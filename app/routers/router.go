@@ -3,6 +3,7 @@ package routers
 import (
 	"fiber-starter/app/controllers"
 	"fiber-starter/app/middleware"
+	"fiber-starter/routes"
 
 	_ "fiber-starter/docs" // swagger docs
 
@@ -11,7 +12,7 @@ import (
 )
 
 // SetupRoutes 配置API路由
-func SetupRoutes(app *fiber.App, authController *controllers.AuthController, userController *controllers.UserController) {
+func SetupRoutes(app *fiber.App, authController *controllers.AuthController, userController *controllers.UserController, storageController *controllers.StorageController) {
 	// Swagger 文档路由
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
@@ -42,4 +43,7 @@ func SetupRoutes(app *fiber.App, authController *controllers.AuthController, use
 	users.Put("/:id", middleware.JWTProtected(), userController.UpdateUser)
 	users.Delete("/:id", middleware.JWTProtected(), userController.DeleteUser)
 	users.Put("/profile", middleware.JWTProtected(), userController.UpdateProfile)
+
+	// 存储路由
+	routes.SetupStorageRoutes(api, storageController)
 }

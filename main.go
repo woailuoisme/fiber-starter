@@ -2,21 +2,15 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
 
 	"fiber-starter/app/controllers"
 	"fiber-starter/app/helpers"
+	"fiber-starter/app/middleware"
+	"fiber-starter/app/providers"
 	"fiber-starter/app/routers"
-	"fiber-starter/app/services"
 	"fiber-starter/config"
 
 	_ "fiber-starter/docs" // swagger docs
@@ -49,6 +43,14 @@ func main() {
 		return
 	}
 
+	// 创建依赖注入容器
+	container := providers.NewContainer()
+	
+	// 注册所有依赖
+	if err := container.RegisterProviders(); err != nil {
+		log.Fatalf("注册依赖失败: %v", err)
+	}
+
 	// 创建 Fiber 应用
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
@@ -61,45 +63,24 @@ func main() {
 		},
 	})
 
-	// 中间件
-	app.Use(recover.New())
-	app.Use(logger.New())
-	app.Use(cors.New())
+	// 配置中间件
+	middleware.SetupMiddleware(app)
+	middleware.SetupTimeoutRedirect(app)
+	middleware.SetupErrorHandling(app)
+	middleware.SetupAuthMiddleware(app)
 
-	// 初始化数据库连接
-	// 构建数据库连接字符串
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=True&loc=%s",
-		config.GetString("database.username"),
-		config.GetString("database.password"),
-		config.GetString("database.host"),
-		config.GetString("database.port"),
-		config.GetString("database.database"),
-		config.GetString("database.charset"),
-		config.GetString("database.timezone"))
+	// 从容器中获取控制器
+	err = container.Invoke(func(authController *controllers.AuthController, 
+		userController *controllers.UserController, 
+		storageController *controllers.StorageController) {
+		
+		// 配置路由
+		routers.SetupRoutes(app, authController, userController, storageController)
+	})
 	
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("数据库连接失败: %v", err)
+		log.Fatalf("设置路由失败: %v", err)
 	}
-
-	// 初始化验证器
-	validate := validator.New()
-
-	// 初始化缓存服务
-	cacheService := services.NewCacheService(config.GlobalConfig)
-
-	// 初始化认证服务
-	authService := services.NewAuthService(db, config.GlobalConfig, cacheService)
-
-	// 初始化用户服务
-	userService := services.NewUserService(db)
-
-	// 初始化控制器
-	authController := controllers.NewAuthController(authService, validate)
-	userController := controllers.NewUserController(userService, validate)
-
-	// 配置路由
-	routers.SetupRoutes(app, authController, userController)
 
 	// 启动服务器
 	port := ":" + config.GetString("app.port")

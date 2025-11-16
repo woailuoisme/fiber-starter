@@ -20,6 +20,14 @@ type MailConfig struct {
 	TLSInsecure    bool   `mapstructure:"tls_insecure"`
 }
 
+// StorageConfig 存储配置
+type StorageConfig struct {
+	Driver     string `mapstructure:"driver"`
+	Database   string `mapstructure:"database"`
+	Reset      bool   `mapstructure:"reset"`
+	GCInterval int    `mapstructure:"gc_interval"`
+}
+
 // Config 应用程序配置结构体
 type Config struct {
 	App      AppConfig      `mapstructure:"app"`
@@ -30,6 +38,7 @@ type Config struct {
 	Cache    CacheConfig    `mapstructure:"cache"`
 	Mail     MailConfig     `mapstructure:"mail"`
 	Queue    QueueConfig    `mapstructure:"queue"`
+	Storage  StorageConfig  `mapstructure:"storage"`
 }
 
 // AppConfig 应用程序基础配置
@@ -211,6 +220,12 @@ func setDefaults() {
 
 	// 队列默认配置
 	viper.SetDefault("queue.concurrency", 10)
+
+	// 存储默认配置
+	viper.SetDefault("storage.driver", "memory")
+	viper.SetDefault("storage.database", "./storage/storage.db")
+	viper.SetDefault("storage.reset", false)
+	viper.SetDefault("storage.gc_interval", 10) // 10分钟
 }
 
 // GetEnv 获取环境变量，如果不存在则返回默认值

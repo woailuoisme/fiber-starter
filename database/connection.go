@@ -3,10 +3,12 @@ package database
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"fiber-starter/config"
 
+	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
@@ -23,10 +25,26 @@ type Connection struct {
 // NewConnection 创建新的数据库连接
 func NewConnection(cfg *config.Config) (*Connection, error) {
 	dsn := buildDSN(cfg.Database)
-	// 创建数据库连接
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: gormLogger.Default.LogMode(getLogLevel(cfg.App.Debug)),
-	})
+	
+	var db *gorm.DB
+	var err error
+	
+	// 根据数据库类型选择驱动
+	switch strings.ToLower(cfg.Database.Connection) {
+	case "mysql":
+		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
+			Logger: gormLogger.Default.LogMode(getLogLevel(cfg.App.Debug)),
+		})
+	case "postgres", "postgresql":
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+			Logger: gormLogger.Default.LogMode(getLogLevel(cfg.App.Debug)),
+		})
+	default:
+		// 默认使用MySQL
+		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
+			Logger: gormLogger.Default.LogMode(getLogLevel(cfg.App.Debug)),
+		})
+	}
 	
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
@@ -58,14 +76,39 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 
 // buildDSN 构建数据库连接字符串
 func buildDSN(cfg config.DatabaseConfig) string {
-	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=%s",
-		cfg.Host,
-		cfg.Username,
-		cfg.Password,
-		cfg.Database,
-		cfg.Port,
-		cfg.Timezone,
-	)
+	// 根据数据库类型构建不同的DSN
+	switch strings.ToLower(cfg.Connection) {
+	case "mysql":
+		return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=True&loc=%s",
+			cfg.Username,
+			cfg.Password,
+			cfg.Host,
+			cfg.Port,
+			cfg.Database,
+			cfg.Charset,
+			cfg.Timezone,
+		)
+	case "postgres", "postgresql":
+		return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=%s",
+			cfg.Host,
+			cfg.Username,
+			cfg.Password,
+			cfg.Database,
+			cfg.Port,
+			cfg.Timezone,
+		)
+	default:
+		// 默认使用MySQL格式
+		return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=True&loc=%s",
+			cfg.Username,
+			cfg.Password,
+			cfg.Host,
+			cfg.Port,
+			cfg.Database,
+			cfg.Charset,
+			cfg.Timezone,
+		)
+	}
 }
 
 // getLogLevel 根据调试模式获取日志级别
