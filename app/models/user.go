@@ -70,6 +70,11 @@ func (u *User) ToSafeUser() SafeUser {
 	}
 }
 
+// ToSafeResponse 转换为安全的用户响应（用于API输出，与ToSafeUser功能相同）
+func (u *User) ToSafeResponse() SafeUser {
+	return u.ToSafeUser()
+}
+
 // SafeUser 安全的用户信息（用于API响应）
 type SafeUser struct {
 	ID            uint           `json:"id"`

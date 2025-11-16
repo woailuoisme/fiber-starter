@@ -9,13 +9,12 @@ app:
 
 # 数据库配置
 database:
-  connection: "mysql"
+  connection: "postgres"
   host: "localhost"
-  port: "3306"
+  port: "5432"
   database: "fiber_starter"
-  username: "root"
+  username: "postgres"
   password: ""
-  charset: "utf8mb4"
   timezone: "UTC"
 
 # JWT认证配置

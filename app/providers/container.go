@@ -3,7 +3,7 @@ package providers
 import (
 	"fiber-starter/config"
 	"fiber-starter/database"
-	"fiber-starter/services"
+	"fiber-starter/app/services"
 	"fmt"
 
 	"go.uber.org/dig"

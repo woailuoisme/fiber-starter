@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"fiber-starter/app/helpers"
 	"fiber-starter/app/models"
 	"fiber-starter/config"
 
@@ -53,7 +54,14 @@ func JWTAuth(cfg *config.Config) fiber.Handler {
 
 		// 验证token有效性
 		if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
+			// 创建用户模型
+			user := &models.User{
+				ID:    claims.UserID,
+				Email: claims.Email,
+				Name:  claims.Name,
+			}
 			// 将用户信息存储到上下文中
+			c.Locals("user", user)
 			c.Locals("user_id", claims.UserID)
 			c.Locals("user_email", claims.Email)
 			c.Locals("user_name", claims.Name)
@@ -154,6 +162,15 @@ func ValidateToken(tokenString string, cfg *config.Config) (*JWTClaims, error) {
 	return nil, jwt.ErrInvalidKey
 }
 
+// GetUserFromContext 从Fiber上下文中获取用户信息
+func GetUserFromContext(c *fiber.Ctx) *models.User {
+	user, ok := c.Locals("user").(*models.User)
+	if !ok {
+		return nil
+	}
+	return user
+}
+
 // GetCurrentUser 从上下文获取当前用户信息
 func GetCurrentUser(c *fiber.Ctx) *JWTClaims {
 	if claims, ok := c.Locals("user_claims").(*JWTClaims); ok {
@@ -173,4 +190,33 @@ func GetCurrentUserID(c *fiber.Ctx) uint {
 // IsAuthenticated 检查用户是否已认证
 func IsAuthenticated(c *fiber.Ctx) bool {
 	return GetCurrentUser(c) != nil
+}
+
+// GetTokenFromContext 从上下文获取JWT令牌
+func GetTokenFromContext(c *fiber.Ctx) string {
+	// 从请求头获取token
+	authHeader := c.Get("Authorization")
+	if authHeader == "" {
+		return ""
+	}
+
+	// 检查Bearer前缀
+	tokenParts := strings.Split(authHeader, " ")
+	if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
+		return ""
+	}
+
+	return tokenParts[1]
+}
+
+// JWTProtected 保护路由的JWT中间件
+func JWTProtected() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// 检查全局配置是否已初始化
+		if config.GlobalConfig == nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(helpers.ErrorResponse("配置未初始化", nil))
+		}
+		// 使用全局配置的JWT设置
+		return JWTAuth(config.GlobalConfig)(c)
+	}
 }

@@ -7,9 +7,7 @@ import (
 
 	"fiber-starter/config"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/hibiken/asynq"
-	"context"
 )
 
 // QueueService 队列服务接口

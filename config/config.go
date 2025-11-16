@@ -4,8 +4,21 @@ import (
 	"log"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
+
+// MailConfig 邮件配置
+type MailConfig struct {
+	FromName       string `mapstructure:"from_name"`
+	FromAddress    string `mapstructure:"from_address"`
+	Host           string `mapstructure:"host"`
+	Port           int    `mapstructure:"port"`
+	Username       string `mapstructure:"username"`
+	Password       string `mapstructure:"password"`
+	Encryption     string `mapstructure:"encryption"`
+	TLSInsecure    bool   `mapstructure:"tls_insecure"`
+}
 
 // Config 应用程序配置结构体
 type Config struct {
@@ -15,6 +28,8 @@ type Config struct {
 	Redis    RedisConfig    `mapstructure:"redis"`
 	Logger   LoggerConfig   `mapstructure:"logger"`
 	Cache    CacheConfig    `mapstructure:"cache"`
+	Mail     MailConfig     `mapstructure:"mail"`
+	Queue    QueueConfig    `mapstructure:"queue"`
 }
 
 // AppConfig 应用程序基础配置
@@ -25,6 +40,7 @@ type AppConfig struct {
 	Port   string `mapstructure:"port"`
 	Host   string `mapstructure:"host"`
 	Timezone string `mapstructure:"timezone"`
+	URL    string `mapstructure:"url"`
 }
 
 // DatabaseConfig 数据库配置
@@ -44,6 +60,7 @@ type JWTConfig struct {
 	Secret         string `mapstructure:"secret"`
 	ExpirationTime int    `mapstructure:"expiration_time"`
 	RefreshTime    int    `mapstructure:"refresh_time"`
+	ExpireHours    int    `mapstructure:"expire_hours"`
 	Issuer         string `mapstructure:"issuer"`
 }
 
@@ -74,9 +91,33 @@ type CacheConfig struct {
 	TTL      int    `mapstructure:"ttl"`
 }
 
+// QueueConfig 队列配置
+type QueueConfig struct {
+	Concurrency int `mapstructure:"concurrency"`
+}
+
+// 全局配置实例
+var GlobalConfig *Config
+
 // LoadConfig 加载配置文件
-func LoadConfig(configPath string) (*Config, error) {
+func LoadConfig() (*Config, error) {
+	configPath := "./config"
 	config := &Config{}
+
+	// 加载 .env 文件
+	if err := godotenv.Load(); err != nil {
+		// 尝试加载其他可能的 .env 文件位置
+		envPaths := []string{".env", "./config/.env", "../.env"}
+		for _, path := range envPaths {
+			if err := godotenv.Load(path); err == nil {
+				log.Printf("成功加载 .env 文件: %s", path)
+				break
+			}
+		}
+		if err != nil {
+			log.Printf("未找到 .env 文件，将使用环境变量和默认配置")
+		}
+	}
 
 	// 设置配置文件路径和名称
 	viper.SetConfigName("app")
@@ -118,21 +159,33 @@ func setDefaults() {
 	viper.SetDefault("app.port", "3000")
 	viper.SetDefault("app.host", "0.0.0.0")
 	viper.SetDefault("app.timezone", "UTC")
+	viper.SetDefault("app.url", "http://localhost:3000")
 
 	// 数据库默认配置
-	viper.SetDefault("database.connection", "mysql")
+	viper.SetDefault("database.connection", "postgres")
 	viper.SetDefault("database.host", "localhost")
-	viper.SetDefault("database.port", "3306")
+	viper.SetDefault("database.port", "5432")
 	viper.SetDefault("database.database", "fiber_starter")
-	viper.SetDefault("database.username", "root")
+	viper.SetDefault("database.username", "postgres")
 	viper.SetDefault("database.password", "")
 	viper.SetDefault("database.charset", "utf8mb4")
 	viper.SetDefault("database.timezone", "UTC")
+
+	// 邮件默认配置
+	viper.SetDefault("mail.from_name", "Fiber Starter")
+	viper.SetDefault("mail.from_address", "noreply@example.com")
+	viper.SetDefault("mail.host", "smtp.example.com")
+	viper.SetDefault("mail.port", 587)
+	viper.SetDefault("mail.username", "")
+	viper.SetDefault("mail.password", "")
+	viper.SetDefault("mail.encryption", "tls")
+	viper.SetDefault("mail.tls_insecure", false)
 
 	// JWT默认配置
 	viper.SetDefault("jwt.secret", "your-secret-key-change-in-production")
 	viper.SetDefault("jwt.expiration_time", 3600) // 1小时
 	viper.SetDefault("jwt.refresh_time", 604800)  // 7天
+	viper.SetDefault("jwt.expire_hours", 24)      // 24小时
 	viper.SetDefault("jwt.issuer", "fiber-starter")
 
 	// Redis默认配置
@@ -155,6 +208,9 @@ func setDefaults() {
 	viper.SetDefault("cache.prefix", "fiber:")
 	viper.SetDefault("cache.default", 3600)
 	viper.SetDefault("cache.ttl", 3600)
+
+	// 队列默认配置
+	viper.SetDefault("queue.concurrency", 10)
 }
 
 // GetEnv 获取环境变量，如果不存在则返回默认值
@@ -163,4 +219,20 @@ func GetEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// Init 初始化配置
+func Init() error {
+	var err error
+	GlobalConfig, err = LoadConfig()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetString 获取字符串配置
+func GetString(key string) string {
+	// 直接使用viper获取配置值，这样更可靠
+	return viper.GetString(key)
 }

@@ -1,0 +1,422 @@
+basePath: /api/v1
+definitions:
+  controllers.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  controllers.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    required:
+    - refresh_token
+    type: object
+  controllers.RegisterRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      name:
+        example: 张三
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        example: password123
+        minLength: 6
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  controllers.UpdateProfileRequest:
+    properties:
+      avatar:
+        example: https://example.com/avatar.jpg
+        type: string
+      name:
+        example: 张三
+        maxLength: 100
+        minLength: 2
+        type: string
+      phone:
+        example: "+8613800138000"
+        type: string
+    type: object
+  helpers.APIResponse:
+    properties:
+      data: {}
+      errors: {}
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+host: localhost:3000
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: 这是一个基于 Fiber 框架的 Go 项目启动模板 API 文档
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Fiber Starter API
+  version: "1.0"
+paths:
+  /api/me:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前登录用户的详细信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取当前用户信息
+      tags:
+      - 用户资料
+  /api/users:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取用户列表，需要管理员权限
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取用户列表
+      tags:
+      - 用户管理
+  /api/users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定用户，需要管理员权限
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "400":
+          description: 无效的用户ID
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 删除用户
+      tags:
+      - 用户管理
+    get:
+      consumes:
+      - application/json
+      description: 根据用户ID获取用户详细信息，需要管理员权限
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "400":
+          description: 无效的用户ID
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取单个用户
+      tags:
+      - 用户管理
+    put:
+      consumes:
+      - application/json
+      description: 更新指定用户的信息，需要管理员权限
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新用户信息请求
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 更新用户信息
+      tags:
+      - 用户管理
+  /api/users/search:
+    get:
+      consumes:
+      - application/json
+      description: 根据关键词搜索用户，需要管理员权限
+      parameters:
+      - description: 搜索关键词
+        in: query
+        name: q
+        required: true
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 搜索成功
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 搜索用户
+      tags:
+      - 用户管理
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 用户身份验证
+      parameters:
+      - description: 登录信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "401":
+          description: 认证失败
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+      summary: 用户登录
+      tags:
+      - 认证
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: 使用刷新令牌获取新的访问令牌
+      parameters:
+      - description: 刷新令牌信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 刷新成功
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "401":
+          description: 认证失败
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+      summary: 刷新令牌
+      tags:
+      - 认证
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: 创建新用户账户
+      parameters:
+      - description: 注册信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 注册成功
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "409":
+          description: 邮箱已被注册
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+      summary: 用户注册
+      tags:
+      - 认证
+  /api/v1/users/profile:
+    put:
+      consumes:
+      - application/json
+      description: 更新当前登录用户的个人信息
+      parameters:
+      - description: 更新个人资料请求
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/helpers.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 更新个人资料
+      tags:
+      - 用户管理
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

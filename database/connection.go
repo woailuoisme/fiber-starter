@@ -58,13 +58,12 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 
 // buildDSN 构建数据库连接字符串
 func buildDSN(cfg config.DatabaseConfig) string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=True&loc=%s",
+	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=%s",
+		cfg.Host,
 		cfg.Username,
 		cfg.Password,
-		cfg.Host,
-		cfg.Port,
 		cfg.Database,
-		cfg.Charset,
+		cfg.Port,
 		cfg.Timezone,
 	)
 }

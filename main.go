@@ -1,28 +1,60 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"log"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 
 	"fiber-starter/app/controllers"
 	"fiber-starter/app/helpers"
-	"fiber-starter/app/middleware"
+	"fiber-starter/app/routers"
+	"fiber-starter/app/services"
 	"fiber-starter/config"
+
+	_ "fiber-starter/docs" // swagger docs
 )
+
+// @title Fiber Starter API
+// @version 1.0
+// @description 这是一个基于 Fiber 框架的 Go 项目启动模板 API 文档
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:3000
+// @BasePath /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 
 func main() {
 	// 初始化配置
-	config.Init()
+	err := config.Init()
+	if err != nil {
+		return
+	}
 
 	// 创建 Fiber 应用
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
-			if e, ok := err.(*fiber.Error); ok {
+			var e *fiber.Error
+			if errors.As(err, &e) {
 				code = e.Code
 			}
 			return c.Status(code).JSON(helpers.ErrorResponse(err.Error(), nil))
@@ -34,36 +66,43 @@ func main() {
 	app.Use(logger.New())
 	app.Use(cors.New())
 
-	// 健康检查
-	app.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(helpers.SuccessResponse("服务运行正常", fiber.Map{
-			"status": "ok",
-		}))
-	})
+	// 初始化数据库连接
+	// 构建数据库连接字符串
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=True&loc=%s",
+		config.GetString("database.username"),
+		config.GetString("database.password"),
+		config.GetString("database.host"),
+		config.GetString("database.port"),
+		config.GetString("database.database"),
+		config.GetString("database.charset"),
+		config.GetString("database.timezone"))
+	
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatalf("数据库连接失败: %v", err)
+	}
 
-	// API 路由组
-	api := app.Group("/api/v1")
+	// 初始化验证器
+	validate := validator.New()
 
-	// 认证路由
-	auth := api.Group("/auth")
-	auth.Post("/register", controllers.Register)
-	auth.Post("/login", controllers.Login)
-	auth.Post("/refresh", controllers.RefreshToken)
-	auth.Post("/logout", middleware.JWTProtected(), controllers.Logout)
-	auth.Post("/change-password", middleware.JWTProtected(), controllers.ChangePassword)
-	auth.Post("/reset-password", controllers.ResetPassword)
+	// 初始化缓存服务
+	cacheService := services.NewCacheService(config.GlobalConfig)
 
-	// 用户路由
-	users := api.Group("/users")
-	users.Get("/", middleware.JWTProtected(), controllers.GetUsers)
-	users.Get("/me", middleware.JWTProtected(), controllers.GetCurrentUser)
-	users.Get("/search", middleware.JWTProtected(), controllers.SearchUsers)
-	users.Put("/:id", middleware.JWTProtected(), controllers.UpdateUser)
-	users.Delete("/:id", middleware.JWTProtected(), controllers.DeleteUser)
-	users.Put("/profile", middleware.JWTProtected(), controllers.UpdateProfile)
+	// 初始化认证服务
+	authService := services.NewAuthService(db, config.GlobalConfig, cacheService)
+
+	// 初始化用户服务
+	userService := services.NewUserService(db)
+
+	// 初始化控制器
+	authController := controllers.NewAuthController(authService, validate)
+	userController := controllers.NewUserController(userService, validate)
+
+	// 配置路由
+	routers.SetupRoutes(app, authController, userController)
 
 	// 启动服务器
-	port := config.GetString("app.port", ":3000")
+	port := ":" + config.GetString("app.port")
 	log.Printf("服务器启动在端口 %s", port)
 	log.Fatal(app.Listen(port))
 }

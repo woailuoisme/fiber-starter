@@ -3,11 +3,10 @@ package services
 import (
 	"crypto/tls"
 	"fmt"
-	"net/smtp"
 
 	"fiber-starter/config"
 
-	"github.com/jordan-wright/email"
+	"gopkg.in/mail.v2"
 )
 
 // EmailService 邮件服务接口
@@ -32,38 +31,41 @@ func NewEmailService(cfg *config.Config) EmailService {
 
 // SendEmail 发送邮件
 func (s *emailService) SendEmail(to, subject, body string, isHTML bool) error {
-	e := email.NewEmail()
-	e.From = fmt.Sprintf("%s <%s>", s.config.Mail.FromName, s.config.Mail.FromAddress)
-	e.To = []string{to}
-	e.Subject = subject
+	e := mail.NewMessage()
+	
+	// 设置发件人
+	e.SetHeader("From", fmt.Sprintf("%s <%s>", s.config.Mail.FromName, s.config.Mail.FromAddress))
+	// 设置收件人
+	e.SetHeader("To", to)
+	// 设置主题
+	e.SetHeader("Subject", subject)
 
+	// 设置邮件内容
 	if isHTML {
-		e.HTML = []byte(body)
+		e.SetBody("text/html", body)
 	} else {
-		e.Text = []byte(body)
+		e.SetBody("text/plain", body)
 	}
 
-	// 配置SMTP服务器
-	smtpHost := fmt.Sprintf("%s:%s", s.config.Mail.Host, s.config.Mail.Port)
+	// 创建SMTP客户端
+	d := mail.NewDialer(s.config.Mail.Host, s.config.Mail.Port, s.config.Mail.Username, s.config.Mail.Password)
 	
 	// 配置TLS
-	tlsConfig := &tls.Config{
+	d.TLSConfig = &tls.Config{
 		InsecureSkipVerify: s.config.Mail.TLSInsecure,
-		ServerName:         s.config.Mail.Host,
 	}
-
-	// 如果使用SSL，则使用TLS连接
+	
+	// 根据加密类型设置
 	if s.config.Mail.Encryption == "ssl" {
-		tlsConfig.InsecureSkipVerify = true
-	}
-
-	// 发送邮件
-	var err error
-	if s.config.Mail.Encryption == "tls" || s.config.Mail.Encryption == "ssl" {
-		err = e.SendWithTLS(smtpHost, smtp.PlainAuth("", s.config.Mail.Username, s.config.Mail.Password, s.config.Mail.Host), tlsConfig)
+		d.StartTLSPolicy = mail.MandatoryStartTLS
+	} else if s.config.Mail.Encryption == "tls" {
+		d.StartTLSPolicy = mail.MandatoryStartTLS
 	} else {
-		err = e.Send(smtpHost, smtp.PlainAuth("", s.config.Mail.Username, s.config.Mail.Password, s.config.Mail.Host))
+		d.StartTLSPolicy = mail.NoStartTLS
 	}
+	
+	// 发送邮件
+	err := d.DialAndSend(e)
 
 	if err != nil {
 		return fmt.Errorf("发送邮件失败: %w", err)
@@ -96,7 +98,7 @@ func (s *emailService) SendPasswordResetEmail(to, resetToken string) error {
 		<p>如果您没有请求重置密码，请忽略此邮件。</p>
 		<p>此链接将在24小时后过期。</p>
 		<p>团队名称</p>
-	`, s.config.App.URL, resetToken)
+	`, fmt.Sprintf("http://%s:%s", s.config.App.Host, s.config.App.Port), resetToken)
 
 	return s.SendEmail(to, subject, body, true)
 }
@@ -111,7 +113,7 @@ func (s *emailService) SendVerificationEmail(to, verificationToken string) error
 		<p>如果您没有注册账户，请忽略此邮件。</p>
 		<p>此链接将在1小时后过期。</p>
 		<p>团队名称</p>
-	`, s.config.App.URL, verificationToken)
+	`, fmt.Sprintf("http://%s:%s", s.config.App.Host, s.config.App.Port), verificationToken)
 
 	return s.SendEmail(to, subject, body, true)
 }
