@@ -1,0 +1,50 @@
+# 应用程序配置
+app:
+  name: "Fiber Starter"
+  env: "local"
+  debug: true
+  port: "3000"
+  host: "0.0.0.0"
+  timezone: "Asia/Shanghai"
+
+# 数据库配置
+database:
+  connection: "mysql"
+  host: "localhost"
+  port: "3306"
+  database: "fiber_starter"
+  username: "root"
+  password: ""
+  charset: "utf8mb4"
+  timezone: "UTC"
+
+# JWT认证配置
+jwt:
+  secret: "your-secret-key-change-in-production-environment"
+  expiration_time: 3600    # 访问令牌过期时间（秒）1小时
+  refresh_time: 604800     # 刷新令牌过期时间（秒）7天
+  issuer: "fiber-starter"
+
+# Redis配置
+redis:
+  host: "localhost"
+  port: "6379"
+  password: ""
+  db: 0
+
+# 日志配置
+logger:
+  level: "info"           # debug, info, warn, error, fatal, panic
+  format: "json"          # json, text
+  output: "stdout"        # stdout, file
+  max_size: 100           # 日志文件最大大小（MB）
+  max_age: 30             # 日志文件保留天数
+  max_backups: 10         # 日志文件备份数量
+  compress: true          # 是否压缩旧日志文件
+
+# 缓存配置
+cache:
+  driver: "redis"         # redis, memory
+  prefix: "fiber:"        # 缓存键前缀
+  default: 3600           # 默认缓存时间（秒）
+  ttl: 3600              # 缓存过期时间（秒）
