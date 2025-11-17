@@ -24,13 +24,20 @@ type Connection struct {
 
 // NewConnection 创建新的数据库连接
 func NewConnection(cfg *config.Config) (*Connection, error) {
-	dsn := buildDSN(cfg.Database)
-	
+	// 获取默认连接配置
+	defaultConn := cfg.Database.Default
+	connConfig, exists := cfg.Database.Connections[defaultConn]
+	if !exists {
+		return nil, fmt.Errorf("数据库连接配置 '%s' 不存在", defaultConn)
+	}
+
+	dsn := buildDSN(connConfig)
+
 	var db *gorm.DB
 	var err error
-	
+
 	// 根据数据库类型选择驱动
-	switch strings.ToLower(cfg.Database.Connection) {
+	switch strings.ToLower(connConfig.Driver) {
 	case "mysql":
 		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
 			Logger: gormLogger.Default.LogMode(getLogLevel(cfg.App.Debug)),
@@ -45,7 +52,7 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 			Logger: gormLogger.Default.LogMode(getLogLevel(cfg.App.Debug)),
 		})
 	}
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -57,17 +64,20 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 	}
 
 	// 设置连接池参数
-	sqlDB.SetMaxIdleConns(10)           // 最大空闲连接数
-	sqlDB.SetMaxOpenConns(100)          // 最大打开连接数
-	sqlDB.SetConnMaxLifetime(time.Hour) // 连接最大生存时间
+	sqlDB.SetMaxIdleConns(cfg.Database.Pool.MaxIdleConns)                                    // 最大空闲连接数
+	sqlDB.SetMaxOpenConns(cfg.Database.Pool.MaxOpenConns)                                    // 最大打开连接数
+	sqlDB.SetConnMaxLifetime(time.Duration(cfg.Database.Pool.ConnMaxLifetime) * time.Second) // 连接最大生存时间
+	if cfg.Database.Pool.ConnMaxIdleTime > 0 {
+		sqlDB.SetConnMaxIdleTime(time.Duration(cfg.Database.Pool.ConnMaxIdleTime) * time.Second)
+	}
 
 	// 测试连接
 	if err := sqlDB.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	log.Printf("数据库连接成功: %s", cfg.Database.Database)
-	
+	log.Printf("数据库连接成功: %s (%s)", connConfig.Database, connConfig.Driver)
+
 	// 设置全局DB实例
 	DB = db
 
@@ -75,38 +85,63 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 }
 
 // buildDSN 构建数据库连接字符串
-func buildDSN(cfg config.DatabaseConfig) string {
+func buildDSN(cfg config.DBConnection) string {
 	// 根据数据库类型构建不同的DSN
-	switch strings.ToLower(cfg.Connection) {
+	switch strings.ToLower(cfg.Driver) {
 	case "mysql":
+		charset := cfg.Charset
+		if charset == "" {
+			charset = "utf8mb4"
+		}
+		timezone := cfg.Timezone
+		if timezone == "" {
+			timezone = "Local"
+		}
 		return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=True&loc=%s",
 			cfg.Username,
 			cfg.Password,
 			cfg.Host,
 			cfg.Port,
 			cfg.Database,
-			cfg.Charset,
-			cfg.Timezone,
+			charset,
+			timezone,
 		)
 	case "postgres", "postgresql":
-		return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=%s",
+		sslmode := cfg.SSLMode
+		if sslmode == "" {
+			sslmode = "disable"
+		}
+		timezone := cfg.Timezone
+		if timezone == "" {
+			timezone = "UTC"
+		}
+		return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s",
 			cfg.Host,
 			cfg.Username,
 			cfg.Password,
 			cfg.Database,
 			cfg.Port,
-			cfg.Timezone,
+			sslmode,
+			timezone,
 		)
 	default:
 		// 默认使用MySQL格式
+		charset := cfg.Charset
+		if charset == "" {
+			charset = "utf8mb4"
+		}
+		timezone := cfg.Timezone
+		if timezone == "" {
+			timezone = "Local"
+		}
 		return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=True&loc=%s",
 			cfg.Username,
 			cfg.Password,
 			cfg.Host,
 			cfg.Port,
 			cfg.Database,
-			cfg.Charset,
-			cfg.Timezone,
+			charset,
+			timezone,
 		)
 	}
 }

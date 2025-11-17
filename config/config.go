@@ -10,14 +10,14 @@ import (
 
 // MailConfig 邮件配置
 type MailConfig struct {
-	FromName       string `mapstructure:"from_name"`
-	FromAddress    string `mapstructure:"from_address"`
-	Host           string `mapstructure:"host"`
-	Port           int    `mapstructure:"port"`
-	Username       string `mapstructure:"username"`
-	Password       string `mapstructure:"password"`
-	Encryption     string `mapstructure:"encryption"`
-	TLSInsecure    bool   `mapstructure:"tls_insecure"`
+	FromName    string `mapstructure:"from_name"`
+	FromAddress string `mapstructure:"from_address"`
+	Host        string `mapstructure:"host"`
+	Port        int    `mapstructure:"port"`
+	Username    string `mapstructure:"username"`
+	Password    string `mapstructure:"password"`
+	Encryption  string `mapstructure:"encryption"`
+	TLSInsecure bool   `mapstructure:"tls_insecure"`
 }
 
 // StorageConfig 存储配置
@@ -43,25 +43,85 @@ type Config struct {
 
 // AppConfig 应用程序基础配置
 type AppConfig struct {
-	Name   string `mapstructure:"name"`
-	Env    string `mapstructure:"env"`
-	Debug  bool   `mapstructure:"debug"`
-	Port   string `mapstructure:"port"`
-	Host   string `mapstructure:"host"`
+	Name     string `mapstructure:"name"`
+	Env      string `mapstructure:"env"`
+	Debug    bool   `mapstructure:"debug"`
+	Port     string `mapstructure:"port"`
+	Host     string `mapstructure:"host"`
 	Timezone string `mapstructure:"timezone"`
-	URL    string `mapstructure:"url"`
+	URL      string `mapstructure:"url"`
 }
 
 // DatabaseConfig 数据库配置
 type DatabaseConfig struct {
-	Connection string `mapstructure:"connection"`
-	Host       string `mapstructure:"host"`
-	Port       string `mapstructure:"port"`
-	Database   string `mapstructure:"database"`
-	Username   string `mapstructure:"username"`
-	Password   string `mapstructure:"password"`
-	Charset    string `mapstructure:"charset"`
-	Timezone   string `mapstructure:"timezone"`
+	Default     string                  `mapstructure:"default"`
+	Connections map[string]DBConnection `mapstructure:"connections"`
+	Pool        DBPoolConfig            `mapstructure:"pool"`
+	Read        DBReadConfig            `mapstructure:"read"`
+	Write       DBWriteConfig           `mapstructure:"write"`
+	Migrations  DBMigrationConfig       `mapstructure:"migrations"`
+	Seeders     DBSeederConfig          `mapstructure:"seeders"`
+	Redis       DBRedisConfig           `mapstructure:"redis"`
+}
+
+// DBConnection 单个数据库连接配置
+type DBConnection struct {
+	Driver    string            `mapstructure:"driver"`
+	Host      string            `mapstructure:"host"`
+	Port      string            `mapstructure:"port"`
+	Database  string            `mapstructure:"database"`
+	Username  string            `mapstructure:"username"`
+	Password  string            `mapstructure:"password"`
+	Charset   string            `mapstructure:"charset"`
+	Collation string            `mapstructure:"collation"`
+	Prefix    string            `mapstructure:"prefix"`
+	Strict    bool              `mapstructure:"strict"`
+	Timezone  string            `mapstructure:"timezone"`
+	Schema    string            `mapstructure:"schema"`
+	SSLMode   string            `mapstructure:"sslmode"`
+	Options   map[string]string `mapstructure:"options"`
+}
+
+// DBPoolConfig 数据库连接池配置
+type DBPoolConfig struct {
+	MaxOpenConns    int `mapstructure:"max_open_conns"`
+	MaxIdleConns    int `mapstructure:"max_idle_conns"`
+	ConnMaxLifetime int `mapstructure:"conn_max_lifetime"`
+	ConnMaxIdleTime int `mapstructure:"conn_max_idle_time"`
+}
+
+// DBReadConfig 读库配置
+type DBReadConfig struct {
+	Hosts    []string `mapstructure:"hosts"`
+	Port     string   `mapstructure:"port"`
+	Username string   `mapstructure:"username"`
+	Password string   `mapstructure:"password"`
+}
+
+// DBWriteConfig 写库配置
+type DBWriteConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     string `mapstructure:"port"`
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
+}
+
+// DBMigrationConfig 迁移配置
+type DBMigrationConfig struct {
+	Table string `mapstructure:"table"`
+	Path  string `mapstructure:"path"`
+}
+
+// DBSeederConfig 填充配置
+type DBSeederConfig struct {
+	Path string `mapstructure:"path"`
+}
+
+// DBRedisConfig Redis配置
+type DBRedisConfig struct {
+	Client  string                 `mapstructure:"client"`
+	Options map[string]interface{} `mapstructure:"options"`
+	Default map[string]interface{} `mapstructure:"default"`
 }
 
 // JWTConfig JWT认证配置
@@ -94,10 +154,10 @@ type LoggerConfig struct {
 
 // CacheConfig 缓存配置
 type CacheConfig struct {
-	Driver   string `mapstructure:"driver"`
-	Prefix   string `mapstructure:"prefix"`
-	Default  int    `mapstructure:"default"`
-	TTL      int    `mapstructure:"ttl"`
+	Driver  string `mapstructure:"driver"`
+	Prefix  string `mapstructure:"prefix"`
+	Default int    `mapstructure:"default"`
+	TTL     int    `mapstructure:"ttl"`
 }
 
 // QueueConfig 队列配置
@@ -108,10 +168,120 @@ type QueueConfig struct {
 // 全局配置实例
 var GlobalConfig *Config
 
+// LoadDatabaseConfig 加载数据库配置文件
+func LoadDatabaseConfig() (*DatabaseConfig, error) {
+	configPath := "./config"
+	dbConfig := &DatabaseConfig{}
+
+	// 加载 .env 文件
+	if err := godotenv.Load(); err != nil {
+		// 尝试加载其他可能的 .env 文件位置
+		envPaths := []string{".env", "./config/.env", "../.env"}
+		for _, path := range envPaths {
+			if err := godotenv.Load(path); err == nil {
+				log.Printf("成功加载 .env 文件: %s", path)
+				break
+			}
+		}
+		if err != nil {
+			log.Printf("未找到 .env 文件，将使用环境变量和默认配置")
+		}
+	}
+
+	// 设置数据库配置文件路径和名称
+	viper.SetConfigName("database")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(configPath)
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("./config")
+
+	// 设置环境变量前缀
+	viper.SetEnvPrefix("DB")
+	viper.AutomaticEnv()
+
+	// 设置默认值
+	setDatabaseDefaults()
+
+	// 读取数据库配置文件
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Printf("数据库配置文件未找到，使用默认配置和环境变量")
+		} else {
+			return nil, err
+		}
+	}
+
+	// 解析配置到结构体
+	if err := viper.Unmarshal(dbConfig); err != nil {
+		return nil, err
+	}
+
+	return dbConfig, nil
+}
+
+// setDatabaseDefaults 设置数据库默认配置值
+func setDatabaseDefaults() {
+	// 默认数据库连接
+	viper.SetDefault("default", "mysql")
+
+	// MySQL 默认配置
+	viper.SetDefault("connections.mysql.driver", "mysql")
+	viper.SetDefault("connections.mysql.host", "localhost")
+	viper.SetDefault("connections.mysql.port", "3306")
+	viper.SetDefault("connections.mysql.database", "fiber_starter")
+	viper.SetDefault("connections.mysql.username", "root")
+	viper.SetDefault("connections.mysql.password", "")
+	viper.SetDefault("connections.mysql.charset", "utf8mb4")
+	viper.SetDefault("connections.mysql.collation", "utf8mb4_unicode_ci")
+	viper.SetDefault("connections.mysql.prefix", "")
+	viper.SetDefault("connections.mysql.strict", true)
+	viper.SetDefault("connections.mysql.timezone", "Local")
+
+	// PostgreSQL 默认配置
+	viper.SetDefault("connections.pgsql.driver", "postgres")
+	viper.SetDefault("connections.pgsql.host", "localhost")
+	viper.SetDefault("connections.pgsql.port", "5432")
+	viper.SetDefault("connections.pgsql.database", "fiber_starter")
+	viper.SetDefault("connections.pgsql.username", "postgres")
+	viper.SetDefault("connections.pgsql.password", "")
+	viper.SetDefault("connections.pgsql.charset", "utf8")
+	viper.SetDefault("connections.pgsql.prefix", "")
+	viper.SetDefault("connections.pgsql.schema", "public")
+	viper.SetDefault("connections.pgsql.sslmode", "disable")
+	viper.SetDefault("connections.pgsql.timezone", "UTC")
+
+	// SQLite 默认配置
+	viper.SetDefault("connections.sqlite.driver", "sqlite")
+	viper.SetDefault("connections.sqlite.database", "./database/database.sqlite")
+	viper.SetDefault("connections.sqlite.prefix", "")
+
+	// 连接池默认配置
+	viper.SetDefault("pool.max_open_conns", 100)
+	viper.SetDefault("pool.max_idle_conns", 10)
+	viper.SetDefault("pool.conn_max_lifetime", 3600)
+	viper.SetDefault("pool.conn_max_idle_time", 600)
+
+	// 迁移默认配置
+	viper.SetDefault("migrations.table", "migrations")
+	viper.SetDefault("migrations.path", "./database/migrations")
+
+	// 填充默认配置
+	viper.SetDefault("seeders.path", "./database/seeders")
+}
+
 // LoadConfig 加载配置文件
 func LoadConfig() (*Config, error) {
-	configPath := "./config"
-	config := &Config{}
+	// 首先加载数据库配置
+	dbConfig, err := LoadDatabaseConfig()
+	if err != nil {
+		log.Printf("加载数据库配置失败: %v", err)
+		// 如果数据库配置加载失败，使用默认配置
+		dbConfig = &DatabaseConfig{}
+	}
+
+	config := &Config{
+		Database: *dbConfig,
+	}
 
 	// 加载 .env 文件
 	if err := godotenv.Load(); err != nil {
@@ -131,9 +301,8 @@ func LoadConfig() (*Config, error) {
 	// 设置配置文件路径和名称
 	viper.SetConfigName("app")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(configPath)
-	viper.AddConfigPath(".")
 	viper.AddConfigPath("./config")
+	viper.AddConfigPath(".")
 
 	// 设置环境变量前缀
 	viper.SetEnvPrefix("APP")
@@ -156,6 +325,9 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
+	// 设置全局配置
+	GlobalConfig = config
+
 	return config, nil
 }
 
@@ -169,16 +341,6 @@ func setDefaults() {
 	viper.SetDefault("app.host", "0.0.0.0")
 	viper.SetDefault("app.timezone", "UTC")
 	viper.SetDefault("app.url", "http://localhost:3000")
-
-	// 数据库默认配置
-	viper.SetDefault("database.connection", "postgres")
-	viper.SetDefault("database.host", "localhost")
-	viper.SetDefault("database.port", "5432")
-	viper.SetDefault("database.database", "fiber_starter")
-	viper.SetDefault("database.username", "postgres")
-	viper.SetDefault("database.password", "")
-	viper.SetDefault("database.charset", "utf8mb4")
-	viper.SetDefault("database.timezone", "UTC")
 
 	// 邮件默认配置
 	viper.SetDefault("mail.from_name", "Fiber Starter")

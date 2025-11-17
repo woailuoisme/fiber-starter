@@ -80,7 +80,7 @@ func SetupMiddleware(app *fiber.App) {
 		if c.Path() == "/health" || c.Path() == "/monitor" || c.Path() == "/swagger/*" {
 			return c.Next()
 		}
-		
+
 		// 设置超时处理
 		return c.Next()
 	}, 30*time.Second))
@@ -90,8 +90,8 @@ func SetupMiddleware(app *fiber.App) {
 		if err := c.Next(); err != nil {
 			if err.Error() == "context deadline exceeded" || err.Error() == "request timeout" {
 				return c.Status(fiber.StatusRequestTimeout).JSON(fiber.Map{
-					"error": "请求超时，请稍后重试",
-					"code":  "REQUEST_TIMEOUT",
+					"error":   "请求超时，请稍后重试",
+					"code":    "REQUEST_TIMEOUT",
 					"timeout": "30s",
 				})
 			}
@@ -155,10 +155,10 @@ func SetupTimeoutRedirect(app *fiber.App) {
 // isMobile 检查是否为移动设备
 func isMobile(userAgent string) bool {
 	mobileKeywords := []string{
-		"Mobile", "Android", "iPhone", "iPad", "iPod", "BlackBerry", 
+		"Mobile", "Android", "iPhone", "iPad", "iPod", "BlackBerry",
 		"Windows Phone", "webOS", "Opera Mini", "IEMobile",
 	}
-	
+
 	userAgentLower := strings.ToLower(userAgent)
 	for _, keyword := range mobileKeywords {
 		if strings.Contains(userAgentLower, strings.ToLower(keyword)) {
