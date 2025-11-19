@@ -10,7 +10,6 @@ type ErrorCode string
 
 // 预定义错误码
 const (
-	// 通用错误码
 	ErrCodeInternalServer ErrorCode = "INTERNAL_SERVER_ERROR"
 	ErrCodeBadRequest     ErrorCode = "BAD_REQUEST"
 	ErrCodeUnauthorized   ErrorCode = "UNAUTHORIZED"
@@ -23,41 +22,41 @@ const (
 	// 认证相关错误码
 	ErrCodeInvalidCredentials ErrorCode = "INVALID_CREDENTIALS"
 	ErrCodeTokenExpired       ErrorCode = "TOKEN_EXPIRED"
-	ErrCodeTokenInvalid      ErrorCode = "TOKEN_INVALID"
-	ErrCodeUserNotFound      ErrorCode = "USER_NOT_FOUND"
-	ErrCodeUserExists        ErrorCode = "USER_EXISTS"
+	ErrCodeTokenInvalid       ErrorCode = "TOKEN_INVALID"
+	ErrCodeUserNotFound       ErrorCode = "USER_NOT_FOUND"
+	ErrCodeUserExists         ErrorCode = "USER_EXISTS"
 	ErrCodeInvalidPassword    ErrorCode = "INVALID_PASSWORD"
 	ErrCodeAccountLocked      ErrorCode = "ACCOUNT_LOCKED"
 
 	// 用户相关错误码
-	ErrCodeUserCreateFailed   ErrorCode = "USER_CREATE_FAILED"
-	ErrCodeUserUpdateFailed   ErrorCode = "USER_UPDATE_FAILED"
-	ErrCodeUserDeleteFailed   ErrorCode = "USER_DELETE_FAILED"
+	ErrCodeUserCreateFailed    ErrorCode = "USER_CREATE_FAILED"
+	ErrCodeUserUpdateFailed    ErrorCode = "USER_UPDATE_FAILED"
+	ErrCodeUserDeleteFailed    ErrorCode = "USER_DELETE_FAILED"
 	ErrCodeProfileUpdateFailed ErrorCode = "PROFILE_UPDATE_FAILED"
 
 	// 数据库相关错误码
-	ErrCodeDatabaseError    ErrorCode = "DATABASE_ERROR"
-	ErrCodeRecordNotFound   ErrorCode = "RECORD_NOT_FOUND"
-	ErrCodeDuplicateEntry   ErrorCode = "DUPLICATE_ENTRY"
-	ErrCodeForeignKeyError  ErrorCode = "FOREIGN_KEY_ERROR"
+	ErrCodeDatabaseError   ErrorCode = "DATABASE_ERROR"
+	ErrCodeRecordNotFound  ErrorCode = "RECORD_NOT_FOUND"
+	ErrCodeDuplicateEntry  ErrorCode = "DUPLICATE_ENTRY"
+	ErrCodeForeignKeyError ErrorCode = "FOREIGN_KEY_ERROR"
 
 	// 业务逻辑错误码
-	ErrCodeBusinessLogicError ErrorCode = "BUSINESS_LOGIC_ERROR"
+	ErrCodeBusinessLogicError     ErrorCode = "BUSINESS_LOGIC_ERROR"
 	ErrCodeInsufficientPermission ErrorCode = "INSUFFICIENT_PERMISSION"
-	ErrCodeResourceNotFound  ErrorCode = "RESOURCE_NOT_FOUND"
-	ErrCodeOperationNotAllowed ErrorCode = "OPERATION_NOT_ALLOWED"
+	ErrCodeResourceNotFound       ErrorCode = "RESOURCE_NOT_FOUND"
+	ErrCodeOperationNotAllowed    ErrorCode = "OPERATION_NOT_ALLOWED"
 
 	// 外部服务错误码
 	ErrCodeExternalServiceError ErrorCode = "EXTERNAL_SERVICE_ERROR"
-	ErrCodeEmailSendFailed    ErrorCode = "EMAIL_SEND_FAILED"
-	ErrCodeSMSSendFailed      ErrorCode = "SMS_SEND_FAILED"
-	ErrCodePaymentFailed      ErrorCode = "PAYMENT_FAILED"
+	ErrCodeEmailSendFailed      ErrorCode = "EMAIL_SEND_FAILED"
+	ErrCodeSMSSendFailed        ErrorCode = "SMS_SEND_FAILED"
+	ErrCodePaymentFailed        ErrorCode = "PAYMENT_FAILED"
 
 	// 文件相关错误码
-	ErrCodeFileUploadFailed   ErrorCode = "FILE_UPLOAD_FAILED"
-	ErrCodeFileNotFound       ErrorCode = "FILE_NOT_FOUND"
-	ErrCodeInvalidFileType    ErrorCode = "INVALID_FILE_TYPE"
-	ErrCodeFileSizeExceeded   ErrorCode = "FILE_SIZE_EXCEEDED"
+	ErrCodeFileUploadFailed ErrorCode = "FILE_UPLOAD_FAILED"
+	ErrCodeFileNotFound     ErrorCode = "FILE_NOT_FOUND"
+	ErrCodeInvalidFileType  ErrorCode = "INVALID_FILE_TYPE"
+	ErrCodeFileSizeExceeded ErrorCode = "FILE_SIZE_EXCEEDED"
 )
 
 // AppError 应用程序错误结构

@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/etag"
+	"github.com/gofiber/fiber/v2/middleware/favicon"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -20,6 +21,18 @@ import (
 
 // SetupMiddleware 配置所有中间件
 func SetupMiddleware(app *fiber.App) {
+	// Favicon中间件 - 提供网站图标
+	app.Use(favicon.New(favicon.Config{
+		File:        "./public/favicon.ico",
+		URL:         "/favicon.ico",
+		CacheMaxAge: 3600, // 缓存1小时
+	}))
+
+	// 备用SVG favicon - 如果.ico文件不存在
+	app.Get("/favicon.svg", func(c *fiber.Ctx) error {
+		return c.SendFile("./public/favicon.svg")
+	})
+
 	// 请求ID中间件 - 为每个请求生成唯一ID
 	app.Use(requestid.New())
 
@@ -173,6 +186,16 @@ func isMaintenanceMode() bool {
 	// 这里可以从配置文件或环境变量读取维护模式状态
 	// 示例：返回false表示不在维护模式
 	return false
+}
+
+// GetFaviconHTMLTags 返回HTML中使用的favicon标签
+func GetFaviconHTMLTags() string {
+	return `
+	<!-- Favicon -->
+	<link rel="icon" type="image/x-icon" href="/favicon.ico">
+	<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+	<link rel="apple-touch-icon" href="/favicon.svg">
+	`
 }
 func SetupErrorHandling(app *fiber.App) {
 	// 自定义404处理

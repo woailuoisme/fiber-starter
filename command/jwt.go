@@ -4,10 +4,10 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -18,9 +18,9 @@ var generateCmd = &cobra.Command{
 	Long:  `生成各种类型的安全密钥，包括 JWT 密钥等`,
 }
 
-// jwtCmd represents the jwt command
-var jwtCmd = &cobra.Command{
-	Use:   "jwt",
+// jwtGenerateCmd represents the jwt:generate command
+var jwtGenerateCmd = &cobra.Command{
+	Use:   "jwt:generate",
 	Short: "生成并替换 JWT 密钥",
 	Long: `生成一个新的安全 JWT 密钥并自动替换 .env 文件中的 JWT_SECRET 值。
 这个命令会生成一个 32 字节的随机密钥，并将其更新到 .env 文件中。`,
@@ -53,7 +53,7 @@ func updateEnvFile(newSecret string) error {
 	}
 
 	// 读取文件内容
-	content, err := ioutil.ReadFile(envFile)
+	content, err := os.ReadFile(envFile)
 	if err != nil {
 		return fmt.Errorf("读取 .env 文件失败: %v", err)
 	}
@@ -77,7 +77,7 @@ func updateEnvFile(newSecret string) error {
 
 	// 将修改后的内容写回文件
 	newContent := strings.Join(lines, "\n")
-	err = ioutil.WriteFile(envFile, []byte(newContent), 0644)
+	err = os.WriteFile(envFile, []byte(newContent), 0644)
 	if err != nil {
 		return fmt.Errorf("写入 .env 文件失败: %v", err)
 	}
@@ -87,33 +87,30 @@ func updateEnvFile(newSecret string) error {
 
 // generateAndReplaceJWTSecret 生成新的 JWT 密钥并替换文件中的值
 func generateAndReplaceJWTSecret() {
-	fmt.Println("🔐 正在生成新的 JWT 密钥...")
+	color.Cyan("正在生成新的 JWT 密钥...")
 
 	// 生成新密钥
 	newSecret, err := generateJWTSecret()
 	if err != nil {
-		fmt.Printf("❌ 生成密钥失败: %v\n", err)
+		color.Red("生成密钥失败: %v", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("✅ 新的 JWT 密钥已生成: %s\n", newSecret)
+	color.Green("新的 JWT 密钥已生成: %s", newSecret)
 
 	// 更新 .env 文件
-	fmt.Println("📝 正在更新 .env 文件...")
+	color.Yellow("正在更新 .env 文件...")
 	err = updateEnvFile(newSecret)
 	if err != nil {
-		fmt.Printf("❌ 更新 .env 文件失败: %v\n", err)
+		color.Red("更新 .env 文件失败: %v", err)
 		os.Exit(1)
 	}
 
-	fmt.Println("✅ JWT 密钥已成功更新到 .env 文件")
-	fmt.Println("🔄 请重启应用程序以使新密钥生效")
+	color.Green("JWT 密钥已成功更新到 .env 文件")
+	color.Yellow("请重启应用程序以使新密钥生效")
 }
 
 func init() {
-	// 将 jwt 命令添加到 generate 命令
-	generateCmd.AddCommand(jwtCmd)
-
-	// 将 generate 命令添加到根命令
-	rootCmd.AddCommand(generateCmd)
+	// 将 jwt:generate 命令添加到根命令
+	rootCmd.AddCommand(jwtGenerateCmd)
 }

@@ -1,8 +1,10 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
@@ -22,10 +24,31 @@ type MailConfig struct {
 
 // StorageConfig 存储配置
 type StorageConfig struct {
-	Driver     string `mapstructure:"driver"`
-	Database   string `mapstructure:"database"`
-	Reset      bool   `mapstructure:"reset"`
-	GCInterval int    `mapstructure:"gc_interval"`
+	Driver     string              `mapstructure:"driver"`
+	Database   string              `mapstructure:"database"`
+	Reset      bool                `mapstructure:"reset"`
+	GCInterval int                 `mapstructure:"gc_interval"`
+	MinIO      *MinIOStorageConfig `mapstructure:"minio"`
+	S3         *S3StorageConfig    `mapstructure:"s3"`
+}
+
+// MinIOStorageConfig MinIO存储配置
+type MinIOStorageConfig struct {
+	Endpoint        string `mapstructure:"endpoint"`
+	AccessKeyID     string `mapstructure:"access_key_id"`
+	SecretAccessKey string `mapstructure:"secret_access_key"`
+	UseSSL          bool   `mapstructure:"use_ssl"`
+	Bucket          string `mapstructure:"bucket"`
+	Region          string `mapstructure:"region"`
+}
+
+// S3StorageConfig AWS S3存储配置
+type S3StorageConfig struct {
+	AccessKeyID     string `mapstructure:"access_key_id"`
+	SecretAccessKey string `mapstructure:"secret_access_key"`
+	Region          string `mapstructure:"region"`
+	Bucket          string `mapstructure:"bucket"`
+	Endpoint        string `mapstructure:"endpoint"` // 可选，用于兼容S3的其他服务
 }
 
 // Config 应用程序配置结构体
@@ -211,6 +234,9 @@ func LoadDatabaseConfig() (*DatabaseConfig, error) {
 		}
 	}
 
+	// 手动处理环境变量替换
+	replaceEnvVars()
+
 	// 解析配置到结构体
 	if err := viper.Unmarshal(dbConfig); err != nil {
 		return nil, err
@@ -269,6 +295,45 @@ func setDatabaseDefaults() {
 	viper.SetDefault("seeders.path", "./database/seeders")
 }
 
+// replaceEnvVars 手动处理环境变量替换
+func replaceEnvVars() {
+	// 获取所有连接配置
+	connections := viper.GetStringMap("connections")
+
+	for connName, connConfig := range connections {
+		if connMap, ok := connConfig.(map[string]interface{}); ok {
+			for key, value := range connMap {
+				if valueStr, ok := value.(string); ok {
+					// 检查是否包含环境变量占位符
+					if strings.Contains(valueStr, "${") && strings.Contains(valueStr, "}") {
+						// 提取环境变量名和默认值
+						start := strings.Index(valueStr, "${") + 2
+						end := strings.Index(valueStr, "}")
+						if start > 1 && end > start {
+							envPart := valueStr[start:end]
+							parts := strings.SplitN(envPart, ":", 2)
+							envKey := parts[0]
+							defaultValue := ""
+							if len(parts) > 1 {
+								defaultValue = parts[1]
+							}
+
+							// 获取环境变量值
+							envValue := os.Getenv(envKey)
+							if envValue == "" {
+								envValue = defaultValue
+							}
+
+							// 替换配置值
+							viper.Set(fmt.Sprintf("connections.%s.%s", connName, key), envValue)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 // LoadConfig 加载配置文件
 func LoadConfig() (*Config, error) {
 	// 首先加载数据库配置
@@ -307,6 +372,24 @@ func LoadConfig() (*Config, error) {
 	// 设置环境变量前缀
 	viper.SetEnvPrefix("APP")
 	viper.AutomaticEnv()
+
+	// 设置Redis环境变量前缀
+	viper.SetEnvPrefix("REDIS")
+	viper.AutomaticEnv()
+
+	// 手动设置Redis环境变量
+	if redisHost := os.Getenv("REDIS_HOST"); redisHost != "" {
+		viper.Set("redis.host", redisHost)
+	}
+	if redisPort := os.Getenv("REDIS_PORT"); redisPort != "" {
+		viper.Set("redis.port", redisPort)
+	}
+	if redisPassword := os.Getenv("REDIS_PASSWORD"); redisPassword != "" {
+		viper.Set("redis.password", redisPassword)
+	}
+	if redisDB := os.Getenv("REDIS_DB"); redisDB != "" {
+		viper.Set("redis.db", redisDB)
+	}
 
 	// 设置默认值
 	setDefaults()

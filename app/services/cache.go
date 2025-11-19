@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"fiber-starter/config"
@@ -34,6 +36,10 @@ type redisCache struct {
 
 // NewCacheService 创建缓存服务实例
 func NewCacheService(cfg *config.Config) CacheService {
+	// 设置日志格式，包含时间戳和文件位置
+	log.SetOutput(os.Stdout)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port),
 		Password: cfg.Redis.Password,
@@ -43,9 +49,9 @@ func NewCacheService(cfg *config.Config) CacheService {
 	// 测试连接
 	ctx := context.Background()
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		fmt.Printf("Redis连接失败: %v\n", err)
+		log.Printf("Redis连接失败: %v", err)
 	} else {
-		fmt.Printf("Redis连接成功: %s:%s\n", cfg.Redis.Host, cfg.Redis.Port)
+		log.Printf("Redis连接成功: %s:%s", cfg.Redis.Host, cfg.Redis.Port)
 	}
 
 	return &redisCache{
@@ -73,12 +79,20 @@ func (c *redisCache) Set(key string, value interface{}, expiration time.Duration
 	default:
 		jsonBytes, err := json.Marshal(value)
 		if err != nil {
+			log.Printf("序列化缓存值失败，键: %s, 错误: %v", key, err)
 			return fmt.Errorf("序列化缓存值失败: %w", err)
 		}
 		val = string(jsonBytes)
 	}
 
-	return c.client.Set(ctx, cacheKey, val, expiration).Err()
+	err := c.client.Set(ctx, cacheKey, val, expiration).Err()
+	if err != nil {
+		log.Printf("设置缓存失败，键: %s, 过期时间: %v, 错误: %v", cacheKey, expiration, err)
+		return err
+	}
+
+	log.Printf("设置缓存成功，键: %s, 过期时间: %v, 数据大小: %d字节", cacheKey, expiration, len(val))
+	return nil
 }
 
 // Get 获取缓存（字符串）
@@ -89,11 +103,14 @@ func (c *redisCache) Get(key string) (string, error) {
 	val, err := c.client.Get(ctx, cacheKey).Result()
 	if err != nil {
 		if err == redis.Nil {
+			log.Printf("缓存键不存在: %s", cacheKey)
 			return "", fmt.Errorf("缓存键不存在")
 		}
+		log.Printf("获取缓存失败，键: %s, 错误: %v", cacheKey, err)
 		return "", fmt.Errorf("获取缓存失败: %w", err)
 	}
 
+	log.Printf("获取缓存成功，键: %s, 数据大小: %d字节", cacheKey, len(val))
 	return val, nil
 }
 
@@ -114,9 +131,11 @@ func (c *redisCache) GetJSON(key string, dest interface{}) error {
 	}
 
 	if err := json.Unmarshal([]byte(val), dest); err != nil {
+		log.Printf("反序列化缓存值失败，键: %s, 错误: %v", key, err)
 		return fmt.Errorf("反序列化缓存值失败: %w", err)
 	}
 
+	log.Printf("反序列化缓存成功，键: %s", key)
 	return nil
 }
 
@@ -125,7 +144,14 @@ func (c *redisCache) Delete(key string) error {
 	ctx := context.Background()
 	cacheKey := c.buildKey(key)
 
-	return c.client.Del(ctx, cacheKey).Err()
+	err := c.client.Del(ctx, cacheKey).Err()
+	if err != nil {
+		log.Printf("删除缓存失败，键: %s, 错误: %v", cacheKey, err)
+		return err
+	}
+
+	log.Printf("删除缓存成功，键: %s", cacheKey)
+	return nil
 }
 
 // DeletePattern 根据模式删除缓存
@@ -135,11 +161,19 @@ func (c *redisCache) DeletePattern(pattern string) error {
 
 	keys, err := c.client.Keys(ctx, cachePattern).Result()
 	if err != nil {
+		log.Printf("获取匹配键失败，模式: %s, 错误: %v", cachePattern, err)
 		return fmt.Errorf("获取匹配键失败: %w", err)
 	}
 
 	if len(keys) > 0 {
-		return c.client.Del(ctx, keys...).Err()
+		err = c.client.Del(ctx, keys...).Err()
+		if err != nil {
+			log.Printf("批量删除缓存失败，模式: %s, 键数量: %d, 错误: %v", cachePattern, len(keys), err)
+			return err
+		}
+		log.Printf("批量删除缓存成功，模式: %s, 删除键数量: %d", cachePattern, len(keys))
+	} else {
+		log.Printf("批量删除缓存，模式: %s, 未找到匹配的键", cachePattern)
 	}
 
 	return nil
@@ -152,10 +186,13 @@ func (c *redisCache) Exists(key string) (bool, error) {
 
 	count, err := c.client.Exists(ctx, cacheKey).Result()
 	if err != nil {
+		log.Printf("检查缓存键存在性失败，键: %s, 错误: %v", cacheKey, err)
 		return false, fmt.Errorf("检查缓存键存在性失败: %w", err)
 	}
 
-	return count > 0, nil
+	exists := count > 0
+	log.Printf("检查缓存键存在性，键: %s, 存在: %t", cacheKey, exists)
+	return exists, nil
 }
 
 // TTL 获取缓存键的剩余生存时间
@@ -165,9 +202,11 @@ func (c *redisCache) TTL(key string) (time.Duration, error) {
 
 	duration, err := c.client.TTL(ctx, cacheKey).Result()
 	if err != nil {
+		log.Printf("获取缓存TTL失败，键: %s, 错误: %v", cacheKey, err)
 		return 0, fmt.Errorf("获取缓存TTL失败: %w", err)
 	}
 
+	log.Printf("获取缓存TTL，键: %s, 剩余时间: %v", cacheKey, duration)
 	return duration, nil
 }
 
@@ -176,7 +215,14 @@ func (c *redisCache) Expire(key string, expiration time.Duration) error {
 	ctx := context.Background()
 	cacheKey := c.buildKey(key)
 
-	return c.client.Expire(ctx, cacheKey, expiration).Err()
+	err := c.client.Expire(ctx, cacheKey, expiration).Err()
+	if err != nil {
+		log.Printf("设置缓存过期时间失败，键: %s, 过期时间: %v, 错误: %v", cacheKey, expiration, err)
+		return err
+	}
+
+	log.Printf("设置缓存过期时间成功，键: %s, 过期时间: %v", cacheKey, expiration)
+	return nil
 }
 
 // Increment 递增缓存值
@@ -184,7 +230,14 @@ func (c *redisCache) Increment(key string) (int64, error) {
 	ctx := context.Background()
 	cacheKey := c.buildKey(key)
 
-	return c.client.Incr(ctx, cacheKey).Result()
+	result, err := c.client.Incr(ctx, cacheKey).Result()
+	if err != nil {
+		log.Printf("递增缓存值失败，键: %s, 错误: %v", cacheKey, err)
+		return 0, err
+	}
+
+	log.Printf("递增缓存值成功，键: %s, 新值: %d", cacheKey, result)
+	return result, nil
 }
 
 // Decrement 递减缓存值
@@ -192,10 +245,24 @@ func (c *redisCache) Decrement(key string) (int64, error) {
 	ctx := context.Background()
 	cacheKey := c.buildKey(key)
 
-	return c.client.Decr(ctx, cacheKey).Result()
+	result, err := c.client.Decr(ctx, cacheKey).Result()
+	if err != nil {
+		log.Printf("递减缓存值失败，键: %s, 错误: %v", cacheKey, err)
+		return 0, err
+	}
+
+	log.Printf("递减缓存值成功，键: %s, 新值: %d", cacheKey, result)
+	return result, nil
 }
 
 // Close 关闭Redis连接
 func (c *redisCache) Close() error {
-	return c.client.Close()
+	err := c.client.Close()
+	if err != nil {
+		log.Printf("关闭Redis连接失败: %v", err)
+		return err
+	}
+
+	log.Printf("Redis连接已关闭")
+	return nil
 }

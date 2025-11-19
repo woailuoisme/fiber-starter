@@ -97,8 +97,8 @@ func (c *AuthController) Register(ctx *fiber.Ctx) error {
 	}
 
 	return helpers.HandleCreated(ctx, "注册成功", fiber.Map{
-		"user":         loginUser.ToSafeResponse(),
-		"access_token": accessToken,
+		"user":          loginUser.ToSafeResponse(),
+		"access_token":  accessToken,
 		"refresh_token": refreshToken,
 	})
 }

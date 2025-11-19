@@ -13,6 +13,27 @@ import (
 
 // SetupRoutes 配置API路由
 func SetupRoutes(app *fiber.App, authController *controllers.AuthController, userController *controllers.UserController, storageController *controllers.StorageController) {
+	// 根路径处理
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"message": "欢迎使用 Fiber Starter API",
+			"version": "1.0.0",
+			"docs":    "/swagger/index.html",
+			"health":  "/health",
+			"api":     "/api/v1",
+		})
+	})
+
+	// 处理 Vite 相关请求（如果有的话）
+	app.Get("/@vite/:path*", func(c *fiber.Ctx) error {
+		// 这是一个纯后端 API，不提供 Vite 服务
+		return c.Status(404).JSON(fiber.Map{
+			"error":    "Vite 开发服务器不可用，这是一个纯后端 API 服务",
+			"message":  "请使用 API 端点进行交互",
+			"api_docs": "/swagger/index.html",
+		})
+	})
+
 	// Swagger 文档路由
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 

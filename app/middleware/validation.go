@@ -15,7 +15,10 @@ var validate = validator.New()
 // 自定义验证器注册
 func init() {
 	// 注册自定义验证标签
-	validate.RegisterValidation("phone", validatePhone)
+	err := validate.RegisterValidation("phone", validatePhone)
+	if err != nil {
+		return
+	}
 }
 
 // validatePhone 自定义手机号验证
@@ -30,7 +33,7 @@ func ValidationMiddleware(model interface{}) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// 获取请求体类型
 		contentType := c.Get("Content-Type")
-		
+
 		if strings.Contains(contentType, "application/json") {
 			// JSON 请求体验证
 			if err := c.BodyParser(model); err != nil {
@@ -62,7 +65,7 @@ func ValidationMiddleware(model interface{}) fiber.Handler {
 
 		// 将验证后的模型存储到上下文中
 		c.Locals("validated_model", model)
-		
+
 		return c.Next()
 	}
 }
@@ -70,12 +73,12 @@ func ValidationMiddleware(model interface{}) fiber.Handler {
 // formatValidationErrors 格式化验证错误
 func formatValidationErrors(err error) map[string]string {
 	errors := make(map[string]string)
-	
+
 	if validationErrors, ok := err.(validator.ValidationErrors); ok {
 		for _, e := range validationErrors {
 			field := e.Field()
 			tag := e.Tag()
-			
+
 			switch tag {
 			case "required":
 				errors[field] = fmt.Sprintf("%s 是必填字段", field)
@@ -96,7 +99,7 @@ func formatValidationErrors(err error) map[string]string {
 			}
 		}
 	}
-	
+
 	return errors
 }
 
@@ -106,11 +109,11 @@ func GetValidatedModel(c *fiber.Ctx, model interface{}) bool {
 		// 使用反射复制值
 		srcValue := reflect.ValueOf(validatedModel)
 		dstValue := reflect.ValueOf(model)
-		
+
 		if srcValue.Kind() == reflect.Ptr && dstValue.Kind() == reflect.Ptr {
 			srcValue = srcValue.Elem()
 			dstValue = dstValue.Elem()
-			
+
 			if srcValue.Type().AssignableTo(dstValue.Type()) {
 				dstValue.Set(srcValue)
 				return true
@@ -124,21 +127,21 @@ func GetValidatedModel(c *fiber.Ctx, model interface{}) bool {
 func QueryValidationMiddleware(rules map[string]string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errors := make(map[string]string)
-		
+
 		for field, rule := range rules {
 			value := c.Query(field)
-			
+
 			// 检查必填字段
 			if strings.Contains(rule, "required") && value == "" {
 				errors[field] = fmt.Sprintf("%s 是必填字段", field)
 				continue
 			}
-			
+
 			// 如果字段为空且不是必填，跳过其他验证
 			if value == "" {
 				continue
 			}
-			
+
 			// 验证数字
 			if strings.Contains(rule, "number") {
 				var num int64
@@ -146,7 +149,7 @@ func QueryValidationMiddleware(rules map[string]string) fiber.Handler {
 					errors[field] = fmt.Sprintf("%s 必须是数字", field)
 				}
 			}
-			
+
 			// 验证最小长度
 			if strings.Contains(rule, "min:") {
 				minLength := 0
@@ -155,7 +158,7 @@ func QueryValidationMiddleware(rules map[string]string) fiber.Handler {
 					errors[field] = fmt.Sprintf("%s 长度不能少于 %d", field, minLength)
 				}
 			}
-			
+
 			// 验证最大长度
 			if strings.Contains(rule, "max:") {
 				maxLength := 0
@@ -165,7 +168,7 @@ func QueryValidationMiddleware(rules map[string]string) fiber.Handler {
 				}
 			}
 		}
-		
+
 		if len(errors) > 0 {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"success": false,
@@ -173,7 +176,7 @@ func QueryValidationMiddleware(rules map[string]string) fiber.Handler {
 				"errors":  errors,
 			})
 		}
-		
+
 		return c.Next()
 	}
 }
@@ -189,7 +192,7 @@ func FileValidationMiddleware(maxSize int64, allowedTypes []string) fiber.Handle
 				"error":   err.Error(),
 			})
 		}
-		
+
 		// 验证文件大小
 		if file.Size > maxSize {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -197,7 +200,7 @@ func FileValidationMiddleware(maxSize int64, allowedTypes []string) fiber.Handle
 				"message": fmt.Sprintf("文件大小不能超过 %d MB", maxSize/(1024*1024)),
 			})
 		}
-		
+
 		// 验证文件类型
 		contentType := file.Header.Get("Content-Type")
 		isAllowed := false
@@ -207,17 +210,17 @@ func FileValidationMiddleware(maxSize int64, allowedTypes []string) fiber.Handle
 				break
 			}
 		}
-		
+
 		if !isAllowed {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"success": false,
 				"message": fmt.Sprintf("不支持的文件类型: %s", contentType),
 			})
 		}
-		
+
 		// 将文件信息存储到上下文中
 		c.Locals("uploaded_file", file)
-		
+
 		return c.Next()
 	}
 }

@@ -45,7 +45,7 @@ func main() {
 
 	// 创建依赖注入容器
 	container := providers.NewContainer()
-	
+
 	// 注册所有依赖
 	if err := container.RegisterProviders(); err != nil {
 		log.Fatalf("注册依赖失败: %v", err)
@@ -70,14 +70,14 @@ func main() {
 	middleware.SetupAuthMiddleware(app)
 
 	// 从容器中获取控制器
-	err = container.Invoke(func(authController *controllers.AuthController, 
-		userController *controllers.UserController, 
+	err = container.Invoke(func(authController *controllers.AuthController,
+		userController *controllers.UserController,
 		storageController *controllers.StorageController) {
-		
+
 		// 配置路由
 		routers.SetupRoutes(app, authController, userController, storageController)
 	})
-	
+
 	if err != nil {
 		log.Fatalf("设置路由失败: %v", err)
 	}

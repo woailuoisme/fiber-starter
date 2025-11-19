@@ -187,10 +187,10 @@ type (
 
 	// ProcessDataExportPayload 处理数据导出负载
 	ProcessDataExportPayload struct {
-		UserID   uint   `json:"user_id"`
+		UserID     uint   `json:"user_id"`
 		ExportType string `json:"export_type"`
-		Format   string `json:"format"`
-		Email    string `json:"email"`
+		Format     string `json:"format"`
+		Email      string `json:"email"`
 	}
 
 	// GenerateReportPayload 生成报告负载

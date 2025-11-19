@@ -3,9 +3,11 @@ package database
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
+	"fiber-starter/app/models"
 	"fiber-starter/config"
 
 	"gorm.io/driver/mysql"
@@ -24,6 +26,10 @@ type Connection struct {
 
 // NewConnection 创建新的数据库连接
 func NewConnection(cfg *config.Config) (*Connection, error) {
+	// 设置日志格式，包含时间戳和文件位置
+	log.SetOutput(os.Stdout)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	// 获取默认连接配置
 	defaultConn := cfg.Database.Default
 	connConfig, exists := cfg.Database.Connections[defaultConn]
@@ -54,12 +60,15 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 	}
 
 	if err != nil {
+		log.Printf("数据库连接失败，主机: %s:%s, 数据库: %s, 错误: %v",
+			connConfig.Host, connConfig.Port, connConfig.Database, err)
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	// 获取底层的sql.DB对象进行连接池配置
 	sqlDB, err := db.DB()
 	if err != nil {
+		log.Printf("获取底层sql.DB对象失败: %v", err)
 		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
 	}
 
@@ -71,8 +80,13 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 		sqlDB.SetConnMaxIdleTime(time.Duration(cfg.Database.Pool.ConnMaxIdleTime) * time.Second)
 	}
 
+	log.Printf("数据库连接池配置完成 - 最大空闲连接: %d, 最大打开连接: %d, 连接最大生存时间: %d秒",
+		cfg.Database.Pool.MaxIdleConns, cfg.Database.Pool.MaxOpenConns, cfg.Database.Pool.ConnMaxLifetime)
+
 	// 测试连接
 	if err := sqlDB.Ping(); err != nil {
+		log.Printf("数据库连接测试失败，主机: %s:%s, 数据库: %s, 错误: %v",
+			connConfig.Host, connConfig.Port, connConfig.Database, err)
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
@@ -158,17 +172,56 @@ func getLogLevel(debug bool) gormLogger.LogLevel {
 func (c *Connection) Close() error {
 	sqlDB, err := c.DB.DB()
 	if err != nil {
+		log.Printf("获取底层sql.DB对象失败，无法关闭连接: %v", err)
 		return err
 	}
-	return sqlDB.Close()
+
+	if err := sqlDB.Close(); err != nil {
+		log.Printf("关闭数据库连接失败: %v", err)
+		return err
+	}
+
+	log.Printf("数据库连接已关闭")
+	return nil
 }
 
 // AutoMigrate 自动迁移数据库表
 func (c *Connection) AutoMigrate(models ...interface{}) error {
-	return c.DB.AutoMigrate(models...)
+	log.Printf("开始数据库表自动迁移，模型数量: %d", len(models))
+
+	if err := c.DB.AutoMigrate(models...); err != nil {
+		log.Printf("数据库表自动迁移失败: %v", err)
+		return err
+	}
+
+	log.Printf("数据库表自动迁移完成")
+	return nil
 }
 
 // GetDB 获取数据库实例
 func GetDB() *gorm.DB {
 	return DB
+}
+
+// AutoMigrate 自动迁移所有数据库表
+func AutoMigrate() error {
+	if DB == nil {
+		log.Printf("数据库连接未初始化，无法执行自动迁移")
+		return fmt.Errorf("数据库连接未初始化")
+	}
+
+	log.Printf("开始执行全局数据库表自动迁移")
+
+	if err := DB.AutoMigrate(
+		&models.User{},
+		// 在这里添加其他模型
+		// &models.Post{},
+		// &models.Comment{},
+	); err != nil {
+		log.Printf("全局数据库表自动迁移失败: %v", err)
+		return err
+	}
+
+	log.Printf("全局数据库表自动迁移完成")
+	return nil
 }

@@ -1,14 +1,14 @@
 package controllers
 
 import (
-	"fiber-starter/app/services"
-	"fiber-starter/app/models"
-	"fiber-starter/app/middleware"
 	"fiber-starter/app/helpers"
+	"fiber-starter/app/middleware"
+	"fiber-starter/app/models"
+	"fiber-starter/app/services"
 	"strconv"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v2"
 )
 
 // UserController 用户控制器

@@ -31,6 +31,13 @@ func (c *Container) RegisterProviders() error {
 		return fmt.Errorf("failed to provide config: %w", err)
 	}
 
+	// 注册Redis配置
+	if err := c.Provide(func(cfg *config.Config) *config.RedisConfig {
+		return &cfg.Redis
+	}); err != nil {
+		return fmt.Errorf("failed to provide redis config: %w", err)
+	}
+
 	// 注册验证器
 	if err := c.Provide(validator.New); err != nil {
 		return fmt.Errorf("failed to provide validator: %w", err)

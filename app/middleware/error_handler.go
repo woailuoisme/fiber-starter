@@ -71,7 +71,7 @@ func handleValidationError(validationErrors validator.ValidationErrors) interfac
 // handleFiberError 处理Fiber框架错误
 func handleFiberError(fiberErr *fiber.Error) interface{} {
 	message := fiberErr.Message
-	
+
 	// 根据状态码提供更友好的错误信息
 	switch fiberErr.Code {
 	case fiber.StatusBadRequest:
@@ -105,7 +105,7 @@ func handleFiberError(fiberErr *fiber.Error) interface{} {
 func handleUnknownError(err error) interface{} {
 	// 在生产环境中，不应该暴露详细的错误信息
 	message := "内部服务器错误"
-	
+
 	// 在开发环境中，可以返回更详细的错误信息
 	// 这里可以根据环境变量来判断
 	if isDevelopment() {
@@ -177,7 +177,7 @@ func RecoveryMiddleware() fiber.Handler {
 			if r := recover(); r != nil {
 				// 记录panic信息
 				log.Printf("PANIC: %s\n%s", r, string(debug.Stack()))
-				
+
 				// 返回内部服务器错误
 				err := errors.InternalServerError("服务器内部错误")
 				c.Status(fiber.StatusInternalServerError).JSON(helpers.ErrorResponse(err.Message, fiber.Map{
@@ -195,18 +195,18 @@ func RequestIDMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// 获取现有的请求ID
 		requestID := c.Get("X-Request-ID")
-		
+
 		// 如果没有请求ID，生成一个新的
 		if requestID == "" {
 			requestID = generateRequestID()
 		}
-		
+
 		// 设置请求ID到响应头
 		c.Set("X-Request-ID", requestID)
-		
+
 		// 将请求ID存储到本地存储中
 		c.Locals("requestID", requestID)
-		
+
 		return c.Next()
 	}
 }

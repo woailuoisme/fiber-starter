@@ -46,6 +46,7 @@ test-coverage: ## 运行测试并生成覆盖率报告
 fmt: ## 格式化代码
 	@echo "格式化代码..."
 	$(GOCMD) fmt ./...
+	@if [ -f "$$GOPATH/bin/goimports" ]; then $$GOPATH/bin/goimports -w .; elif [ -f "$$HOME/go/bin/goimports" ]; then $$HOME/go/bin/goimports -w .; fi
 
 vet: ## 代码静态检查
 	@echo "运行代码静态检查..."
@@ -53,7 +54,14 @@ vet: ## 代码静态检查
 
 lint: ## 运行代码检查工具
 	@echo "运行代码检查工具..."
-	@if command -v golangci-lint >/dev/null 2>&1; then golangci-lint run; else echo "golangci-lint 未安装"; fi
+	@if command -v golangci-lint >/dev/null 2>&1; then golangci-lint run --disable-all -E gofmt,govet,errcheck,staticcheck,unused --fast; else echo "golangci-lint 未安装，使用 make install-tools 安装"; fi
+
+lint-fix: ## 运行代码检查工具并自动修复
+	@echo "运行代码检查工具并自动修复..."
+	@if command -v golangci-lint >/dev/null 2>&1; then golangci-lint run --disable-all -E gofmt,govet,errcheck,staticcheck,unused --fix --fast; else echo "golangci-lint 未安装，使用 make install-tools 安装"; fi
+
+format: fmt lint-fix ## 格式化代码并修复问题 (类似 Laravel Pint)
+	@echo "✅ 代码格式化完成"
 
 check: fmt vet test ## 运行所有代码检查
 
@@ -97,8 +105,8 @@ generate: ## 生成代码
 	$(GOCMD) generate ./...
 
 jwt: ## 生成新的 JWT 密钥
-	@echo "🔐 生成新的 JWT 密钥..."
-	$(GOCMD) run cli.go generate jwt
+	@echo "生成新的 JWT 密钥..."
+	$(GOCMD) run cli.go jwt:generate
 
 cli: ## 打开命令行工具
 	@echo "💻 命令行工具"

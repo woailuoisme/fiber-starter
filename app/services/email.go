@@ -32,7 +32,7 @@ func NewEmailService(cfg *config.Config) EmailService {
 // SendEmail 发送邮件
 func (s *emailService) SendEmail(to, subject, body string, isHTML bool) error {
 	e := mail.NewMessage()
-	
+
 	// 设置发件人
 	e.SetHeader("From", fmt.Sprintf("%s <%s>", s.config.Mail.FromName, s.config.Mail.FromAddress))
 	// 设置收件人
@@ -49,12 +49,12 @@ func (s *emailService) SendEmail(to, subject, body string, isHTML bool) error {
 
 	// 创建SMTP客户端
 	d := mail.NewDialer(s.config.Mail.Host, s.config.Mail.Port, s.config.Mail.Username, s.config.Mail.Password)
-	
+
 	// 配置TLS
 	d.TLSConfig = &tls.Config{
 		InsecureSkipVerify: s.config.Mail.TLSInsecure,
 	}
-	
+
 	// 根据加密类型设置
 	if s.config.Mail.Encryption == "ssl" {
 		d.StartTLSPolicy = mail.MandatoryStartTLS
@@ -63,7 +63,7 @@ func (s *emailService) SendEmail(to, subject, body string, isHTML bool) error {
 	} else {
 		d.StartTLSPolicy = mail.NoStartTLS
 	}
-	
+
 	// 发送邮件
 	err := d.DialAndSend(e)
 

@@ -10,12 +10,12 @@ import (
 // FormatValidationErrors 格式化验证错误
 func FormatValidationErrors(err error) map[string]string {
 	errors := make(map[string]string)
-	
+
 	if validationErrors, ok := err.(validator.ValidationErrors); ok {
 		for _, e := range validationErrors {
 			field := e.Field()
 			tag := e.Tag()
-			
+
 			switch tag {
 			case "required":
 				errors[field] = fmt.Sprintf("%s 是必填字段", field)
@@ -36,7 +36,7 @@ func FormatValidationErrors(err error) map[string]string {
 			}
 		}
 	}
-	
+
 	return errors
 }
 
@@ -112,6 +112,6 @@ func GenerateSlug(text string) string {
 		}
 		return -1
 	}, slug)
-	
+
 	return slug
 }

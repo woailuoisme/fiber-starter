@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"fiber-starter/app/middleware"
 	"fiber-starter/app/models"
 	"fiber-starter/config"
-	"fiber-starter/app/middleware"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -66,7 +66,7 @@ func (s *authService) Register(user *models.User) error {
 // Login 用户登录
 func (s *authService) Login(email, password string) (*models.User, string, string, error) {
 	var user models.User
-	
+
 	// 查找用户
 	if err := s.db.Where("email = ?", email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -177,7 +177,7 @@ func (s *authService) Logout(token string) error {
 // ChangePassword 修改密码
 func (s *authService) ChangePassword(userID uint, oldPassword, newPassword string) error {
 	var user models.User
-	
+
 	// 获取用户
 	if err := s.db.First(&user, userID).Error; err != nil {
 		return fmt.Errorf("用户不存在: %w", err)
@@ -205,7 +205,7 @@ func (s *authService) ChangePassword(userID uint, oldPassword, newPassword strin
 // ForgotPassword 忘记密码
 func (s *authService) ForgotPassword(email string) error {
 	var user models.User
-	
+
 	// 查找用户
 	if err := s.db.Where("email = ?", email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -216,7 +216,7 @@ func (s *authService) ForgotPassword(email string) error {
 
 	// 生成重置令牌
 	resetToken := fmt.Sprintf("%d:%d", user.ID, time.Now().Unix())
-	
+
 	// 存储重置令牌到缓存（有效期1小时）
 	cacheKey := fmt.Sprintf("reset_token:%s", resetToken)
 	if err := s.cache.Set(cacheKey, user.Email, time.Hour); err != nil {
