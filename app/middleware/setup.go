@@ -23,9 +23,8 @@ import (
 func SetupMiddleware(app *fiber.App) {
 	// Favicon中间件 - 提供网站图标
 	app.Use(favicon.New(favicon.Config{
-		File:        "./public/favicon.ico",
-		URL:         "/favicon.ico",
-		CacheMaxAge: 3600, // 缓存1小时
+		File: "./public/favicon.ico",
+		URL:  "/favicon.ico",
 	}))
 
 	// 备用SVG favicon - 如果.ico文件不存在
