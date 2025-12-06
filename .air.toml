@@ -1,0 +1,68 @@
+root = "."
+testdata_dir = "testdata"
+tmp_dir = "tmp"
+
+[build]
+  # 要监视的命令
+  cmd = "go build -o ./tmp/main ./main.go"
+  # 构建的二进制文件路径
+  bin = "tmp/main"
+  # 要监视的文件扩展名
+  include_ext = ["go", "tpl", "tmpl", "html", "yaml", "yml", "env"]
+  # 要忽略的文件扩展名
+  exclude_ext = ["_test.go"]
+  # 要包含的目录
+  include_dir = []
+  # 要忽略的目录
+  exclude_dir = ["assets", "tmp", "vendor", "testdata", "docs", "build", "coverage", "deploy", "storage/logs"]
+  # 要忽略的文件
+  exclude_file = []
+  # 要监视的文件
+  include_file = []
+  # 延迟时间（毫秒）
+  delay = 1000
+  # 停止旧进程后启动新进程前的延迟
+  stop_on_root = false
+  # 发送中断信号前先发送 SIGTERM
+  send_interrupt = false
+  # 发送中断信号时的延迟
+  kill_delay = "0s"
+  # 设置二进制文件的可执行权限
+  bin_args = []
+  # 设置环境变量
+  env = {}
+  # 运行二进制文件时传递的参数
+  args_bin = []
+  # 在运行二进制文件前执行的命令
+  run_before = []
+  # 在运行二进制文件后执行的命令
+  run_after = []
+  # 自定义日志格式
+  log = "build-errors.log"
+  # 重新构建的轮询间隔
+  poll = false
+  poll_interval = 0
+  # 重新构建的文件系统监视器
+  rerun = false
+  rerun_delay = 500
+
+[color]
+  # 自定义每个部分显示的颜色
+  main = "magenta"
+  watcher = "cyan"
+  build = "yellow"
+  runner = "green"
+
+[log]
+  # 显示日志时间
+  time = true
+  # 只显示主要日志（不显示 watcher 日志）
+  main_only = false
+
+[misc]
+  # 删除每次构建的中间文件
+  clean_on_exit = false
+
+[screen]
+  clear_on_rebuild = false
+  keep_scroll = true

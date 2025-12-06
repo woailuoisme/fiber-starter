@@ -1,67 +1,55 @@
-# 数据库配置文件
+# ============================================
+# 饭盒售货机数据库配置文件
+# ============================================
 # 支持多种数据库连接配置，仿照 Laravel 的数据库配置结构
 
 default: pgsql
 
 connections:
-  # MySQL 配置
+  # PostgreSQL 配置（主数据库）
+  pgsql:
+    driver: postgres
+    host: ${DB_HOST:localhost}
+    port: ${DB_PORT:5432}
+    database: ${DB_DATABASE:lunchbox_vending}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
+    charset: utf8
+    prefix: ""
+    schema: ${DB_SCHEMA:public}
+    sslmode: ${DB_SSLMODE:disable}
+    timezone: ${DB_TIMEZONE:Asia/Shanghai}
+    options:
+      "sslmode": "disable"
+      "TimeZone": "Asia/Shanghai"
+
+  # MySQL 配置（备用）
   mysql:
     driver: mysql
     host: ${DB_HOST:localhost}
     port: ${DB_PORT:3306}
-    database: ${DB_DATABASE:fiber_starter}
+    database: ${DB_DATABASE:lunchbox_vending}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:}
     charset: utf8mb4
     collation: utf8mb4_unicode_ci
     prefix: ""
     strict: true
-    timezone: ${DB_TIMEZONE:Local}
+    timezone: ${DB_TIMEZONE:Asia/Shanghai}
     options:
       "charset": utf8mb4
       "parseTime": "true"
-      "loc": "Local"
+      "loc": "Asia/Shanghai"
 
-  # PostgreSQL 配置
-  pgsql:
-    driver: postgres
-    host: ${DB_HOST:localhost}
-    port: ${DB_PORT:5432}
-    database: ${DB_DATABASE:fiber_starter}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
-    charset: utf8
-    prefix: ""
-    schema: public
-    sslmode: disable
-    timezone: ${DB_TIMEZONE:Asia/Shanghai}
-    options:
-      "sslmode": "disable"
-      "TimeZone": "Asia/Shanghai"
-
-  # SQLite 配置
+  # SQLite 配置（开发/测试环境）
   sqlite:
     driver: sqlite
-    database: ${DB_DATABASE:./database/database.sqlite}
+    database: ${DB_DATABASE:./database/lunchbox_vending.sqlite}
     prefix: ""
     options:
       "journal_mode": "WAL"
       "synchronous": "NORMAL"
       "cache_size": 1000
-
-  # SQL Server 配置
-  sqlsrv:
-    driver: sqlserver
-    host: ${DB_HOST:localhost}
-    port: ${DB_PORT:1433}
-    database: ${DB_DATABASE:fiber_starter}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
-    charset: utf8
-    prefix: ""
-    options:
-      "encrypt": "disable"
-      "trustServerCertificate": "true"
 
 # 数据库连接池配置
 pool:

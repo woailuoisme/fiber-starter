@@ -1,28 +1,25 @@
+# ============================================
+# 饭盒售货机后端 API 系统配置
+# ============================================
+# 注意：此文件中的值可以通过环境变量覆盖
+# 环境变量会自动覆盖这里的默认值
+
 # 应用程序配置
 app:
-  name: "Fiber Starter"
+  name: "Lunchbox Vending API"
   env: "local"
   debug: true
   port: "3000"
   host: "0.0.0.0"
   timezone: "Asia/Shanghai"
-
-# 数据库配置
-database:
-  connection: "postgres"
-  host: "localhost"
-  port: "5432"
-  database: "fiber_starter"
-  username: "postgres"
-  password: ""
-  timezone: "UTC"
+  url: "http://localhost:3000"
 
 # JWT认证配置
 jwt:
   secret: "your-secret-key-change-in-production-environment"
   expiration_time: 3600    # 访问令牌过期时间（秒）1小时
   refresh_time: 604800     # 刷新令牌过期时间（秒）7天
-  issuer: "fiber-starter"
+  issuer: "lunchbox-vending-api"
 
 # Redis配置
 redis:
@@ -44,6 +41,81 @@ logger:
 # 缓存配置
 cache:
   driver: "redis"         # redis, memory
-  prefix: "fiber:"        # 缓存键前缀
+  prefix: "lunchbox:"     # 缓存键前缀
   default: 3600           # 默认缓存时间（秒）
   ttl: 3600              # 缓存过期时间（秒）
+
+# 邮件配置
+mail:
+  from_name: "Lunchbox Vending"
+  from_address: "noreply@lunchbox.com"
+  host: "smtp.gmail.com"
+  port: 587
+  username: ""
+  password: ""
+  encryption: "tls"
+  tls_insecure: false
+
+# 队列配置
+queue:
+  concurrency: 10
+
+# 存储配置
+storage:
+  driver: "minio"         # local, minio, s3
+  database: "./storage/storage.db"
+  reset: false
+  gc_interval: 10
+  minio:
+    endpoint: "localhost:9000"
+    access_key_id: "minioadmin"
+    secret_access_key: "minioadmin"
+    use_ssl: false
+    bucket: "lunchbox-media"
+    region: "us-east-1"
+  s3:
+    access_key_id: ""
+    secret_access_key: ""
+    region: "us-east-1"
+    bucket: "lunchbox-media"
+    endpoint: ""
+
+# WebSocket配置
+websocket:
+  port: "3001"
+  path: "/ws"
+  heartbeat_interval: 30
+
+# 支付配置
+payment:
+  wechat:
+    app_id: ""
+    mch_id: ""
+    api_key: ""
+    cert_path: ""
+    key_path: ""
+    notify_url: ""
+  alipay:
+    app_id: ""
+    private_key: ""
+    public_key: ""
+    notify_url: ""
+
+# 业务配置
+business:
+  order:
+    payment_timeout: 30    # 订单支付超时时间（分钟）
+    pickup_timeout: 1440   # 订单取货超时时间（分钟，24小时）
+  device:
+    channel_count: 53      # 每台设备的货道数量
+    channel_max_capacity: 4 # 每个货道的最大容量
+
+# 安全配置
+security:
+  cors:
+    allowed_origins: "*"
+    allowed_methods: "GET,POST,PUT,DELETE,OPTIONS"
+    allowed_headers: "Origin,Content-Type,Accept,Authorization"
+  rate_limit:
+    max: 60               # 每个时间窗口的最大请求数
+    window: 60            # 时间窗口（秒）

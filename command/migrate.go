@@ -5,10 +5,13 @@ import (
 	"os"
 	"strings"
 
-	"fiber-starter/database/migrations"
+	"fiber-starter/config"
 	"fiber-starter/database/seeders"
 
 	"github.com/fatih/color"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/spf13/cobra"
 )
 
@@ -147,30 +150,87 @@ var dbSetupCmd = &cobra.Command{
 	},
 }
 
+// getMigrate 获取 migrate 实例
+func getMigrate() (*migrate.Migrate, error) {
+	// 初始化配置
+	if err := config.Init(); err != nil {
+		return nil, fmt.Errorf("初始化配置失败: %w", err)
+	}
+
+	// 获取数据库配置
+	dbConfig := &config.GlobalConfig.Database
+	defaultConn := dbConfig.Default
+	connConfig, exists := dbConfig.Connections[defaultConn]
+	if !exists {
+		return nil, fmt.Errorf("数据库连接配置 '%s' 不存在", defaultConn)
+	}
+
+	// 构建数据库连接字符串
+	databaseURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		connConfig.Username,
+		connConfig.Password,
+		connConfig.Host,
+		connConfig.Port,
+		connConfig.Database,
+		connConfig.SSLMode,
+	)
+
+	// 创建 migrate 实例
+	m, err := migrate.New(
+		"file://database/migrations/sql",
+		databaseURL,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("创建迁移实例失败: %w", err)
+	}
+
+	return m, nil
+}
+
 // runMigrations 运行数据库迁移
 func runMigrations() {
 	color.Cyan("正在运行数据库迁移...")
 
-	err := migrations.RunAllMigrations()
+	m, err := getMigrate()
 	if err != nil {
+		color.Red("获取迁移实例失败: %v", err)
+		os.Exit(1)
+	}
+	defer m.Close()
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		color.Red("迁移失败: %v", err)
 		os.Exit(1)
 	}
 
-	color.Green("数据库迁移完成")
+	if err == migrate.ErrNoChange {
+		color.Yellow("没有待执行的迁移")
+	} else {
+		color.Green("数据库迁移完成")
+	}
 }
 
 // rollbackMigrations 回滚数据库迁移
 func rollbackMigrations() {
 	color.Cyan("正在回滚数据库迁移...")
 
-	err := migrations.RollbackAllMigrations()
+	m, err := getMigrate()
 	if err != nil {
+		color.Red("获取迁移实例失败: %v", err)
+		os.Exit(1)
+	}
+	defer m.Close()
+
+	if err := m.Steps(-1); err != nil && err != migrate.ErrNoChange {
 		color.Red("回滚失败: %v", err)
 		os.Exit(1)
 	}
 
-	color.Green("数据库迁移回滚完成")
+	if err == migrate.ErrNoChange {
+		color.Yellow("没有可回滚的迁移")
+	} else {
+		color.Green("数据库迁移回滚完成")
+	}
 }
 
 // resetDatabase 重置数据库
@@ -187,9 +247,22 @@ func resetDatabase() {
 
 	color.Cyan("正在重置数据库...")
 
-	err := migrations.ResetDatabase()
+	m, err := getMigrate()
 	if err != nil {
-		color.Red("重置失败: %v", err)
+		color.Red("获取迁移实例失败: %v", err)
+		os.Exit(1)
+	}
+	defer m.Close()
+
+	// 回滚所有迁移
+	if err := m.Down(); err != nil && err != migrate.ErrNoChange {
+		color.Red("回滚失败: %v", err)
+		os.Exit(1)
+	}
+
+	// 重新运行所有迁移
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		color.Red("迁移失败: %v", err)
 		os.Exit(1)
 	}
 
@@ -210,9 +283,22 @@ func freshDatabase() {
 
 	color.Cyan("正在清空数据库...")
 
-	err := migrations.ResetDatabase()
+	m, err := getMigrate()
 	if err != nil {
-		color.Red("清空数据库失败: %v", err)
+		color.Red("获取迁移实例失败: %v", err)
+		os.Exit(1)
+	}
+	defer m.Close()
+
+	// 回滚所有迁移
+	if err := m.Down(); err != nil && err != migrate.ErrNoChange {
+		color.Red("回滚失败: %v", err)
+		os.Exit(1)
+	}
+
+	// 重新运行所有迁移
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		color.Red("迁移失败: %v", err)
 		os.Exit(1)
 	}
 
@@ -230,10 +316,27 @@ func freshDatabase() {
 func showMigrationStatus() {
 	color.Cyan("正在检查迁移状态...")
 
-	// 这里可以添加更详细的迁移状态检查逻辑
-	// 目前显示简单的状态信息
-	color.Green("迁移状态检查完成")
-	color.Yellow("提示：详细的迁移状态功能待实现")
+	m, err := getMigrate()
+	if err != nil {
+		color.Red("获取迁移实例失败: %v", err)
+		os.Exit(1)
+	}
+	defer m.Close()
+
+	version, dirty, err := m.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		color.Red("获取迁移版本失败: %v", err)
+		os.Exit(1)
+	}
+
+	if err == migrate.ErrNilVersion {
+		color.Yellow("数据库尚未运行任何迁移")
+	} else {
+		color.Green("当前迁移版本: %d", version)
+		if dirty {
+			color.Red("警告：数据库处于脏状态（dirty），可能需要手动修复")
+		}
+	}
 }
 
 // runSeeds 运行种子数据
@@ -294,8 +397,14 @@ func setupDatabase() {
 
 	// 运行迁移
 	color.Yellow("步骤 1/2: 运行数据库迁移")
-	err := migrations.RunAllMigrations()
+	m, err := getMigrate()
 	if err != nil {
+		color.Red("获取迁移实例失败: %v", err)
+		os.Exit(1)
+	}
+	defer m.Close()
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		color.Red("迁移失败: %v", err)
 		os.Exit(1)
 	}

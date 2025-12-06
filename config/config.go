@@ -53,15 +53,19 @@ type S3StorageConfig struct {
 
 // Config 应用程序配置结构体
 type Config struct {
-	App      AppConfig      `mapstructure:"app"`
-	Database DatabaseConfig `mapstructure:"database"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	Logger   LoggerConfig   `mapstructure:"logger"`
-	Cache    CacheConfig    `mapstructure:"cache"`
-	Mail     MailConfig     `mapstructure:"mail"`
-	Queue    QueueConfig    `mapstructure:"queue"`
-	Storage  StorageConfig  `mapstructure:"storage"`
+	App       AppConfig       `mapstructure:"app"`
+	Database  DatabaseConfig  `mapstructure:"database"`
+	JWT       JWTConfig       `mapstructure:"jwt"`
+	Redis     RedisConfig     `mapstructure:"redis"`
+	Logger    LoggerConfig    `mapstructure:"logger"`
+	Cache     CacheConfig     `mapstructure:"cache"`
+	Mail      MailConfig      `mapstructure:"mail"`
+	Queue     QueueConfig     `mapstructure:"queue"`
+	Storage   StorageConfig   `mapstructure:"storage"`
+	WebSocket WebSocketConfig `mapstructure:"websocket"`
+	Payment   PaymentConfig   `mapstructure:"payment"`
+	Business  BusinessConfig  `mapstructure:"business"`
+	Security  SecurityConfig  `mapstructure:"security"`
 }
 
 // AppConfig 应用程序基础配置
@@ -186,6 +190,74 @@ type CacheConfig struct {
 // QueueConfig 队列配置
 type QueueConfig struct {
 	Concurrency int `mapstructure:"concurrency"`
+}
+
+// WebSocketConfig WebSocket配置
+type WebSocketConfig struct {
+	Port              string `mapstructure:"port"`
+	Path              string `mapstructure:"path"`
+	HeartbeatInterval int    `mapstructure:"heartbeat_interval"`
+}
+
+// PaymentConfig 支付配置
+type PaymentConfig struct {
+	Wechat WechatPaymentConfig `mapstructure:"wechat"`
+	Alipay AlipayPaymentConfig `mapstructure:"alipay"`
+}
+
+// WechatPaymentConfig 微信支付配置
+type WechatPaymentConfig struct {
+	AppID     string `mapstructure:"app_id"`
+	MchID     string `mapstructure:"mch_id"`
+	APIKey    string `mapstructure:"api_key"`
+	CertPath  string `mapstructure:"cert_path"`
+	KeyPath   string `mapstructure:"key_path"`
+	NotifyURL string `mapstructure:"notify_url"`
+}
+
+// AlipayPaymentConfig 支付宝配置
+type AlipayPaymentConfig struct {
+	AppID      string `mapstructure:"app_id"`
+	PrivateKey string `mapstructure:"private_key"`
+	PublicKey  string `mapstructure:"public_key"`
+	NotifyURL  string `mapstructure:"notify_url"`
+}
+
+// BusinessConfig 业务配置
+type BusinessConfig struct {
+	Order  OrderConfig  `mapstructure:"order"`
+	Device DeviceConfig `mapstructure:"device"`
+}
+
+// OrderConfig 订单配置
+type OrderConfig struct {
+	PaymentTimeout int `mapstructure:"payment_timeout"`
+	PickupTimeout  int `mapstructure:"pickup_timeout"`
+}
+
+// DeviceConfig 设备配置
+type DeviceConfig struct {
+	ChannelCount       int `mapstructure:"channel_count"`
+	ChannelMaxCapacity int `mapstructure:"channel_max_capacity"`
+}
+
+// SecurityConfig 安全配置
+type SecurityConfig struct {
+	CORS      CORSConfig      `mapstructure:"cors"`
+	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
+}
+
+// CORSConfig CORS配置
+type CORSConfig struct {
+	AllowedOrigins string `mapstructure:"allowed_origins"`
+	AllowedMethods string `mapstructure:"allowed_methods"`
+	AllowedHeaders string `mapstructure:"allowed_headers"`
+}
+
+// RateLimitConfig 频率限制配置
+type RateLimitConfig struct {
+	Max    int `mapstructure:"max"`
+	Window int `mapstructure:"window"`
 }
 
 // 全局配置实例
@@ -369,28 +441,6 @@ func LoadConfig() (*Config, error) {
 	viper.AddConfigPath("./config")
 	viper.AddConfigPath(".")
 
-	// 设置环境变量前缀
-	viper.SetEnvPrefix("APP")
-	viper.AutomaticEnv()
-
-	// 设置Redis环境变量前缀
-	viper.SetEnvPrefix("REDIS")
-	viper.AutomaticEnv()
-
-	// 手动设置Redis环境变量
-	if redisHost := os.Getenv("REDIS_HOST"); redisHost != "" {
-		viper.Set("redis.host", redisHost)
-	}
-	if redisPort := os.Getenv("REDIS_PORT"); redisPort != "" {
-		viper.Set("redis.port", redisPort)
-	}
-	if redisPassword := os.Getenv("REDIS_PASSWORD"); redisPassword != "" {
-		viper.Set("redis.password", redisPassword)
-	}
-	if redisDB := os.Getenv("REDIS_DB"); redisDB != "" {
-		viper.Set("redis.db", redisDB)
-	}
-
 	// 设置默认值
 	setDefaults()
 
@@ -403,6 +453,9 @@ func LoadConfig() (*Config, error) {
 		}
 	}
 
+	// 手动覆盖环境变量
+	overrideWithEnv()
+
 	// 解析配置到结构体
 	if err := viper.Unmarshal(config); err != nil {
 		return nil, err
@@ -414,16 +467,260 @@ func LoadConfig() (*Config, error) {
 	return config, nil
 }
 
+// overrideWithEnv 使用环境变量覆盖配置
+func overrideWithEnv() {
+	// App配置
+	if v := os.Getenv("APP_NAME"); v != "" {
+		viper.Set("app.name", v)
+	}
+	if v := os.Getenv("APP_ENV"); v != "" {
+		viper.Set("app.env", v)
+	}
+	if v := os.Getenv("APP_DEBUG"); v != "" {
+		viper.Set("app.debug", v)
+	}
+	if v := os.Getenv("APP_PORT"); v != "" {
+		viper.Set("app.port", v)
+	}
+	if v := os.Getenv("APP_HOST"); v != "" {
+		viper.Set("app.host", v)
+	}
+	if v := os.Getenv("APP_TIMEZONE"); v != "" {
+		viper.Set("app.timezone", v)
+	}
+	if v := os.Getenv("APP_URL"); v != "" {
+		viper.Set("app.url", v)
+	}
+
+	// JWT配置
+	if v := os.Getenv("JWT_SECRET"); v != "" {
+		viper.Set("jwt.secret", v)
+	}
+	if v := os.Getenv("JWT_EXPIRATION_TIME"); v != "" {
+		viper.Set("jwt.expiration_time", v)
+	}
+	if v := os.Getenv("JWT_REFRESH_TIME"); v != "" {
+		viper.Set("jwt.refresh_time", v)
+	}
+	if v := os.Getenv("JWT_ISSUER"); v != "" {
+		viper.Set("jwt.issuer", v)
+	}
+
+	// Redis配置
+	if v := os.Getenv("REDIS_HOST"); v != "" {
+		viper.Set("redis.host", v)
+	}
+	if v := os.Getenv("REDIS_PORT"); v != "" {
+		viper.Set("redis.port", v)
+	}
+	if v := os.Getenv("REDIS_PASSWORD"); v != "" {
+		viper.Set("redis.password", v)
+	}
+	if v := os.Getenv("REDIS_DB"); v != "" {
+		viper.Set("redis.db", v)
+	}
+
+	// Logger配置
+	if v := os.Getenv("LOG_LEVEL"); v != "" {
+		viper.Set("logger.level", v)
+	}
+	if v := os.Getenv("LOG_FORMAT"); v != "" {
+		viper.Set("logger.format", v)
+	}
+	if v := os.Getenv("LOG_OUTPUT"); v != "" {
+		viper.Set("logger.output", v)
+	}
+	if v := os.Getenv("LOG_MAX_SIZE"); v != "" {
+		viper.Set("logger.max_size", v)
+	}
+	if v := os.Getenv("LOG_MAX_AGE"); v != "" {
+		viper.Set("logger.max_age", v)
+	}
+	if v := os.Getenv("LOG_MAX_BACKUPS"); v != "" {
+		viper.Set("logger.max_backups", v)
+	}
+	if v := os.Getenv("LOG_COMPRESS"); v != "" {
+		viper.Set("logger.compress", v)
+	}
+
+	// Cache配置
+	if v := os.Getenv("CACHE_DRIVER"); v != "" {
+		viper.Set("cache.driver", v)
+	}
+	if v := os.Getenv("CACHE_PREFIX"); v != "" {
+		viper.Set("cache.prefix", v)
+	}
+	if v := os.Getenv("CACHE_DEFAULT_TTL"); v != "" {
+		viper.Set("cache.default", v)
+		viper.Set("cache.ttl", v)
+	}
+
+	// Mail配置
+	if v := os.Getenv("MAIL_FROM_NAME"); v != "" {
+		viper.Set("mail.from_name", v)
+	}
+	if v := os.Getenv("MAIL_FROM_ADDRESS"); v != "" {
+		viper.Set("mail.from_address", v)
+	}
+	if v := os.Getenv("MAIL_HOST"); v != "" {
+		viper.Set("mail.host", v)
+	}
+	if v := os.Getenv("MAIL_PORT"); v != "" {
+		viper.Set("mail.port", v)
+	}
+	if v := os.Getenv("MAIL_USERNAME"); v != "" {
+		viper.Set("mail.username", v)
+	}
+	if v := os.Getenv("MAIL_PASSWORD"); v != "" {
+		viper.Set("mail.password", v)
+	}
+	if v := os.Getenv("MAIL_ENCRYPTION"); v != "" {
+		viper.Set("mail.encryption", v)
+	}
+	if v := os.Getenv("MAIL_TLS_INSECURE"); v != "" {
+		viper.Set("mail.tls_insecure", v)
+	}
+
+	// Queue配置
+	if v := os.Getenv("QUEUE_CONCURRENCY"); v != "" {
+		viper.Set("queue.concurrency", v)
+	}
+
+	// Storage配置
+	if v := os.Getenv("STORAGE_DRIVER"); v != "" {
+		viper.Set("storage.driver", v)
+	}
+
+	// MinIO配置
+	if v := os.Getenv("MINIO_ENDPOINT"); v != "" {
+		viper.Set("storage.minio.endpoint", v)
+	}
+	if v := os.Getenv("MINIO_ACCESS_KEY_ID"); v != "" {
+		viper.Set("storage.minio.access_key_id", v)
+	}
+	if v := os.Getenv("MINIO_SECRET_ACCESS_KEY"); v != "" {
+		viper.Set("storage.minio.secret_access_key", v)
+	}
+	if v := os.Getenv("MINIO_USE_SSL"); v != "" {
+		viper.Set("storage.minio.use_ssl", v)
+	}
+	if v := os.Getenv("MINIO_BUCKET"); v != "" {
+		viper.Set("storage.minio.bucket", v)
+	}
+	if v := os.Getenv("MINIO_REGION"); v != "" {
+		viper.Set("storage.minio.region", v)
+	}
+
+	// S3配置
+	if v := os.Getenv("S3_ACCESS_KEY_ID"); v != "" {
+		viper.Set("storage.s3.access_key_id", v)
+	}
+	if v := os.Getenv("S3_SECRET_ACCESS_KEY"); v != "" {
+		viper.Set("storage.s3.secret_access_key", v)
+	}
+	if v := os.Getenv("S3_REGION"); v != "" {
+		viper.Set("storage.s3.region", v)
+	}
+	if v := os.Getenv("S3_BUCKET"); v != "" {
+		viper.Set("storage.s3.bucket", v)
+	}
+	if v := os.Getenv("S3_ENDPOINT"); v != "" {
+		viper.Set("storage.s3.endpoint", v)
+	}
+
+	// WebSocket配置
+	if v := os.Getenv("WEBSOCKET_PORT"); v != "" {
+		viper.Set("websocket.port", v)
+	}
+	if v := os.Getenv("WEBSOCKET_PATH"); v != "" {
+		viper.Set("websocket.path", v)
+	}
+	if v := os.Getenv("WEBSOCKET_HEARTBEAT_INTERVAL"); v != "" {
+		viper.Set("websocket.heartbeat_interval", v)
+	}
+
+	// Payment配置
+	if v := os.Getenv("WECHAT_APP_ID"); v != "" {
+		viper.Set("payment.wechat.app_id", v)
+	}
+	if v := os.Getenv("WECHAT_MCH_ID"); v != "" {
+		viper.Set("payment.wechat.mch_id", v)
+	}
+	if v := os.Getenv("WECHAT_API_KEY"); v != "" {
+		viper.Set("payment.wechat.api_key", v)
+	}
+	if v := os.Getenv("WECHAT_CERT_PATH"); v != "" {
+		viper.Set("payment.wechat.cert_path", v)
+	}
+	if v := os.Getenv("WECHAT_KEY_PATH"); v != "" {
+		viper.Set("payment.wechat.key_path", v)
+	}
+	if v := os.Getenv("WECHAT_NOTIFY_URL"); v != "" {
+		viper.Set("payment.wechat.notify_url", v)
+	}
+	if v := os.Getenv("ALIPAY_APP_ID"); v != "" {
+		viper.Set("payment.alipay.app_id", v)
+	}
+	if v := os.Getenv("ALIPAY_PRIVATE_KEY"); v != "" {
+		viper.Set("payment.alipay.private_key", v)
+	}
+	if v := os.Getenv("ALIPAY_PUBLIC_KEY"); v != "" {
+		viper.Set("payment.alipay.public_key", v)
+	}
+	if v := os.Getenv("ALIPAY_NOTIFY_URL"); v != "" {
+		viper.Set("payment.alipay.notify_url", v)
+	}
+
+	// Business配置
+	if v := os.Getenv("ORDER_PAYMENT_TIMEOUT"); v != "" {
+		viper.Set("business.order.payment_timeout", v)
+	}
+	if v := os.Getenv("ORDER_PICKUP_TIMEOUT"); v != "" {
+		viper.Set("business.order.pickup_timeout", v)
+	}
+	if v := os.Getenv("DEVICE_CHANNEL_COUNT"); v != "" {
+		viper.Set("business.device.channel_count", v)
+	}
+	if v := os.Getenv("DEVICE_CHANNEL_MAX_CAPACITY"); v != "" {
+		viper.Set("business.device.channel_max_capacity", v)
+	}
+
+	// Security配置
+	if v := os.Getenv("CORS_ALLOWED_ORIGINS"); v != "" {
+		viper.Set("security.cors.allowed_origins", v)
+	}
+	if v := os.Getenv("CORS_ALLOWED_METHODS"); v != "" {
+		viper.Set("security.cors.allowed_methods", v)
+	}
+	if v := os.Getenv("CORS_ALLOWED_HEADERS"); v != "" {
+		viper.Set("security.cors.allowed_headers", v)
+	}
+	if v := os.Getenv("RATE_LIMIT_MAX"); v != "" {
+		viper.Set("security.rate_limit.max", v)
+	}
+	if v := os.Getenv("RATE_LIMIT_WINDOW"); v != "" {
+		viper.Set("security.rate_limit.window", v)
+	}
+}
+
 // setDefaults 设置默认配置值
 func setDefaults() {
-	// 应用程序默认配置
-	viper.SetDefault("app.name", "Fiber Starter")
-	viper.SetDefault("app.env", "local")
+	viper.SetDefault("app.name", "fiber-starter")
+	viper.SetDefault("app.env", "development")
 	viper.SetDefault("app.debug", true)
 	viper.SetDefault("app.port", "3000")
 	viper.SetDefault("app.host", "0.0.0.0")
 	viper.SetDefault("app.timezone", "UTC")
 	viper.SetDefault("app.url", "http://localhost:3000")
+
+	// 日志配置默认值
+	viper.SetDefault("logger.level", "info")
+	viper.SetDefault("logger.format", "console")
+	viper.SetDefault("logger.output", "stdout")
+	viper.SetDefault("logger.max_size", 100)
+	viper.SetDefault("logger.max_age", 28)
+	viper.SetDefault("logger.max_backups", 3)
+	viper.SetDefault("logger.compress", false)
 
 	// 邮件默认配置
 	viper.SetDefault("mail.from_name", "Fiber Starter")
@@ -467,10 +764,44 @@ func setDefaults() {
 	viper.SetDefault("queue.concurrency", 10)
 
 	// 存储默认配置
-	viper.SetDefault("storage.driver", "memory")
+	viper.SetDefault("storage.driver", "minio")
 	viper.SetDefault("storage.database", "./storage/storage.db")
 	viper.SetDefault("storage.reset", false)
 	viper.SetDefault("storage.gc_interval", 10) // 10分钟
+
+	// MinIO默认配置
+	viper.SetDefault("storage.minio.endpoint", "localhost:9000")
+	viper.SetDefault("storage.minio.access_key_id", "minioadmin")
+	viper.SetDefault("storage.minio.secret_access_key", "minioadmin")
+	viper.SetDefault("storage.minio.use_ssl", false)
+	viper.SetDefault("storage.minio.bucket", "lunchbox-media")
+	viper.SetDefault("storage.minio.region", "us-east-1")
+
+	// S3默认配置
+	viper.SetDefault("storage.s3.region", "us-east-1")
+	viper.SetDefault("storage.s3.bucket", "lunchbox-media")
+
+	// WebSocket默认配置
+	viper.SetDefault("websocket.port", "3001")
+	viper.SetDefault("websocket.path", "/ws")
+	viper.SetDefault("websocket.heartbeat_interval", 30)
+
+	// 支付默认配置
+	viper.SetDefault("payment.wechat.notify_url", "")
+	viper.SetDefault("payment.alipay.notify_url", "")
+
+	// 业务默认配置
+	viper.SetDefault("business.order.payment_timeout", 30)
+	viper.SetDefault("business.order.pickup_timeout", 1440)
+	viper.SetDefault("business.device.channel_count", 53)
+	viper.SetDefault("business.device.channel_max_capacity", 4)
+
+	// 安全默认配置
+	viper.SetDefault("security.cors.allowed_origins", "*")
+	viper.SetDefault("security.cors.allowed_methods", "GET,POST,PUT,DELETE,OPTIONS")
+	viper.SetDefault("security.cors.allowed_headers", "Origin,Content-Type,Accept,Authorization")
+	viper.SetDefault("security.rate_limit.max", 60)
+	viper.SetDefault("security.rate_limit.window", 60)
 }
 
 // GetEnv 获取环境变量，如果不存在则返回默认值

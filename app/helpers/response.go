@@ -2,87 +2,243 @@ package helpers
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v2"
 )
 
+// ApiResponse 统一API响应结构
+// Requirements: 14.1, 14.2, 14.3
+type ApiResponse struct {
+	Success  bool        `json:"success"`
+	Code     int         `json:"code"`
+	Message  string      `json:"message"`
+	Data     interface{} `json:"data,omitempty"`
+	Errors   interface{} `json:"errors,omitempty"`
+	Debugger *Debugger   `json:"debugger,omitempty"`
+}
+
+// Debugger 调试信息结构体
+// Requirements: 13.1
+type Debugger struct {
+	Exception   string   `json:"exception"`
+	File        string   `json:"file"`
+	Line        int      `json:"line"`
+	Trace       []string `json:"trace"`
+	RequestTime float64  `json:"request_time"` // 毫秒
+	MemoryUsage string   `json:"memory_usage"`
+	QueryCount  int      `json:"query_count"`
+}
+
+// PaginationMeta 分页元数据
+// Requirements: 14.6
+type PaginationMeta struct {
+	CurrentPage int   `json:"current_page"`
+	PerPage     int   `json:"per_page"`
+	LastPage    int   `json:"last_page"`
+	HasMore     bool  `json:"has_more"`
+	Total       int64 `json:"total"`
+	From        int   `json:"from"`
+	To          int   `json:"to"`
+}
+
+// PaginatedResponse 分页响应结构
+// Requirements: 14.5, 14.6
+type PaginatedResponse struct {
+	Items []interface{}  `json:"items"`
+	Meta  PaginationMeta `json:"meta"`
+}
+
+// Success 成功响应
+// Requirements: 14.2, 14.4
+func Success(c *fiber.Ctx, message string, data interface{}) error {
+	return c.Status(fiber.StatusOK).JSON(ApiResponse{
+		Success: true,
+		Code:    fiber.StatusOK,
+		Message: message,
+		Data:    data,
+	})
+}
+
+// Error 错误响应
+// Requirements: 14.3, 14.7
+func Error(c *fiber.Ctx, code int, message string, errors interface{}) error {
+	response := ApiResponse{
+		Success: false,
+		Code:    code,
+		Message: message,
+		Errors:  errors,
+	}
+
+	// 如果是调试模式，添加调试信息
+	if IsDebugMode() {
+		response.Debugger = GetDebugger(c)
+	}
+
+	return c.Status(code).JSON(response)
+}
+
+// ErrorWithDebugger 带调试信息的错误响应
+// Requirements: 12.5, 12.6, 12.7, 12.8, 12.9
+func ErrorWithDebugger(c *fiber.Ctx, code int, message string, errors interface{}, exception string, file string, line int) error {
+	response := ApiResponse{
+		Success: false,
+		Code:    code,
+		Message: message,
+		Errors:  errors,
+	}
+
+	// 如果是调试模式，添加详细调试信息
+	if IsDebugMode() {
+		debugger := GetDebugger(c)
+		debugger.Exception = exception
+		debugger.File = file
+		debugger.Line = line
+		debugger.Trace = GetStackTrace()
+		response.Debugger = debugger
+	}
+
+	return c.Status(code).JSON(response)
+}
+
+// Paginated 分页响应
+// Requirements: 14.5, 14.6
+func Paginated(c *fiber.Ctx, items []interface{}, currentPage, perPage int, total int64) error {
+	lastPage := int((total + int64(perPage) - 1) / int64(perPage))
+	if lastPage < 1 {
+		lastPage = 1
+	}
+
+	from := (currentPage-1)*perPage + 1
+	to := currentPage * perPage
+	if to > int(total) {
+		to = int(total)
+	}
+	if from > int(total) {
+		from = int(total)
+	}
+
+	meta := PaginationMeta{
+		CurrentPage: currentPage,
+		PerPage:     perPage,
+		LastPage:    lastPage,
+		HasMore:     currentPage < lastPage,
+		Total:       total,
+		From:        from,
+		To:          to,
+	}
+
+	data := PaginatedResponse{
+		Items: items,
+		Meta:  meta,
+	}
+
+	return c.Status(fiber.StatusOK).JSON(ApiResponse{
+		Success: true,
+		Code:    fiber.StatusOK,
+		Message: "Success",
+		Data:    data,
+	})
+}
+
+// GetDebugger 获取调试信息
+// Requirements: 13.1, 12.6, 12.7, 12.8
+func GetDebugger(c *fiber.Ctx) *Debugger {
+	startTime := c.Locals("start_time")
+	var requestTime float64
+	if startTime != nil {
+		if t, ok := startTime.(time.Time); ok {
+			requestTime = float64(time.Since(t).Microseconds()) / 1000.0 // 转换为毫秒
+		}
+	}
+
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	memoryUsage := fmt.Sprintf("%.2f MB", float64(m.Alloc)/1024/1024)
+
+	queryCount := 0
+	if qc := c.Locals("query_count"); qc != nil {
+		if count, ok := qc.(int); ok {
+			queryCount = count
+		}
+	}
+
+	return &Debugger{
+		RequestTime: requestTime,
+		MemoryUsage: memoryUsage,
+		QueryCount:  queryCount,
+	}
+}
+
+// GetStackTrace 获取堆栈跟踪
+// Requirements: 13.3
+func GetStackTrace() []string {
+	var traces []string
+	for i := 2; i < 10; i++ { // 跳过前两个调用（GetStackTrace 和调用者）
+		pc, file, line, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+		fn := runtime.FuncForPC(pc)
+		if fn != nil {
+			traces = append(traces, fmt.Sprintf("%s() at %s:%d", fn.Name(), file, line))
+		}
+	}
+	return traces
+}
+
+// IsDebugMode 检查是否为调试模式
+// Requirements: 12.5, 12.9, 13.9
+func IsDebugMode() bool {
+	// 从环境变量或配置中读取
+	// 这里简化处理，实际应该从配置中读取
+	return true // 临时返回 true，后续会从配置中读取
+}
+
 // FormatValidationErrors 格式化验证错误
-func FormatValidationErrors(err error) map[string]string {
-	errors := make(map[string]string)
+// Requirements: 14.7
+func FormatValidationErrors(err error) map[string][]string {
+	errors := make(map[string][]string)
 
 	if validationErrors, ok := err.(validator.ValidationErrors); ok {
 		for _, e := range validationErrors {
-			field := e.Field()
+			field := strings.ToLower(e.Field())
 			tag := e.Tag()
 
+			var message string
 			switch tag {
 			case "required":
-				errors[field] = fmt.Sprintf("%s 是必填字段", field)
+				message = fmt.Sprintf("The %s field is required.", field)
 			case "min":
-				errors[field] = fmt.Sprintf("%s 长度不能少于 %s", field, e.Param())
+				message = fmt.Sprintf("The %s must be at least %s characters.", field, e.Param())
 			case "max":
-				errors[field] = fmt.Sprintf("%s 长度不能超过 %s", field, e.Param())
+				message = fmt.Sprintf("The %s must not exceed %s characters.", field, e.Param())
 			case "email":
-				errors[field] = fmt.Sprintf("%s 必须是有效的邮箱地址", field)
+				message = fmt.Sprintf("The %s must be a valid email address.", field)
 			case "e164":
-				errors[field] = fmt.Sprintf("%s 必须是有效的手机号码", field)
+				message = fmt.Sprintf("The %s must be a valid phone number.", field)
 			case "url":
-				errors[field] = fmt.Sprintf("%s 必须是有效的URL", field)
-			case "phone":
-				errors[field] = fmt.Sprintf("%s 必须是有效的手机号码", field)
+				message = fmt.Sprintf("The %s must be a valid URL.", field)
+			case "gt":
+				message = fmt.Sprintf("The %s must be greater than %s.", field, e.Param())
+			case "gte":
+				message = fmt.Sprintf("The %s must be greater than or equal to %s.", field, e.Param())
+			case "lt":
+				message = fmt.Sprintf("The %s must be less than %s.", field, e.Param())
+			case "lte":
+				message = fmt.Sprintf("The %s must be less than or equal to %s.", field, e.Param())
 			default:
-				errors[field] = fmt.Sprintf("%s 格式不正确", field)
+				message = fmt.Sprintf("The %s field is invalid.", field)
 			}
+
+			errors[field] = append(errors[field], message)
 		}
 	}
 
 	return errors
-}
-
-// PaginationResponse 分页响应结构
-type PaginationResponse struct {
-	Page  int   `json:"page"`
-	Limit int   `json:"limit"`
-	Total int64 `json:"total"`
-	Pages int64 `json:"pages"`
-}
-
-// NewPaginationResponse 创建分页响应
-func NewPaginationResponse(page, limit int, total int64) PaginationResponse {
-	pages := (total + int64(limit) - 1) / int64(limit)
-	return PaginationResponse{
-		Page:  page,
-		Limit: limit,
-		Total: total,
-		Pages: pages,
-	}
-}
-
-// APIResponse 统一API响应结构
-type APIResponse struct {
-	Success bool        `json:"success"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
-	Errors  interface{} `json:"errors,omitempty"`
-}
-
-// SuccessResponse 成功响应
-func SuccessResponse(message string, data interface{}) APIResponse {
-	return APIResponse{
-		Success: true,
-		Message: message,
-		Data:    data,
-	}
-}
-
-// ErrorResponse 错误响应
-func ErrorResponse(message string, errors interface{}) APIResponse {
-	return APIResponse{
-		Success: false,
-		Message: message,
-		Errors:  errors,
-	}
 }
 
 // SanitizeString 清理字符串
@@ -114,4 +270,26 @@ func GenerateSlug(text string) string {
 	}, slug)
 
 	return slug
+}
+
+// SuccessResponse 创建成功响应对象（不直接返回给客户端）
+// Requirements: 14.2, 14.4
+func SuccessResponse(message string, data interface{}) ApiResponse {
+	return ApiResponse{
+		Success: true,
+		Code:    fiber.StatusOK,
+		Message: message,
+		Data:    data,
+	}
+}
+
+// ErrorResponse 创建错误响应对象（不直接返回给客户端）
+// Requirements: 14.3, 14.7
+func ErrorResponse(message string, errors interface{}) ApiResponse {
+	return ApiResponse{
+		Success: false,
+		Code:    fiber.StatusBadRequest,
+		Message: message,
+		Errors:  errors,
+	}
 }

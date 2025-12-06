@@ -79,7 +79,7 @@ func (r AdminRole) IsValid() bool {
 	return exists
 }
 
-// FromString 通过字符串值获取枚举实例（类似PHP的fromString）
+// AdminRoleFromString FromString 通过字符串值获取枚举实例（类似PHP的fromString）
 func AdminRoleFromString(value string) (AdminRole, error) {
 	// 首先尝试直接匹配枚举值
 	role := AdminRole(strings.ToLower(value))
@@ -100,7 +100,7 @@ func AdminRoleFromString(value string) (AdminRole, error) {
 	return "", fmt.Errorf("invalid admin role: %s", value)
 }
 
-// MustFromString 类似FromString，但遇到错误时panic
+// AdminRoleMustFromString MustFromString 类似FromString，但遇到错误时panic
 func AdminRoleMustFromString(value string) AdminRole {
 	role, err := AdminRoleFromString(value)
 	if err != nil {
@@ -109,12 +109,12 @@ func AdminRoleMustFromString(value string) AdminRole {
 	return role
 }
 
-// Values 获取所有有效的角色值（类似PHP的cases）
+// AdminRoleValues Values 获取所有有效的角色值（类似PHP的cases）
 func AdminRoleValues() []AdminRole {
 	return GetValuesFromMap(adminRoleMap)
 }
 
-// SortedValues 获取按优先级排序的角色值
+// AdminRoleSortedValues SortedValues 获取按优先级排序的角色值
 func AdminRoleSortedValues() []AdminRole {
 	infos := GetInfosFromMap(adminRoleMap)
 	sortedInfos := SortByPriority(infos)
@@ -126,22 +126,22 @@ func AdminRoleSortedValues() []AdminRole {
 	return values
 }
 
-// GetOptions 获取所有管理员角色及其标签的数组（类似PHP的getOptions）
+// AdminRoleGetOptions GetOptions 获取所有管理员角色及其标签的数组（类似PHP的getOptions）
 func AdminRoleGetOptions() map[string]string {
 	return CreateOptionsMap(adminRoleMap)
 }
 
-// GetOptionsWithColor 获取包含颜色的选项数组
+// AdminRoleGetOptionsWithColor GetOptionsWithColor 获取包含颜色的选项数组
 func AdminRoleGetOptionsWithColor() map[string]map[string]string {
 	return CreateOptionsWithColorMap(adminRoleMap)
 }
 
-// GetAllInfo 获取所有角色信息
+// AdminRoleGetAllInfo GetAllInfo 获取所有角色信息
 func AdminRoleGetAllInfo() []EnumInfo[AdminRole] {
 	return GetInfosFromMap(adminRoleMap)
 }
 
-// GetSortedInfo 获取按优先级排序的角色信息
+// AdminRoleGetSortedInfo GetSortedInfo 获取按优先级排序的角色信息
 func AdminRoleGetSortedInfo() []EnumInfo[AdminRole] {
 	infos := GetInfosFromMap(adminRoleMap)
 	return SortByPriority(infos)

@@ -99,11 +99,13 @@ func ParseAndValidate(ctx *fiber.Ctx, req interface{}, validate interface{}) err
 func FormatValidationErrorsToString(err error) string {
 	if validationErrors := FormatValidationErrors(err); validationErrors != nil {
 		result := ""
-		for field, message := range validationErrors {
-			if result != "" {
-				result += "; "
+		for field, messages := range validationErrors {
+			for _, message := range messages {
+				if result != "" {
+					result += "; "
+				}
+				result += field + ": " + message
 			}
-			result += field + ": " + message
 		}
 		return result
 	}

@@ -1,20 +1,23 @@
 package middleware
 
 import (
-	"fiber-starter/app/errors"
+	"fiber-starter/app/exceptions"
 	"fiber-starter/app/helpers"
+	"fiber-starter/app/logger"
 	"fmt"
-	"log"
 	"os"
+	"runtime"
 	"runtime/debug"
 	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"go.uber.org/zap"
 )
 
 // ErrorHandler 全局错误处理中间件
+// Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.10, 12.11
 func ErrorHandler(c *fiber.Ctx) error {
 	// 执行下一个处理器
 	err := c.Next()
@@ -24,101 +27,167 @@ func ErrorHandler(c *fiber.Ctx) error {
 		return nil
 	}
 
-	// 处理不同类型的错误
-	var appErr *errors.AppError
-	var statusCode int
-	var response interface{}
+	// 记录错误日志
+	// Requirements: 12.4, 12.11
+	logError(c, err)
 
-	// 检查是否为应用程序错误
-	if errors.IsAppError(err) {
-		appErr, _ = errors.GetAppError(err)
-		statusCode = appErr.StatusCode
-		response = handleAppError(appErr)
-	} else if validationErrors, ok := err.(validator.ValidationErrors); ok {
-		// 处理验证错误
-		statusCode = fiber.StatusBadRequest
-		response = handleValidationError(validationErrors)
-	} else if fiberErr, ok := err.(*fiber.Error); ok {
-		// 处理Fiber框架错误
-		statusCode = fiberErr.Code
-		response = handleFiberError(fiberErr)
-	} else {
-		// 处理未知错误
-		statusCode = fiber.StatusInternalServerError
-		response = handleUnknownError(err)
+	// 处理 ApiException
+	// Requirements: 12.1, 11.13
+	if apiErr, ok := err.(*exceptions.ApiException); ok {
+		return handleApiException(c, apiErr)
 	}
 
-	// 记录错误日志
-	logError(c, err, appErr)
+	// 处理 ValidationException
+	if valErr, ok := err.(*exceptions.ValidationException); ok {
+		return handleApiException(c, valErr.ApiException)
+	}
 
-	// 返回错误响应
-	return c.Status(statusCode).JSON(response)
+	// 处理 AuthenticationException
+	if authErr, ok := err.(*exceptions.AuthenticationException); ok {
+		return handleApiException(c, authErr.ApiException)
+	}
+
+	// 处理 AuthorizationException
+	if authzErr, ok := err.(*exceptions.AuthorizationException); ok {
+		return handleApiException(c, authzErr.ApiException)
+	}
+
+	// 处理 NotFoundException
+	if notFoundErr, ok := err.(*exceptions.NotFoundException); ok {
+		return handleApiException(c, notFoundErr.ApiException)
+	}
+
+	// 处理 BadRequestException
+	if badReqErr, ok := err.(*exceptions.BadRequestException); ok {
+		return handleApiException(c, badReqErr.ApiException)
+	}
+
+	// 处理 ConflictException
+	if conflictErr, ok := err.(*exceptions.ConflictException); ok {
+		return handleApiException(c, conflictErr.ApiException)
+	}
+
+	// 处理 ServerException
+	if serverErr, ok := err.(*exceptions.ServerException); ok {
+		return handleApiException(c, serverErr.ApiException)
+	}
+
+	// 处理验证错误
+	if validationErrors, ok := err.(validator.ValidationErrors); ok {
+		return handleValidationError(c, validationErrors)
+	}
+
+	// 处理 Fiber 框架错误
+	if fiberErr, ok := err.(*fiber.Error); ok {
+		return handleFiberError(c, fiberErr)
+	}
+
+	// 处理未捕获的异常
+	// Requirements: 12.2, 12.3
+	return handleUnknownError(c, err)
 }
 
-// handleAppError 处理应用程序错误
-func handleAppError(appErr *errors.AppError) interface{} {
-	return helpers.ErrorResponse(appErr.Message, fiber.Map{
-		"code":    appErr.Code,
-		"details": appErr.Details,
-	})
+// handleApiException 处理 API 异常
+// Requirements: 12.1, 11.13
+func handleApiException(c *fiber.Ctx, apiErr *exceptions.ApiException) error {
+	// 获取调用栈信息
+	_, file, line, _ := runtime.Caller(2)
+
+	// 使用带调试信息的错误响应
+	return helpers.ErrorWithDebugger(
+		c,
+		apiErr.Code,
+		apiErr.Message,
+		apiErr.Errors,
+		"ApiException",
+		file,
+		line,
+	)
 }
 
 // handleValidationError 处理验证错误
-func handleValidationError(validationErrors validator.ValidationErrors) interface{} {
-	return helpers.ErrorResponse("请求参数验证失败", helpers.FormatValidationErrors(validationErrors))
+func handleValidationError(c *fiber.Ctx, validationErrors validator.ValidationErrors) error {
+	errors := helpers.FormatValidationErrors(validationErrors)
+	_, file, line, _ := runtime.Caller(1)
+
+	return helpers.ErrorWithDebugger(
+		c,
+		422,
+		"Validation failed",
+		errors,
+		"ValidationError",
+		file,
+		line,
+	)
 }
 
-// handleFiberError 处理Fiber框架错误
-func handleFiberError(fiberErr *fiber.Error) interface{} {
+// handleFiberError 处理 Fiber 框架错误
+func handleFiberError(c *fiber.Ctx, fiberErr *fiber.Error) error {
 	message := fiberErr.Message
 
 	// 根据状态码提供更友好的错误信息
 	switch fiberErr.Code {
 	case fiber.StatusBadRequest:
-		message = "请求参数错误"
+		message = "Bad request"
 	case fiber.StatusUnauthorized:
-		message = "未授权访问"
+		message = "Unauthorized"
 	case fiber.StatusForbidden:
-		message = "禁止访问"
+		message = "Forbidden"
 	case fiber.StatusNotFound:
-		message = "请求的资源不存在"
+		message = "Not found"
 	case fiber.StatusMethodNotAllowed:
-		message = "请求方法不被允许"
+		message = "Method not allowed"
 	case fiber.StatusRequestTimeout:
-		message = "请求超时"
+		message = "Request timeout"
 	case fiber.StatusTooManyRequests:
-		message = "请求过于频繁，请稍后再试"
+		message = "Too many requests"
 	case fiber.StatusInternalServerError:
-		message = "内部服务器错误"
+		message = "Internal server error"
 	case fiber.StatusBadGateway:
-		message = "网关错误"
+		message = "Bad gateway"
 	case fiber.StatusServiceUnavailable:
-		message = "服务暂时不可用"
+		message = "Service unavailable"
 	}
 
-	return helpers.ErrorResponse(message, fiber.Map{
-		"code": fmt.Sprintf("FIBER_%d", fiberErr.Code),
-	})
+	_, file, line, _ := runtime.Caller(1)
+
+	return helpers.ErrorWithDebugger(
+		c,
+		fiberErr.Code,
+		message,
+		nil,
+		"FiberError",
+		file,
+		line,
+	)
 }
 
 // handleUnknownError 处理未知错误
-func handleUnknownError(err error) interface{} {
-	// 在生产环境中，不应该暴露详细的错误信息
-	message := "内部服务器错误"
+// Requirements: 12.2, 12.3
+func handleUnknownError(c *fiber.Ctx, err error) error {
+	message := "Internal server error"
 
 	// 在开发环境中，可以返回更详细的错误信息
-	// 这里可以根据环境变量来判断
 	if isDevelopment() {
-		message = fmt.Sprintf("内部服务器错误: %s", err.Error())
+		message = fmt.Sprintf("Internal server error: %s", err.Error())
 	}
 
-	return helpers.ErrorResponse(message, fiber.Map{
-		"code": errors.ErrCodeInternalServer,
-	})
+	_, file, line, _ := runtime.Caller(1)
+
+	return helpers.ErrorWithDebugger(
+		c,
+		500,
+		message,
+		nil,
+		fmt.Sprintf("%T", err),
+		file,
+		line,
+	)
 }
 
 // logError 记录错误日志
-func logError(c *fiber.Ctx, err error, appErr *errors.AppError) {
+// Requirements: 12.4, 12.11
+func logError(c *fiber.Ctx, err error) {
 	// 构建日志信息
 	logMsg := fmt.Sprintf(
 		"[%s] %s %s - %s",
@@ -128,26 +197,25 @@ func logError(c *fiber.Ctx, err error, appErr *errors.AppError) {
 		err.Error(),
 	)
 
-	// 如果是应用程序错误，添加错误码
-	if appErr != nil {
-		logMsg = fmt.Sprintf("%s (Code: %s)", logMsg, appErr.Code)
-	}
-
 	// 添加请求ID（如果存在）
 	if requestID := c.Get("X-Request-ID"); requestID != "" {
 		logMsg = fmt.Sprintf("%s [RequestID: %s]", logMsg, requestID)
 	}
 
 	// 根据错误类型选择日志级别
-	if errors.IsAppError(err) {
-		if appErr.StatusCode >= 500 {
-			log.Printf("ERROR: %s", logMsg)
+	if apiErr, ok := err.(*exceptions.ApiException); ok {
+		if apiErr.Code >= 500 {
+			logger.Error(logMsg, zap.Int("code", apiErr.Code))
 		} else {
-			log.Printf("WARN: %s", logMsg)
+			logger.Warn(logMsg, zap.Int("code", apiErr.Code))
 		}
 	} else {
 		// 未知错误，记录堆栈信息
-		log.Printf("ERROR: %s\n%s", logMsg, string(debug.Stack()))
+		if isDevelopment() {
+			logger.Error(logMsg, zap.String("stack", string(debug.Stack())))
+		} else {
+			logger.Error(logMsg)
+		}
 	}
 }
 
@@ -171,18 +239,16 @@ func getValue(key string) string {
 }
 
 // RecoveryMiddleware 恢复中间件，用于捕获panic
+// Requirements: 12.2, 12.3
 func RecoveryMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		defer func() {
 			if r := recover(); r != nil {
 				// 记录panic信息
-				log.Printf("PANIC: %s\n%s", r, string(debug.Stack()))
+				logger.Error("PANIC: "+fmt.Sprint(r), zap.String("stack", string(debug.Stack())))
 
 				// 返回内部服务器错误
-				err := errors.InternalServerError("服务器内部错误")
-				c.Status(fiber.StatusInternalServerError).JSON(helpers.ErrorResponse(err.Message, fiber.Map{
-					"code": err.Code,
-				}))
+				helpers.Error(c, 500, "Internal server error", nil)
 			}
 		}()
 
@@ -206,6 +272,17 @@ func RequestIDMiddleware() fiber.Handler {
 
 		// 将请求ID存储到本地存储中
 		c.Locals("requestID", requestID)
+
+		return c.Next()
+	}
+}
+
+// RequestTimerMiddleware 请求计时中间件
+// Requirements: 12.6, 12.8
+func RequestTimerMiddleware() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// 记录请求开始时间
+		c.Locals("start_time", time.Now())
 
 		return c.Next()
 	}

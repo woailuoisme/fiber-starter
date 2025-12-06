@@ -48,7 +48,7 @@ logs/
 *.sqlite3
 
 # Air live reload
-.air.toml
+#.air.toml
 tmp/
 
 # Build output
