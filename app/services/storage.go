@@ -6,9 +6,9 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"time"
 
+	"fiber-starter/app/helpers"
 	"fiber-starter/config"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -21,6 +21,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 	minio "github.com/minio/minio-go/v7"
 	minioCredentials "github.com/minio/minio-go/v7/pkg/credentials"
+	"go.uber.org/zap"
 )
 
 // CompressionType 压缩类型
@@ -104,11 +105,11 @@ func NewStorageService(cfg *config.StorageConfig, redisCfg *config.RedisConfig) 
 
 	default:
 		// 默认使用内存存储
-		log.Printf("未知的存储驱动 '%s'，使用内存存储作为默认", cfg.Driver)
+		helpers.Logger.Warn("未知的存储驱动，使用内存存储作为默认", zap.String("driver", cfg.Driver))
 		store = memory.New(memory.Config{})
 	}
 
-	log.Printf("存储服务已初始化，驱动类型: %s", cfg.Driver)
+	helpers.Logger.Info("存储服务已初始化", zap.String("driver", cfg.Driver))
 
 	return &StorageService{
 		storage: store,
@@ -380,7 +381,7 @@ func NewMinIOStorage(cfg *config.MinIOStorageConfig) (*MinIOStorage, error) {
 		if err != nil {
 			return nil, fmt.Errorf("创建存储桶失败: %w", err)
 		}
-		log.Printf("MinIO存储桶 '%s' 已创建", cfg.Bucket)
+		helpers.Logger.Info("MinIO存储桶已创建", zap.String("bucket", cfg.Bucket))
 	}
 
 	return &MinIOStorage{

@@ -205,9 +205,9 @@ func logError(c *fiber.Ctx, err error) {
 	// 根据错误类型选择日志级别
 	if apiErr, ok := err.(*exceptions.ApiException); ok {
 		if apiErr.Code >= 500 {
-			helpers.LogError(logMsg, zap.Int("code", apiErr.Code))
+			helpers.Logger.Error(logMsg, zap.Int("code", apiErr.Code))
 		} else {
-			helpers.Warn(logMsg, zap.Int("code", apiErr.Code))
+			helpers.Logger.Warn(logMsg, zap.Int("code", apiErr.Code))
 		}
 	} else {
 		// 未知错误，记录堆栈信息

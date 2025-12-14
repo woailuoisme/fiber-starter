@@ -70,7 +70,7 @@ func main() {
 
 	// 启动服务器
 	port := ":" + config.GetString("app.port")
-	helpers.Info("服务器启动在端口 " + port)
+	helpers.Info("服务器启动在端口 ", zap.String("port", config.GetString("app.port")))
 	if err := app.Listen(port); err != nil {
 		helpers.Fatal("服务器启动失败", zap.Error(err))
 	}

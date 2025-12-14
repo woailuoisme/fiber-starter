@@ -107,4 +107,5 @@ config/local.yaml
 config/development.yaml
 config/testing.yaml
 
-fiber-starter
+.kiro
+
