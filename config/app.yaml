@@ -31,7 +31,7 @@ redis:
 # 日志配置
 logger:
   level: "info"           # debug, info, warn, error, fatal, panic
-  format: "json"          # json, text
+  format: "text"          # json, text
   output: "stdout"        # stdout, file
   max_size: 100           # 日志文件最大大小（MB）
   max_age: 30             # 日志文件保留天数

@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"fiber-starter/app/exceptions"
-	"fiber-starter/app/helpers"
+	helpers "fiber-starter/app/http/requests"
 	"fmt"
 	"reflect"
 	"strings"

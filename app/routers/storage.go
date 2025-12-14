@@ -1,7 +1,7 @@
-package routes
+package routers
 
 import (
-	"fiber-starter/app/controllers"
+	"fiber-starter/app/http/controllers"
 
 	"github.com/gofiber/fiber/v2"
 )

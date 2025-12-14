@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"fiber-starter/app/logger"
+	"fiber-starter/app/helpers"
 	"fiber-starter/app/models"
 	"fiber-starter/config"
 
@@ -56,7 +56,7 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 	}
 
 	if err != nil {
-		logger.Error("数据库连接失败",
+		helpers.LogError("数据库连接失败",
 			zap.Error(err),
 			zap.String("host", connConfig.Host),
 			zap.String("port", connConfig.Port),
@@ -67,7 +67,7 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 	// 获取底层的sql.DB对象进行连接池配置
 	sqlDB, err := db.DB()
 	if err != nil {
-		logger.Error("获取底层sql.DB对象失败", zap.Error(err))
+		helpers.LogError("获取底层sql.DB对象失败", zap.Error(err))
 		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
 	}
 
@@ -79,14 +79,14 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 		sqlDB.SetConnMaxIdleTime(time.Duration(cfg.Database.Pool.ConnMaxIdleTime) * time.Second)
 	}
 
-	logger.Info("数据库连接池配置完成",
+	helpers.Info("数据库连接池配置完成",
 		zap.Int("maxIdleConns", cfg.Database.Pool.MaxIdleConns),
 		zap.Int("maxOpenConns", cfg.Database.Pool.MaxOpenConns),
 		zap.Int("connMaxLifetime", cfg.Database.Pool.ConnMaxLifetime))
 
 	// 测试连接
 	if err := sqlDB.Ping(); err != nil {
-		logger.Error("数据库连接测试失败",
+		helpers.LogError("数据库连接测试失败",
 			zap.Error(err),
 			zap.String("host", connConfig.Host),
 			zap.String("port", connConfig.Port),
@@ -94,7 +94,7 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	logger.Info("数据库连接成功",
+	helpers.Info("数据库连接成功",
 		zap.String("database", connConfig.Database),
 		zap.String("driver", connConfig.Driver))
 
@@ -178,16 +178,16 @@ func getLogLevel(debug bool) gormLogger.LogLevel {
 func (c *Connection) Close() error {
 	sqlDB, err := c.DB.DB()
 	if err != nil {
-		logger.Error("获取底层sql.DB对象失败，无法关闭连接", zap.Error(err))
+		helpers.LogError("获取底层sql.DB对象失败，无法关闭连接", zap.Error(err))
 		return err
 	}
 
 	if err := sqlDB.Close(); err != nil {
-		logger.Error("关闭数据库连接失败", zap.Error(err))
+		helpers.LogError("关闭数据库连接失败", zap.Error(err))
 		return err
 	}
 
-	logger.Info("数据库连接已关闭")
+	helpers.Info("数据库连接已关闭")
 	return nil
 }
 
@@ -195,17 +195,17 @@ func (c *Connection) Close() error {
 func (c *Connection) HealthCheck() error {
 	sqlDB, err := c.DB.DB()
 	if err != nil {
-		logger.Error("获取底层sql.DB对象失败", zap.Error(err))
+		helpers.LogError("获取底层sql.DB对象失败", zap.Error(err))
 		return fmt.Errorf("failed to get underlying sql.DB: %w", err)
 	}
 
 	// 执行 Ping 测试连接
 	if err := sqlDB.Ping(); err != nil {
-		logger.Error("数据库健康检查失败", zap.Error(err))
+		helpers.LogError("数据库健康检查失败", zap.Error(err))
 		return fmt.Errorf("database ping failed: %w", err)
 	}
 
-	logger.Info("数据库连接健康检查通过")
+	helpers.Info("数据库连接健康检查通过")
 	return nil
 }
 
@@ -232,14 +232,14 @@ func (c *Connection) GetStats() (map[string]interface{}, error) {
 
 // AutoMigrate 自动迁移数据库表
 func (c *Connection) AutoMigrate(models ...interface{}) error {
-	logger.Info("开始数据库表自动迁移", zap.Int("modelCount", len(models)))
+	helpers.Info("开始数据库表自动迁移", zap.Int("modelCount", len(models)))
 
 	if err := c.DB.AutoMigrate(models...); err != nil {
-		logger.Error("数据库表自动迁移失败", zap.Error(err))
+		helpers.LogError("数据库表自动迁移失败", zap.Error(err))
 		return err
 	}
 
-	logger.Info("数据库表自动迁移完成")
+	helpers.Info("数据库表自动迁移完成")
 	return nil
 }
 
@@ -256,19 +256,19 @@ func HealthCheck() error {
 
 	sqlDB, err := DB.DB()
 	if err != nil {
-		logger.Error("获取底层sql.DB对象失败", zap.Error(err))
+		helpers.LogError("获取底层sql.DB对象失败", zap.Error(err))
 		return fmt.Errorf("failed to get underlying sql.DB: %w", err)
 	}
 
 	// 执行 Ping 测试连接
 	if err := sqlDB.Ping(); err != nil {
-		logger.Error("数据库健康检查失败", zap.Error(err))
+		helpers.LogError("数据库健康检查失败", zap.Error(err))
 		return fmt.Errorf("database ping failed: %w", err)
 	}
 
 	// 获取连接池统计信息
 	stats := sqlDB.Stats()
-	logger.Info("数据库健康检查通过",
+	helpers.Info("数据库健康检查通过",
 		zap.Int("openConnections", stats.OpenConnections),
 		zap.Int("inUse", stats.InUse),
 		zap.Int("idle", stats.Idle),
@@ -309,11 +309,11 @@ func GetConnectionStats() (map[string]interface{}, error) {
 // AutoMigrate 自动迁移所有数据库表
 func AutoMigrate() error {
 	if DB == nil {
-		logger.Error("数据库连接未初始化，无法执行自动迁移")
+		helpers.LogError("数据库连接未初始化，无法执行自动迁移")
 		return fmt.Errorf("数据库连接未初始化")
 	}
 
-	logger.Info("开始执行全局数据库表自动迁移")
+	helpers.Info("开始执行全局数据库表自动迁移")
 
 	if err := DB.AutoMigrate(
 		&models.User{},
@@ -321,10 +321,10 @@ func AutoMigrate() error {
 		// &models.Post{},
 		// &models.Comment{},
 	); err != nil {
-		logger.Error("全局数据库表自动迁移失败", zap.Error(err))
+		helpers.LogError("全局数据库表自动迁移失败", zap.Error(err))
 		return err
 	}
 
-	logger.Info("全局数据库表自动迁移完成")
+	helpers.Info("全局数据库表自动迁移完成")
 	return nil
 }

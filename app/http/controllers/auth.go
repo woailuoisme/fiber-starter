@@ -3,7 +3,7 @@ package controllers
 import (
 	"fiber-starter/app/errors"
 	"fiber-starter/app/helpers"
-	"fiber-starter/app/middleware"
+	"fiber-starter/app/http/middleware"
 	"fiber-starter/app/models"
 	"fiber-starter/app/services"
 

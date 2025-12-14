@@ -1,7 +1,7 @@
 package providers
 
 import (
-	"fiber-starter/app/services"
+	"fiber-starter/app/helpers"
 	"fiber-starter/config"
 
 	"go.uber.org/dig"
@@ -29,8 +29,8 @@ func (p *CacheProvider) Register() error {
 	}
 
 	// 注册缓存服务
-	if err := p.container.Provide(func(cfg *config.Config) services.CacheService {
-		return services.NewCacheService(cfg)
+	if err := p.container.Provide(func(cfg *config.Config) helpers.CacheService {
+		return helpers.NewCacheService(cfg)
 	}); err != nil {
 		return err
 	}

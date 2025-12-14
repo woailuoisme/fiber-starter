@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"fiber-starter/app/middleware"
+	"fiber-starter/app/helpers"
+	"fiber-starter/app/http/middleware"
 	"fiber-starter/app/models"
 	"fiber-starter/config"
 
@@ -28,11 +29,11 @@ type AuthService interface {
 type authService struct {
 	db     *gorm.DB
 	config *config.Config
-	cache  CacheService
+	cache  helpers.CacheService
 }
 
 // NewAuthService 创建认证服务实例
-func NewAuthService(db *gorm.DB, cfg *config.Config, cache CacheService) AuthService {
+func NewAuthService(db *gorm.DB, cfg *config.Config, cache helpers.CacheService) AuthService {
 	return &authService{
 		db:     db,
 		config: cfg,

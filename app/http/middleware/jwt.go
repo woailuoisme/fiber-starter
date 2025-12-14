@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"fiber-starter/app/helpers"
+	"fiber-starter/app/http/resources"
 	"fiber-starter/app/models"
 	"fiber-starter/config"
 
@@ -214,7 +214,7 @@ func JWTProtected() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// 检查全局配置是否已初始化
 		if config.GlobalConfig == nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(helpers.ErrorResponse("配置未初始化", nil))
+			return c.Status(fiber.StatusInternalServerError).JSON(resources.ErrorResponse("配置未初始化", nil))
 		}
 		// 使用全局配置的JWT设置
 		return JWTAuth(config.GlobalConfig)(c)

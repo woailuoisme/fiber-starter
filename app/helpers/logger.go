@@ -1,4 +1,4 @@
-package logger
+package helpers
 
 import (
 	"os"
@@ -36,21 +36,11 @@ func Init() error {
 	encoderConfig.CallerKey = "caller"
 	encoderConfig.StacktraceKey = "stacktrace"
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
 	encoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
 	encoderConfig.EncodeDuration = zapcore.SecondsDurationEncoder
 
-	// 根据配置选择编码器
-	// Requirements: 17.5
-	var encoder zapcore.Encoder
-	if logConfig.Format == "json" {
-		encoder = zapcore.NewJSONEncoder(encoderConfig)
-	} else {
-		encoder = zapcore.NewConsoleEncoder(encoderConfig)
-	}
-
-	// 创建输出目标
-	var writers []zapcore.WriteSyncer
+	// 创建多个核心以支持不同的输出格式
+	var cores []zapcore.Core
 
 	// 输出到文件（带日志轮转）
 	// Requirements: 17.7
@@ -71,28 +61,48 @@ func Init() error {
 			Compress:   true,
 			LocalTime:  true,
 		}
-		writers = append(writers, zapcore.AddSync(fileWriter))
+
+		// 文件输出使用 JSON 格式
+		fileEncoderConfig := encoderConfig
+		fileEncoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
+		fileEncoder := zapcore.NewJSONEncoder(fileEncoderConfig)
+
+		cores = append(cores, zapcore.NewCore(
+			fileEncoder,
+			zapcore.AddSync(fileWriter),
+			level,
+		))
 	}
 
 	// 输出到标准输出
 	if logConfig.Output == "stdout" || logConfig.Output == "both" || logConfig.Output == "" {
-		writers = append(writers, zapcore.AddSync(os.Stdout))
+		// 控制台输出使用彩色格式
+		consoleEncoderConfig := encoderConfig
+		consoleEncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		consoleEncoder := zapcore.NewConsoleEncoder(consoleEncoderConfig)
+
+		cores = append(cores, zapcore.NewCore(
+			consoleEncoder,
+			zapcore.AddSync(os.Stdout),
+			level,
+		))
 	}
 
-	// 如果没有配置任何输出，默认输出到标准输出
-	if len(writers) == 0 {
-		writers = append(writers, zapcore.AddSync(os.Stdout))
-	}
+	// 如果没有配置任何输出，默认输出到标准输出（彩色）
+	if len(cores) == 0 {
+		consoleEncoderConfig := encoderConfig
+		consoleEncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		consoleEncoder := zapcore.NewConsoleEncoder(consoleEncoderConfig)
 
-	// 创建多输出核心
-	writer := zapcore.NewMultiWriteSyncer(writers...)
+		cores = append(cores, zapcore.NewCore(
+			consoleEncoder,
+			zapcore.AddSync(os.Stdout),
+			level,
+		))
+	}
 
 	// 创建核心
-	core := zapcore.NewCore(
-		encoder,
-		writer,
-		level,
-	)
+	core := zapcore.NewTee(cores...)
 
 	// 创建Logger实例
 	// Requirements: 17.1, 17.2, 17.3
@@ -145,8 +155,8 @@ func Warn(msg string, fields ...zapcore.Field) {
 	Logger.Warn(msg, fields...)
 }
 
-// Error 记录错误日志
-func Error(msg string, fields ...zapcore.Field) {
+// LogError 记录错误日志
+func LogError(msg string, fields ...zapcore.Field) {
 	Logger.Error(msg, fields...)
 }
 

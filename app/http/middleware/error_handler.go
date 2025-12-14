@@ -3,7 +3,7 @@ package middleware
 import (
 	"fiber-starter/app/exceptions"
 	"fiber-starter/app/helpers"
-	"fiber-starter/app/logger"
+	"fiber-starter/app/http/resources"
 	"fmt"
 	"os"
 	"runtime"
@@ -94,7 +94,7 @@ func handleApiException(c *fiber.Ctx, apiErr *exceptions.ApiException) error {
 	_, file, line, _ := runtime.Caller(2)
 
 	// 使用带调试信息的错误响应
-	return helpers.ErrorWithDebugger(
+	return resources.ErrorWithDebugger(
 		c,
 		apiErr.Code,
 		apiErr.Message,
@@ -107,10 +107,10 @@ func handleApiException(c *fiber.Ctx, apiErr *exceptions.ApiException) error {
 
 // handleValidationError 处理验证错误
 func handleValidationError(c *fiber.Ctx, validationErrors validator.ValidationErrors) error {
-	errors := helpers.FormatValidationErrors(validationErrors)
+	errors := resources.FormatValidationErrors(validationErrors)
 	_, file, line, _ := runtime.Caller(1)
 
-	return helpers.ErrorWithDebugger(
+	return resources.ErrorWithDebugger(
 		c,
 		422,
 		"Validation failed",
@@ -151,7 +151,7 @@ func handleFiberError(c *fiber.Ctx, fiberErr *fiber.Error) error {
 
 	_, file, line, _ := runtime.Caller(1)
 
-	return helpers.ErrorWithDebugger(
+	return resources.ErrorWithDebugger(
 		c,
 		fiberErr.Code,
 		message,
@@ -174,7 +174,7 @@ func handleUnknownError(c *fiber.Ctx, err error) error {
 
 	_, file, line, _ := runtime.Caller(1)
 
-	return helpers.ErrorWithDebugger(
+	return resources.ErrorWithDebugger(
 		c,
 		500,
 		message,
@@ -205,16 +205,16 @@ func logError(c *fiber.Ctx, err error) {
 	// 根据错误类型选择日志级别
 	if apiErr, ok := err.(*exceptions.ApiException); ok {
 		if apiErr.Code >= 500 {
-			logger.Error(logMsg, zap.Int("code", apiErr.Code))
+			helpers.LogError(logMsg, zap.Int("code", apiErr.Code))
 		} else {
-			logger.Warn(logMsg, zap.Int("code", apiErr.Code))
+			helpers.Warn(logMsg, zap.Int("code", apiErr.Code))
 		}
 	} else {
 		// 未知错误，记录堆栈信息
 		if isDevelopment() {
-			logger.Error(logMsg, zap.String("stack", string(debug.Stack())))
+			helpers.LogError(logMsg, zap.String("stack", string(debug.Stack())))
 		} else {
-			logger.Error(logMsg)
+			helpers.LogError(logMsg)
 		}
 	}
 }
@@ -245,10 +245,10 @@ func RecoveryMiddleware() fiber.Handler {
 		defer func() {
 			if r := recover(); r != nil {
 				// 记录panic信息
-				logger.Error("PANIC: "+fmt.Sprint(r), zap.String("stack", string(debug.Stack())))
+				helpers.LogError("PANIC: "+fmt.Sprint(r), zap.String("stack", string(debug.Stack())))
 
 				// 返回内部服务器错误
-				helpers.Error(c, 500, "Internal server error", nil)
+				resources.ErrorWithDebugger(c, 500, "Internal server error", nil, "Panic", "", 0)
 			}
 		}()
 

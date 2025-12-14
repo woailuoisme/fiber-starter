@@ -1,9 +1,8 @@
 package routers
 
 import (
-	"fiber-starter/app/controllers"
-	"fiber-starter/app/middleware"
-	"fiber-starter/routes"
+	"fiber-starter/app/http/controllers"
+	"fiber-starter/app/http/middleware"
 
 	_ "fiber-starter/docs" // swagger docs
 
@@ -66,5 +65,5 @@ func SetupRoutes(app *fiber.App, authController *controllers.AuthController, use
 	users.Put("/profile", middleware.JWTProtected(), userController.UpdateProfile)
 
 	// 存储路由
-	routes.SetupStorageRoutes(api, storageController)
+	SetupStorageRoutes(api, storageController)
 }

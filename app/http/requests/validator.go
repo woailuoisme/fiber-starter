@@ -1,7 +1,8 @@
-package helpers
+package requests
 
 import (
 	"fiber-starter/app/exceptions"
+	"fiber-starter/app/http/resources"
 	"reflect"
 	"regexp"
 	"strings"
@@ -66,9 +67,8 @@ func validatePositive(fl validator.FieldLevel) bool {
 	case reflect.Float32, reflect.Float64:
 		return fl.Field().Float() > 0
 	default:
-		panic("unhandled default case")
+		return false
 	}
-	return false
 }
 
 // validatePrice 验证价格（正整数）
@@ -90,7 +90,7 @@ func ValidateStruct(s interface{}) error {
 		// 格式化验证错误
 		// Requirements: 10.6
 		if validationErrors, ok := err.(validator.ValidationErrors); ok {
-			errors := FormatValidationErrors(validationErrors)
+			errors := resources.FormatValidationErrors(validationErrors)
 			return exceptions.NewValidationExceptionWithErrors("Validation failed", errors)
 		}
 		return exceptions.NewValidationException(err.Error())

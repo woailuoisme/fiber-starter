@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"fiber-starter/app/helpers"
-	"fiber-starter/app/middleware"
+	"fiber-starter/app/http/middleware"
+	"fiber-starter/app/http/resources"
 	"fiber-starter/app/models"
 	"fiber-starter/app/services"
 	"strconv"
@@ -61,7 +61,7 @@ func (c *UserController) GetUsers(ctx *fiber.Ctx) error {
 	// 调用用户服务获取用户列表
 	users, total, err := c.userService.GetUsers(page, limit)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(helpers.ErrorResponse(err.Error(), nil))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(resources.ErrorResponse(err.Error(), nil))
 	}
 
 	// 转换为安全响应
@@ -70,7 +70,7 @@ func (c *UserController) GetUsers(ctx *fiber.Ctx) error {
 		userResponses[i] = user.ToSafeUser()
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(helpers.SuccessResponse("获取用户列表成功", fiber.Map{
+	return ctx.Status(fiber.StatusOK).JSON(resources.SuccessResponse("获取用户列表成功", fiber.Map{
 		"users": userResponses,
 		"pagination": fiber.Map{
 			"page":  page,
@@ -99,16 +99,16 @@ func (c *UserController) GetUser(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(helpers.ErrorResponse("无效的用户ID", nil))
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("无效的用户ID", nil))
 	}
 
 	// 调用用户服务获取用户
 	user, err := c.userService.GetUserByID(uint(id))
 	if err != nil {
-		return ctx.Status(fiber.StatusNotFound).JSON(helpers.ErrorResponse(err.Error(), nil))
+		return ctx.Status(fiber.StatusNotFound).JSON(resources.ErrorResponse(err.Error(), nil))
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(helpers.SuccessResponse("获取用户信息成功", user.ToSafeResponse()))
+	return ctx.Status(fiber.StatusOK).JSON(resources.SuccessResponse("获取用户信息成功", user.ToSafeResponse()))
 }
 
 // UpdateUser 更新用户信息
@@ -130,18 +130,18 @@ func (c *UserController) UpdateUser(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(helpers.ErrorResponse("无效的用户ID", nil))
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("无效的用户ID", nil))
 	}
 
 	// 解析请求体
 	var req UpdateProfileRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(helpers.ErrorResponse("请求参数解析失败", err.Error()))
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("请求参数解析失败", err.Error()))
 	}
 
 	// 验证请求参数
 	if err := c.validator.Struct(&req); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(helpers.ErrorResponse("请求参数验证失败", helpers.FormatValidationErrors(err)))
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("请求参数验证失败", resources.FormatValidationErrors(err)))
 	}
 
 	// 构建更新数据
@@ -159,16 +159,16 @@ func (c *UserController) UpdateUser(ctx *fiber.Ctx) error {
 	// 调用用户服务更新用户
 	err = c.userService.UpdateUser(uint(id), updates)
 	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(helpers.ErrorResponse(err.Error(), nil))
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse(err.Error(), nil))
 	}
 
 	// 获取更新后的用户信息
 	user, err := c.userService.GetUserByID(uint(id))
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(helpers.ErrorResponse("获取更新后的用户信息失败", nil))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(resources.ErrorResponse("获取更新后的用户信息失败", nil))
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(helpers.SuccessResponse("用户信息更新成功", fiber.Map{
+	return ctx.Status(fiber.StatusOK).JSON(resources.SuccessResponse("用户信息更新成功", fiber.Map{
 		"user": user.ToSafeResponse(),
 	}))
 }
@@ -191,16 +191,16 @@ func (c *UserController) DeleteUser(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(helpers.ErrorResponse("无效的用户ID", nil))
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("无效的用户ID", nil))
 	}
 
 	// 调用用户服务删除用户
 	err = c.userService.DeleteUser(uint(id))
 	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(helpers.ErrorResponse(err.Error(), nil))
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse(err.Error(), nil))
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(helpers.SuccessResponse("用户删除成功", nil))
+	return ctx.Status(fiber.StatusOK).JSON(resources.SuccessResponse("用户删除成功", nil))
 }
 
 // UpdateProfile 更新个人资料
@@ -219,18 +219,18 @@ func (c *UserController) UpdateProfile(ctx *fiber.Ctx) error {
 	// 从上下文中获取用户信息
 	user := middleware.GetUserFromContext(ctx)
 	if user == nil {
-		return ctx.Status(fiber.StatusUnauthorized).JSON(helpers.ErrorResponse("未认证用户", nil))
+		return ctx.Status(fiber.StatusUnauthorized).JSON(resources.ErrorResponse("未认证用户", nil))
 	}
 
 	// 解析请求体
 	var req UpdateProfileRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(helpers.ErrorResponse("请求参数解析失败", err.Error()))
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("请求参数解析失败", err.Error()))
 	}
 
 	// 验证请求参数
 	if err := c.validator.Struct(&req); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(helpers.ErrorResponse("请求参数验证失败", helpers.FormatValidationErrors(err)))
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("请求参数验证失败", resources.FormatValidationErrors(err)))
 	}
 
 	// 构建更新资料
@@ -247,16 +247,16 @@ func (c *UserController) UpdateProfile(ctx *fiber.Ctx) error {
 	// 调用用户服务更新资料
 	err := c.userService.UpdateProfile(user.ID, profile)
 	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(helpers.ErrorResponse(err.Error(), nil))
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse(err.Error(), nil))
 	}
 
 	// 获取更新后的用户信息
 	updatedUser, err := c.userService.GetUserByID(user.ID)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(helpers.ErrorResponse("获取更新后的用户信息失败", nil))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(resources.ErrorResponse("获取更新后的用户信息失败", nil))
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(helpers.SuccessResponse("资料更新成功", fiber.Map{
+	return ctx.Status(fiber.StatusOK).JSON(resources.SuccessResponse("资料更新成功", fiber.Map{
 		"user": updatedUser.ToSafeResponse(),
 	}))
 }
@@ -276,16 +276,16 @@ func (c *UserController) GetCurrentUser(ctx *fiber.Ctx) error {
 	// 从上下文中获取用户ID
 	userID, ok := ctx.Locals("user_id").(uint)
 	if !ok {
-		return ctx.Status(fiber.StatusUnauthorized).JSON(helpers.ErrorResponse("未授权", nil))
+		return ctx.Status(fiber.StatusUnauthorized).JSON(resources.ErrorResponse("未授权", nil))
 	}
 
 	// 获取完整的用户信息
 	currentUser, err := c.userService.GetUserByID(userID)
 	if err != nil {
-		return ctx.Status(fiber.StatusNotFound).JSON(helpers.ErrorResponse("用户不存在", nil))
+		return ctx.Status(fiber.StatusNotFound).JSON(resources.ErrorResponse("用户不存在", nil))
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(helpers.SuccessResponse("获取用户信息成功", fiber.Map{
+	return ctx.Status(fiber.StatusOK).JSON(resources.SuccessResponse("获取用户信息成功", fiber.Map{
 		"user": currentUser.ToSafeUser(),
 	}))
 }
@@ -309,7 +309,7 @@ func (c *UserController) SearchUsers(ctx *fiber.Ctx) error {
 	// 获取搜索参数
 	query := ctx.Query("q")
 	if query == "" {
-		return ctx.Status(fiber.StatusBadRequest).JSON(helpers.ErrorResponse("搜索关键词不能为空", nil))
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("搜索关键词不能为空", nil))
 	}
 
 	// 获取分页参数
@@ -327,7 +327,7 @@ func (c *UserController) SearchUsers(ctx *fiber.Ctx) error {
 	// 调用用户服务搜索用户
 	users, total, err := c.userService.SearchUsers(query, page, limit)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(helpers.ErrorResponse(err.Error(), nil))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(resources.ErrorResponse(err.Error(), nil))
 	}
 
 	// 转换为安全响应
@@ -336,7 +336,7 @@ func (c *UserController) SearchUsers(ctx *fiber.Ctx) error {
 		userResponses[i] = user.ToSafeUser()
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(helpers.SuccessResponse("搜索用户成功", fiber.Map{
+	return ctx.Status(fiber.StatusOK).JSON(resources.SuccessResponse("搜索用户成功", fiber.Map{
 		"users": userResponses,
 		"query": query,
 		"pagination": fiber.Map{

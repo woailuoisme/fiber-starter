@@ -4,9 +4,9 @@ import (
 	"fiber-starter/app/models"
 	"fiber-starter/database"
 	"math/rand"
+	"time"
 
 	"github.com/go-faker/faker/v4"
-	"github.com/golang-module/carbon/v2"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -62,11 +62,10 @@ func SeedUsers(db *gorm.DB) error {
 		},
 	}
 
-	// 设置邮箱验证时间（使用 carbon 库）
-	now := carbon.Now()
-	nowTime := now.StdTime()
-	users[0].EmailVerifiedAt = &nowTime
-	users[1].EmailVerifiedAt = &nowTime
+	// 设置邮箱验证时间
+	now := time.Now()
+	users[0].EmailVerifiedAt = &now
+	users[1].EmailVerifiedAt = &now
 
 	// 批量创建用户
 	if err := db.CreateInBatches(users, 100).Error; err != nil {
@@ -114,9 +113,8 @@ func SeedRandomUsers(db *gorm.DB, count int) error {
 		// 随机设置一些用户为已验证邮箱
 		if i%3 == 0 { // 每3个用户中有1个已验证邮箱
 			daysAgo := rand.Intn(30) + 1
-			verifiedTime := carbon.Now().SubDays(daysAgo)
-			verifiedTimeValue := verifiedTime.StdTime()
-			user.EmailVerifiedAt = &verifiedTimeValue
+			verifiedTime := time.Now().AddDate(0, 0, -daysAgo)
+			user.EmailVerifiedAt = &verifiedTime
 		}
 
 		// 随机设置一些用户为非活跃状态
@@ -198,10 +196,9 @@ func CreateAdminUser(db *gorm.DB, name, email, password string) error {
 		Status:   models.UserStatusActive,
 	}
 
-	// 使用 carbon 设置邮箱验证时间
-	now := carbon.Now()
-	nowTime := now.StdTime()
-	admin.EmailVerifiedAt = &nowTime
+	// 设置邮箱验证时间
+	now := time.Now()
+	admin.EmailVerifiedAt = &now
 
 	return db.Create(&admin).Error
 }
@@ -232,11 +229,10 @@ func GenerateTestUsers(db *gorm.DB, count int) error {
 
 		// 随机设置邮箱验证状态
 		if rand.Intn(2) == 1 {
-			// 使用 carbon 生成随机的验证时间（过去30天内）
+			// 生成随机的验证时间（过去30天内）
 			daysAgo := rand.Intn(30) + 1
-			verifiedTime := carbon.Now().SubDays(daysAgo)
-			verifiedTimeValue := verifiedTime.StdTime()
-			user.EmailVerifiedAt = &verifiedTimeValue
+			verifiedTime := time.Now().AddDate(0, 0, -daysAgo)
+			user.EmailVerifiedAt = &verifiedTime
 		}
 
 		// 随机设置用户状态

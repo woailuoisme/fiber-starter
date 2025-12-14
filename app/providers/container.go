@@ -1,7 +1,7 @@
 package providers
 
 import (
-	"fiber-starter/app/controllers"
+	"fiber-starter/app/http/controllers"
 	"fiber-starter/app/services"
 	"fiber-starter/config"
 	"fmt"
