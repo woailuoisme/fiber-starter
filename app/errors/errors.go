@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -19,7 +20,7 @@ const (
 	ErrCodeValidation     ErrorCode = "VALIDATION_ERROR"
 	ErrCodeTimeout        ErrorCode = "TIMEOUT_ERROR"
 
-	// 认证相关错误码
+	// ErrCodeInvalidCredentials 认证相关错误码
 	ErrCodeInvalidCredentials ErrorCode = "INVALID_CREDENTIALS"
 	ErrCodeTokenExpired       ErrorCode = "TOKEN_EXPIRED"
 	ErrCodeTokenInvalid       ErrorCode = "TOKEN_INVALID"
@@ -28,7 +29,7 @@ const (
 	ErrCodeInvalidPassword    ErrorCode = "INVALID_PASSWORD"
 	ErrCodeAccountLocked      ErrorCode = "ACCOUNT_LOCKED"
 
-	// 用户相关错误码
+	// ErrCodeUserCreateFailed 用户相关错误码
 	ErrCodeUserCreateFailed    ErrorCode = "USER_CREATE_FAILED"
 	ErrCodeUserUpdateFailed    ErrorCode = "USER_UPDATE_FAILED"
 	ErrCodeUserDeleteFailed    ErrorCode = "USER_DELETE_FAILED"
@@ -83,7 +84,8 @@ func (e *AppError) Unwrap() error {
 
 // Is 支持errors.Is
 func (e *AppError) Is(target error) bool {
-	if t, ok := target.(*AppError); ok {
+	var t *AppError
+	if errors.As(target, &t) {
 		return e.Code == t.Code
 	}
 	return false
@@ -257,13 +259,15 @@ func ExternalServiceErrorWithCause(message string, cause error) *AppError {
 
 // IsAppError 检查是否为应用程序错误
 func IsAppError(err error) bool {
-	_, ok := err.(*AppError)
+	var appError *AppError
+	ok := errors.As(err, &appError)
 	return ok
 }
 
 // GetAppError 获取应用程序错误
 func GetAppError(err error) (*AppError, bool) {
-	if appErr, ok := err.(*AppError); ok {
+	var appErr *AppError
+	if errors.As(err, &appErr) {
 		return appErr, true
 	}
 	return nil, false
