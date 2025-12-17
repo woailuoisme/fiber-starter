@@ -70,13 +70,22 @@ type Config struct {
 
 // AppConfig 应用程序基础配置
 type AppConfig struct {
-	Name     string `mapstructure:"name"`
-	Env      string `mapstructure:"env"`
-	Debug    bool   `mapstructure:"debug"`
-	Port     string `mapstructure:"port"`
-	Host     string `mapstructure:"host"`
-	Timezone string `mapstructure:"timezone"`
-	URL      string `mapstructure:"url"`
+	Name     string      `mapstructure:"name"`
+	Env      string      `mapstructure:"env"`
+	Debug    bool        `mapstructure:"debug"`
+	Port     string      `mapstructure:"port"`
+	Host     string      `mapstructure:"host"`
+	Timezone string      `mapstructure:"timezone"`
+	URL      string      `mapstructure:"url"`
+	Fiber    FiberConfig `mapstructure:"fiber"`
+}
+
+// FiberConfig Fiber 框架配置
+type FiberConfig struct {
+	Prefork      bool   `mapstructure:"prefork"`
+	ServerHeader string `mapstructure:"server_header"`
+	BodyLimit    int    `mapstructure:"body_limit"`
+	Concurrency  int    `mapstructure:"concurrency"`
 }
 
 // DatabaseConfig 数据库配置
@@ -490,6 +499,11 @@ func overrideWithEnv() {
 	}
 	if v := os.Getenv("APP_URL"); v != "" {
 		viper.Set("app.url", v)
+	}
+
+	// Fiber配置
+	if v := os.Getenv("FIBER_PREFORK"); v != "" {
+		viper.Set("app.fiber.prefork", v)
 	}
 
 	// JWT配置

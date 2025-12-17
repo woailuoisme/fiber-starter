@@ -108,6 +108,9 @@ jwt: ## 生成新的 JWT 密钥
 	@echo "生成新的 JWT 密钥..."
 	$(GOCMD) run cli.go jwt:generate
 
+routes: ## 显示所有路由
+	@$(GOCMD) run cli.go routes
+
 cli: ## 打开命令行工具
 	@echo "💻 命令行工具"
 	$(GOCMD) run cli.go --help

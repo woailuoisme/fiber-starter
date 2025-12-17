@@ -14,6 +14,13 @@ app:
   timezone: "Asia/Shanghai"
   url: "http://localhost:3000"
 
+  # Fiber 配置
+  fiber:
+    prefork: false              # 是否启用 Prefork 模式（多进程，生产环境建议启用）
+    server_header: ""           # 服务器响应头
+    body_limit: 4194304         # 请求体大小限制（字节，默认 4MB）4*1024*1024
+    concurrency: 262144         # 最大并发连接数  256 * 1024
+
 # JWT认证配置
 jwt:
   secret: "your-secret-key-change-in-production-environment"
