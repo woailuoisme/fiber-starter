@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"log"
 	"strings"
 	"time"
 
@@ -17,7 +16,10 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/gofiber/fiber/v2/middleware/timeout"
+	"go.uber.org/zap"
 )
+
+var Logger *zap.Logger
 
 // SetupMiddleware 配置所有中间件
 func SetupMiddleware(app *fiber.App) {
@@ -213,12 +215,12 @@ func SetupErrorHandling(app *fiber.App) {
 		// 捕获路由处理函数中的错误
 		if err := c.Next(); err != nil {
 			// 记录错误日志
-			log.Printf("请求处理错误: %v", err)
-
+			Logger.Error("消息", zap.Error(err))
 			// 返回统一的错误响应
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "服务器内部错误",
-				"code":  "INTERNAL_SERVER_ERROR",
+				"success": false,
+				"message": "服务器内部错误",
+				"code":    500,
 			})
 		}
 		return nil

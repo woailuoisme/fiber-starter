@@ -66,6 +66,7 @@ type Config struct {
 	Payment   PaymentConfig   `mapstructure:"payment"`
 	Business  BusinessConfig  `mapstructure:"business"`
 	Security  SecurityConfig  `mapstructure:"security"`
+	I18n      I18nConfig      `mapstructure:"i18n"`
 }
 
 // AppConfig 应用程序基础配置
@@ -715,6 +716,20 @@ func overrideWithEnv() {
 	if v := os.Getenv("RATE_LIMIT_WINDOW"); v != "" {
 		viper.Set("security.rate_limit.window", v)
 	}
+
+	// i18n 配置
+	if v := os.Getenv("I18N_DEFAULT_LANGUAGE"); v != "" {
+		viper.Set("i18n.default_language", v)
+	}
+	if v := os.Getenv("I18N_LANGUAGE_DIR"); v != "" {
+		viper.Set("i18n.language_dir", v)
+	}
+	if v := os.Getenv("I18N_COOKIE_NAME"); v != "" {
+		viper.Set("i18n.cookie_name", v)
+	}
+	if v := os.Getenv("I18N_COOKIE_MAX_AGE"); v != "" {
+		viper.Set("i18n.cookie_max_age", v)
+	}
 }
 
 // setDefaults 设置默认配置值
@@ -816,6 +831,13 @@ func setDefaults() {
 	viper.SetDefault("security.cors.allowed_headers", "Origin,Content-Type,Accept,Authorization")
 	viper.SetDefault("security.rate_limit.max", 60)
 	viper.SetDefault("security.rate_limit.window", 60)
+
+	// i18n 默认配置
+	viper.SetDefault("i18n.default_language", "zh-CN")
+	viper.SetDefault("i18n.supported_languages", []string{"zh-CN", "en"})
+	viper.SetDefault("i18n.language_dir", "./lang")
+	viper.SetDefault("i18n.cookie_name", "lang")
+	viper.SetDefault("i18n.cookie_max_age", 31536000) // 1年
 }
 
 // GetEnv 获取环境变量，如果不存在则返回默认值

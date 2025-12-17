@@ -160,6 +160,10 @@ func LogError(msg string, fields ...zapcore.Field) {
 	Logger.Error(msg, fields...)
 }
 
+func Error(msg string, fields ...zapcore.Field) {
+	Logger.Error(msg, fields...)
+}
+
 // DPanic 记录严重错误日志，开发环境会触发panic
 func DPanic(msg string, fields ...zapcore.Field) {
 	Logger.DPanic(msg, fields...)

@@ -111,6 +111,10 @@ jwt: ## 生成新的 JWT 密钥
 routes: ## 显示所有路由
 	@$(GOCMD) run cli.go routes
 
+schedule: ## 运行定时任务调度器
+	@echo "🕐 启动定时任务调度器..."
+	$(GOCMD) run cli.go schedule:run
+
 cli: ## 打开命令行工具
 	@echo "💻 命令行工具"
 	$(GOCMD) run cli.go --help
