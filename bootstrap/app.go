@@ -110,17 +110,8 @@ func App() {
 
 // printRoutes 打印所有注册的路由
 func printRoutes(app *fiber.App) {
-	helpers.Info("📋 注册的路由列表:")
-
 	routes := app.GetRoutes()
-	for _, route := range routes {
-		helpers.Info("",
-			zap.String("method", route.Method),
-			zap.String("path", route.Path),
-		)
-	}
-
-	helpers.Info("", zap.Int("total", len(routes)))
+	helpers.Info("注册的路由", zap.Int("total", len(routes)))
 }
 
 // killPortProcess 清理占用指定端口的进程

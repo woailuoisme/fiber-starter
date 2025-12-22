@@ -273,24 +273,63 @@ type RateLimitConfig struct {
 // 全局配置实例
 var GlobalConfig *Config
 
+// loadEnvFile 根据 APP_ENV 加载对应的 .env 文件
+func loadEnvFile() error {
+	// 获取环境变量 APP_ENV，默认为空（使用 .env）
+	appEnv := os.Getenv("APP_ENV")
+
+	var envFiles []string
+
+	// 根据 APP_ENV 确定要加载的 .env 文件
+	if appEnv != "" {
+		// 如果设置了 APP_ENV，优先加载 .env.{APP_ENV}
+		envFiles = []string{
+			fmt.Sprintf(".env.%s", appEnv),
+			".env",
+		}
+	} else {
+		// 如果没有设置 APP_ENV，只加载 .env
+		envFiles = []string{".env"}
+	}
+
+	// 尝试加载环境文件
+	var loaded bool
+	for _, envFile := range envFiles {
+		// 尝试多个可能的路径
+		envPaths := []string{
+			envFile,
+			fmt.Sprintf("./config/%s", envFile),
+			fmt.Sprintf("../%s", envFile),
+		}
+
+		for _, path := range envPaths {
+			if err := godotenv.Load(path); err == nil {
+				log.Printf("成功加载环境文件: %s", path)
+				loaded = true
+				break
+			}
+		}
+
+		if loaded {
+			break
+		}
+	}
+
+	if !loaded {
+		log.Printf("未找到环境文件，将使用环境变量和默认配置")
+	}
+
+	return nil
+}
+
 // LoadDatabaseConfig 加载数据库配置文件
 func LoadDatabaseConfig() (*DatabaseConfig, error) {
 	configPath := "./config"
 	dbConfig := &DatabaseConfig{}
 
-	// 加载 .env 文件
-	if err := godotenv.Load(); err != nil {
-		// 尝试加载其他可能的 .env 文件位置
-		envPaths := []string{".env", "./config/.env", "../.env"}
-		for _, path := range envPaths {
-			if err := godotenv.Load(path); err == nil {
-				log.Printf("成功加载 .env 文件: %s", path)
-				break
-			}
-		}
-		if err != nil {
-			log.Printf("未找到 .env 文件，将使用环境变量和默认配置")
-		}
+	// 加载环境文件
+	if err := loadEnvFile(); err != nil {
+		log.Printf("加载环境文件失败: %v", err)
 	}
 
 	// 设置数据库配置文件路径和名称
@@ -430,20 +469,8 @@ func LoadConfig() (*Config, error) {
 		Database: *dbConfig,
 	}
 
-	// 加载 .env 文件
-	if err := godotenv.Load(); err != nil {
-		// 尝试加载其他可能的 .env 文件位置
-		envPaths := []string{".env", "./config/.env", "../.env"}
-		for _, path := range envPaths {
-			if err := godotenv.Load(path); err == nil {
-				log.Printf("成功加载 .env 文件: %s", path)
-				break
-			}
-		}
-		if err != nil {
-			log.Printf("未找到 .env 文件，将使用环境变量和默认配置")
-		}
-	}
+	// 加载环境文件（已在 LoadDatabaseConfig 中加载，这里不需要重复）
+	// loadEnvFile() 已经在 LoadDatabaseConfig 中调用
 
 	// 设置配置文件路径和名称
 	viper.SetConfigName("app")

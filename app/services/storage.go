@@ -396,8 +396,8 @@ func NewS3Storage(cfg *config.S3StorageConfig) (*S3Storage, error) {
 		return nil, fmt.Errorf("S3配置不能为空")
 	}
 
-	// 创建AWS配置
-	awsCfg, err := awsConfig.LoadDefaultConfig(context.Background(),
+	// 创建AWS配置选项
+	configOptions := []func(*awsConfig.LoadOptions) error{
 		awsConfig.WithCredentialsProvider(aws.NewCredentialsCache(
 			aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
 				return aws.Credentials{
@@ -407,21 +407,33 @@ func NewS3Storage(cfg *config.S3StorageConfig) (*S3Storage, error) {
 			}),
 		)),
 		awsConfig.WithRegion(cfg.Region),
-	)
+	}
+
+	// 如果有自定义端点，添加端点解析器
+	if cfg.Endpoint != "" {
+		configOptions = append(configOptions, awsConfig.WithEndpointResolverWithOptions(
+			aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+				return aws.Endpoint{
+					URL:               cfg.Endpoint,
+					HostnameImmutable: true,
+					Source:            aws.EndpointSourceCustom,
+				}, nil
+			}),
+		))
+	}
+
+	// 创建AWS配置
+	awsCfg, err := awsConfig.LoadDefaultConfig(context.Background(), configOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("创建AWS配置失败: %w", err)
 	}
 
 	// 创建S3客户端
-	var s3Client *s3.Client
-	if cfg.Endpoint != "" {
-		// 使用自定义端点（兼容其他S3服务）
-		s3Client = s3.NewFromConfig(awsCfg, func(o *s3.Options) {
-			o.BaseEndpoint = aws.String(cfg.Endpoint)
-		})
-	} else {
-		s3Client = s3.NewFromConfig(awsCfg)
-	}
+	s3Client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
+		if cfg.Endpoint != "" {
+			o.UsePathStyle = true
+		}
+	})
 
 	return &S3Storage{
 		client: s3Client,

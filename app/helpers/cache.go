@@ -35,8 +35,10 @@ type redisCache struct {
 
 // NewCacheService 创建缓存服务实例
 func NewCacheService(cfg *config.Config) CacheService {
+	addr := fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port)
+
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port),
+		Addr:     addr,
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	})
@@ -44,11 +46,16 @@ func NewCacheService(cfg *config.Config) CacheService {
 	// 测试连接
 	ctx := context.Background()
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		Logger.Error("Redis连接失败", zap.Error(err))
+		Logger.Error("Redis连接失败",
+			zap.String("host", cfg.Redis.Host),
+			zap.String("port", cfg.Redis.Port),
+			zap.Int("db", cfg.Redis.DB),
+			zap.Error(err))
 	} else {
 		Logger.Info("Redis连接成功",
 			zap.String("host", cfg.Redis.Host),
-			zap.String("port", cfg.Redis.Port))
+			zap.String("port", cfg.Redis.Port),
+			zap.Int("db", cfg.Redis.DB))
 	}
 
 	return &redisCache{
@@ -77,7 +84,7 @@ func (c *redisCache) Set(key string, value interface{}, expiration time.Duration
 		jsonBytes, err := json.Marshal(value)
 		if err != nil {
 			Logger.Error("序列化缓存值失败", zap.String("key", key), zap.Error(err))
-			return fmt.Errorf("序列化缓存值失败: %w", err)
+			return err
 		}
 		val = string(jsonBytes)
 	}
@@ -107,10 +114,10 @@ func (c *redisCache) Get(key string) (string, error) {
 	if err != nil {
 		if err == redis.Nil {
 			Logger.Debug("缓存键不存在", zap.String("key", cacheKey))
-			return "", fmt.Errorf("缓存键不存在")
+			return "", redis.Nil
 		}
 		Logger.Error("获取缓存失败", zap.String("key", cacheKey), zap.Error(err))
-		return "", fmt.Errorf("获取缓存失败: %w", err)
+		return "", err
 	}
 
 	Logger.Debug("获取缓存成功", zap.String("key", cacheKey), zap.Int("size", len(val)))
@@ -135,7 +142,7 @@ func (c *redisCache) GetJSON(key string, dest interface{}) error {
 
 	if err := json.Unmarshal([]byte(val), dest); err != nil {
 		Logger.Error("反序列化缓存值失败", zap.String("key", key), zap.Error(err))
-		return fmt.Errorf("反序列化缓存值失败: %w", err)
+		return err
 	}
 
 	Logger.Debug("反序列化缓存成功", zap.String("key", key))
@@ -165,7 +172,7 @@ func (c *redisCache) DeletePattern(pattern string) error {
 	keys, err := c.client.Keys(ctx, cachePattern).Result()
 	if err != nil {
 		Logger.Error("获取匹配键失败", zap.String("pattern", cachePattern), zap.Error(err))
-		return fmt.Errorf("获取匹配键失败: %w", err)
+		return err
 	}
 
 	if len(keys) > 0 {
@@ -195,7 +202,7 @@ func (c *redisCache) Exists(key string) (bool, error) {
 	count, err := c.client.Exists(ctx, cacheKey).Result()
 	if err != nil {
 		Logger.Error("检查缓存键存在性失败", zap.String("key", cacheKey), zap.Error(err))
-		return false, fmt.Errorf("检查缓存键存在性失败: %w", err)
+		return false, err
 	}
 
 	exists := count > 0
@@ -211,7 +218,7 @@ func (c *redisCache) TTL(key string) (time.Duration, error) {
 	duration, err := c.client.TTL(ctx, cacheKey).Result()
 	if err != nil {
 		Logger.Error("获取缓存TTL失败", zap.String("key", cacheKey), zap.Error(err))
-		return 0, fmt.Errorf("获取缓存TTL失败: %w", err)
+		return 0, err
 	}
 
 	Logger.Debug("获取缓存TTL", zap.String("key", cacheKey), zap.Duration("ttl", duration))
