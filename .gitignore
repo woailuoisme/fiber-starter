@@ -44,6 +44,8 @@ go.work
 # ------------------------------
 .env
 .env.local
+.env.dev
+.env.production
 .env.*.local
 # Keep these as templates/defaults
 # !.env.example
