@@ -205,7 +205,9 @@ func getMigrate() (*migrate.Migrate, error) {
 			if err != nil {
 				return nil, fmt.Errorf("创建数据库文件失败: %w", err)
 			}
-			file.Close()
+			if err := file.Close(); err != nil {
+				return nil, fmt.Errorf("关闭数据库文件失败: %w", err)
+			}
 		}
 		databaseURL = fmt.Sprintf("sqlite3://%s", connConfig.Database)
 	case "postgres", "postgresql":
