@@ -3,6 +3,10 @@ package providers
 
 import (
 	"fiber-starter/config"
+
+	"github.com/go-playground/locales/en"
+	"github.com/go-playground/locales/zh"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/dig"
 )
@@ -26,8 +30,17 @@ func (p *AppProvider) Register() error {
 		return err
 	}
 
-	// 注册验证器
-	if err := p.container.Provide(validator.New); err != nil {
+	// 注册验证器，支持多语言翻译
+	if err := p.container.Provide(func() (*validator.Validate, *ut.UniversalTranslator) {
+		validate := validator.New()
+
+		// 注册通用翻译器
+		en := en.New()
+		zh := zh.New()
+		uni := ut.New(en, en, zh)
+
+		return validate, uni
+	}); err != nil {
 		return err
 	}
 

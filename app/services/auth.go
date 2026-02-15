@@ -10,6 +10,7 @@ import (
 	"fiber-starter/app/http/middleware"
 	"fiber-starter/app/models"
 	"fiber-starter/config"
+	"fiber-starter/database"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -28,13 +29,13 @@ type AuthService interface {
 
 // authService 认证服务实现
 type authService struct {
-	db     *gorm.DB
+	db     *database.Connection
 	config *config.Config
 	cache  helpers.CacheService
 }
 
 // NewAuthService 创建认证服务实例
-func NewAuthService(db *gorm.DB, cfg *config.Config, cache helpers.CacheService) AuthService {
+func NewAuthService(db *database.Connection, cfg *config.Config, cache helpers.CacheService) AuthService {
 	return &authService{
 		db:     db,
 		config: cfg,
@@ -44,9 +45,14 @@ func NewAuthService(db *gorm.DB, cfg *config.Config, cache helpers.CacheService)
 
 // Register 用户注册
 func (s *authService) Register(user *models.User) error {
+	db, err := s.db.GetDB()
+	if err != nil {
+		return err
+	}
+
 	// 检查邮箱是否已存在
 	var existingUser models.User
-	if err := s.db.Where("email = ?", user.Email).First(&existingUser).Error; err == nil {
+	if err := db.Where("email = ?", user.Email).First(&existingUser).Error; err == nil {
 		return errors.New("邮箱已被注册")
 	}
 
@@ -58,7 +64,7 @@ func (s *authService) Register(user *models.User) error {
 	user.Password = string(hashedPassword)
 
 	// 创建用户
-	if err := s.db.Create(user).Error; err != nil {
+	if err := db.Create(user).Error; err != nil {
 		return fmt.Errorf("用户创建失败: %w", err)
 	}
 
@@ -67,10 +73,15 @@ func (s *authService) Register(user *models.User) error {
 
 // Login 用户登录
 func (s *authService) Login(email, password string) (*models.User, string, string, error) {
+	db, err := s.db.GetDB()
+	if err != nil {
+		return nil, "", "", err
+	}
+
 	var user models.User
 
 	// 查找用户
-	if err := s.db.Where("email = ?", email).First(&user).Error; err != nil {
+	if err := db.Where("email = ?", email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, "", "", errors.New("邮箱或密码错误")
 		}
@@ -123,9 +134,14 @@ func (s *authService) RefreshToken(refreshToken string) (string, string, error) 
 		return "", "", errors.New("刷新令牌已失效")
 	}
 
+	db, err := s.db.GetDB()
+	if err != nil {
+		return "", "", err
+	}
+
 	// 获取用户信息
 	var user models.User
-	if err := s.db.First(&user, claims.UserID).Error; err != nil {
+	if err := db.First(&user, claims.UserID).Error; err != nil {
 		return "", "", fmt.Errorf("用户不存在: %w", err)
 	}
 
@@ -178,10 +194,15 @@ func (s *authService) Logout(token string) error {
 
 // ChangePassword 修改密码
 func (s *authService) ChangePassword(userID uint, oldPassword, newPassword string) error {
+	db, err := s.db.GetDB()
+	if err != nil {
+		return err
+	}
+
 	var user models.User
 
 	// 获取用户
-	if err := s.db.First(&user, userID).Error; err != nil {
+	if err := db.First(&user, userID).Error; err != nil {
 		return fmt.Errorf("用户不存在: %w", err)
 	}
 
@@ -197,7 +218,7 @@ func (s *authService) ChangePassword(userID uint, oldPassword, newPassword strin
 	}
 
 	// 更新密码
-	if err := s.db.Model(&user).Update("password", string(hashedPassword)).Error; err != nil {
+	if err := db.Model(&user).Update("password", string(hashedPassword)).Error; err != nil {
 		return fmt.Errorf("密码更新失败: %w", err)
 	}
 
@@ -206,10 +227,15 @@ func (s *authService) ChangePassword(userID uint, oldPassword, newPassword strin
 
 // ForgotPassword 忘记密码
 func (s *authService) ForgotPassword(email string) error {
+	db, err := s.db.GetDB()
+	if err != nil {
+		return err
+	}
+
 	var user models.User
 
 	// 查找用户
-	if err := s.db.Where("email = ?", email).First(&user).Error; err != nil {
+	if err := db.Where("email = ?", email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil // 为了安全，即使用户不存在也返回成功
 		}
@@ -240,6 +266,11 @@ func (s *authService) ResetPassword(token, email, newPassword string) error {
 		return errors.New("无效或已过期的重置令牌")
 	}
 
+	db, err := s.db.GetDB()
+	if err != nil {
+		return err
+	}
+
 	// 加密新密码
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
@@ -247,7 +278,7 @@ func (s *authService) ResetPassword(token, email, newPassword string) error {
 	}
 
 	// 更新用户密码
-	if err := s.db.Model(&models.User{}).Where("email = ?", email).
+	if err := db.Model(&models.User{}).Where("email = ?", email).
 		Update("password", string(hashedPassword)).Error; err != nil {
 		return fmt.Errorf("密码重置失败: %w", err)
 	}

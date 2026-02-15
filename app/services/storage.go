@@ -6,6 +6,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"fiber-starter/app/helpers"
@@ -36,9 +38,12 @@ const (
 type StorageService struct {
 	storage     storage.Storage
 	config      *config.StorageConfig
+	redisCfg    *config.RedisConfig
 	compression CompressionType
 	zstdEncoder *zstd.Encoder
 	zstdDecoder *zstd.Decoder
+	initMu      sync.Mutex
+	initialized uint32 // 0: false, 1: true
 }
 
 // MinIOStorage MinIO存储适配器 (已废弃，使用S3Storage)
@@ -55,34 +60,53 @@ type S3Storage struct {
 
 // NewStorageService 创建新的存储服务实例
 func NewStorageService(cfg *config.StorageConfig, redisCfg *config.RedisConfig) (*StorageService, error) {
+	// 延迟初始化，仅保存配置
+	return &StorageService{
+		config:   cfg,
+		redisCfg: redisCfg,
+	}, nil
+}
+
+// ensureInitialized 确保存储服务已初始化
+func (s *StorageService) ensureInitialized() error {
+	if atomic.LoadUint32(&s.initialized) == 1 {
+		return nil
+	}
+
+	s.initMu.Lock()
+	defer s.initMu.Unlock()
+
+	if s.initialized == 1 {
+		return nil
+	}
+
 	var store storage.Storage
 	var err error
 
-	switch cfg.Driver {
+	switch s.config.Driver {
 	case "redis":
-		store = createRedisStorage(cfg, redisCfg)
+		store = createRedisStorage(s.config, s.redisCfg)
 	case "minio":
-		store, err = createMinIOStorage(cfg)
+		store, err = createMinIOStorage(s.config)
 	case "s3":
-		store, err = createS3Storage(cfg)
+		store, err = createS3Storage(s.config)
 	case "r2":
-		store, err = createR2Storage(cfg)
+		store, err = createR2Storage(s.config)
 	case "oss":
-		store, err = createOSSStorage(cfg)
+		store, err = createOSSStorage(s.config)
 	default:
-		store = createDefaultStorage(cfg, redisCfg)
+		store = createDefaultStorage(s.config, s.redisCfg)
 	}
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	helpers.Logger.Info("存储服务已初始化", zap.String("driver", cfg.Driver))
+	s.storage = store
+	atomic.StoreUint32(&s.initialized, 1)
+	helpers.Logger.Info("存储服务已初始化", zap.String("driver", s.config.Driver))
 
-	return &StorageService{
-		storage: store,
-		config:  cfg,
-	}, nil
+	return nil
 }
 
 func createRedisStorage(cfg *config.StorageConfig, redisCfg *config.RedisConfig) storage.Storage {
@@ -169,6 +193,10 @@ func createDefaultStorage(cfg *config.StorageConfig, redisCfg *config.RedisConfi
 
 // Get 获取存储值
 func (s *StorageService) Get(key string) ([]byte, error) {
+	if err := s.ensureInitialized(); err != nil {
+		return nil, err
+	}
+
 	if s.storage == nil {
 		return nil, fmt.Errorf("storage not initialized")
 	}
@@ -192,6 +220,10 @@ func (s *StorageService) Get(key string) ([]byte, error) {
 
 // Set 设置存储值
 func (s *StorageService) Set(key string, value []byte, ttl time.Duration) error {
+	if err := s.ensureInitialized(); err != nil {
+		return err
+	}
+
 	// 如果启用了压缩，先压缩数据
 	if s.compression != CompressionNone {
 		compressed, err := s.compressData(value)
@@ -206,16 +238,25 @@ func (s *StorageService) Set(key string, value []byte, ttl time.Duration) error 
 
 // Delete 删除存储值
 func (s *StorageService) Delete(key string) error {
+	if err := s.ensureInitialized(); err != nil {
+		return err
+	}
 	return s.storage.Delete(key)
 }
 
 // Reset 重置存储
 func (s *StorageService) Reset() error {
+	if err := s.ensureInitialized(); err != nil {
+		return err
+	}
 	return s.storage.Reset()
 }
 
 // Close 关闭存储服务
 func (s *StorageService) Close() error {
+	if atomic.LoadUint32(&s.initialized) == 0 {
+		return nil
+	}
 	if s.zstdEncoder != nil {
 		_ = s.zstdEncoder.Close()
 	}
@@ -355,6 +396,7 @@ func (s *StorageService) GetCompressionTypeName() string {
 
 // GetStorage 获取底层存储实例
 func (s *StorageService) GetStorage() storage.Storage {
+	_ = s.ensureInitialized()
 	return s.storage
 }
 

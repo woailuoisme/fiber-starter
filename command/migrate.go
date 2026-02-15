@@ -14,10 +14,35 @@ import (
 
 	// 引入 postgres 驱动
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	// 引入 sqlite3 驱动
+	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
 	// 引入 file 驱动
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/spf13/cobra"
+
+	"fiber-starter/database"
 )
+
+// initDB 初始化数据库连接
+func initDB() error {
+	// 初始化配置（如果尚未初始化）
+	if err := config.Init(); err != nil {
+		return fmt.Errorf("初始化配置失败: %w", err)
+	}
+
+	// 创建连接管理器
+	conn, err := database.NewConnection(config.GlobalConfig)
+	if err != nil {
+		return fmt.Errorf("创建数据库连接管理器失败: %w", err)
+	}
+
+	// 初始化连接
+	if _, err := conn.GetDB(); err != nil {
+		return fmt.Errorf("连接数据库失败: %w", err)
+	}
+
+	return nil
+}
 
 // migrateCmd represents the migrate command
 var migrateCmd = &cobra.Command{
@@ -170,14 +195,31 @@ func getMigrate() (*migrate.Migrate, error) {
 	}
 
 	// 构建数据库连接字符串
-	databaseURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		connConfig.Username,
-		connConfig.Password,
-		connConfig.Host,
-		connConfig.Port,
-		connConfig.Database,
-		connConfig.SSLMode,
-	)
+	var databaseURL string
+	switch connConfig.Driver {
+	case "sqlite", "sqlite3":
+		// For sqlite3, the URL format is sqlite3://path/to/database?query
+		// 确保数据库文件存在
+		if _, err := os.Stat(connConfig.Database); os.IsNotExist(err) {
+			file, err := os.Create(connConfig.Database)
+			if err != nil {
+				return nil, fmt.Errorf("创建数据库文件失败: %w", err)
+			}
+			file.Close()
+		}
+		databaseURL = fmt.Sprintf("sqlite3://%s", connConfig.Database)
+	case "postgres", "postgresql":
+		databaseURL = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+			connConfig.Username,
+			connConfig.Password,
+			connConfig.Host,
+			connConfig.Port,
+			connConfig.Database,
+			connConfig.SSLMode,
+		)
+	default:
+		return nil, fmt.Errorf("不支持的数据库驱动: %s", connConfig.Driver)
+	}
 
 	// 创建 migrate 实例
 	m, err := migrate.New(
@@ -315,6 +357,10 @@ func freshDatabase() {
 	}
 
 	color.Cyan("正在运行种子数据...")
+	if err := initDB(); err != nil {
+		color.Red("初始化数据库连接失败: %v", err)
+		os.Exit(1)
+	}
 	err = seeders.RunAllSeeders()
 	if err != nil {
 		color.Red("运行种子数据失败: %v", err)
@@ -355,6 +401,10 @@ func showMigrationStatus() {
 
 // runSeeds 运行种子数据
 func runSeeds() {
+	if err := initDB(); err != nil {
+		color.Red("初始化数据库连接失败: %v", err)
+		os.Exit(1)
+	}
 	color.Cyan("正在运行种子数据...")
 
 	err := seeders.RunAllSeeders()
@@ -368,6 +418,10 @@ func runSeeds() {
 
 // runRandomSeeds 生成随机测试数据
 func runRandomSeeds(count int) {
+	if err := initDB(); err != nil {
+		color.Red("初始化数据库连接失败: %v", err)
+		os.Exit(1)
+	}
 	color.Cyan("正在生成 %d 条随机测试数据...", count)
 
 	err := seeders.RunRandomSeeders(count)
@@ -381,6 +435,10 @@ func runRandomSeeds(count int) {
 
 // clearSeeds 清除种子数据
 func clearSeeds() {
+	if err := initDB(); err != nil {
+		color.Red("初始化数据库连接失败: %v", err)
+		os.Exit(1)
+	}
 	color.Cyan("正在清除种子数据...")
 
 	err := seeders.ClearAllSeeders()
@@ -394,6 +452,10 @@ func clearSeeds() {
 
 // refreshSeeds 刷新种子数据
 func refreshSeeds() {
+	if err := initDB(); err != nil {
+		color.Red("初始化数据库连接失败: %v", err)
+		os.Exit(1)
+	}
 	color.Cyan("正在刷新种子数据...")
 
 	err := seeders.RefreshAllSeeders()
@@ -427,6 +489,10 @@ func setupDatabase() {
 
 	// 运行种子数据
 	color.Yellow("步骤 2/2: 运行种子数据")
+	if err := initDB(); err != nil {
+		color.Red("初始化数据库连接失败: %v", err)
+		os.Exit(1)
+	}
 	err = seeders.RunAllSeeders()
 	if err != nil {
 		color.Red("种子数据运行失败: %v", err)

@@ -2,7 +2,7 @@
 package controllers
 
 import (
-	apierrors "fiber-starter/app/errors"
+	apierrors "fiber-starter/app/apierrors"
 	"fiber-starter/app/helpers"
 	"fiber-starter/app/http/middleware"
 	"fiber-starter/app/models"

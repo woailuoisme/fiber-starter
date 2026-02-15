@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
@@ -284,51 +285,56 @@ type RateLimitConfig struct {
 // GlobalConfig 全局配置实例
 var GlobalConfig *Config
 
+// loadEnvOnce 确保环境文件只加载一次
+var loadEnvOnce sync.Once
+
 // loadEnvFile 根据 APP_ENV 加载对应的 .env 文件
 func loadEnvFile() {
-	// 获取环境变量 APP_ENV，默认为空（使用 .env）
-	appEnv := os.Getenv("APP_ENV")
+	loadEnvOnce.Do(func() {
+		// 获取环境变量 APP_ENV，默认为空（使用 .env）
+		appEnv := os.Getenv("APP_ENV")
 
-	var envFiles []string
+		var envFiles []string
 
-	// 根据 APP_ENV 确定要加载的 .env 文件
-	if appEnv != "" {
-		// 如果设置了 APP_ENV，优先加载 .env.{APP_ENV}
-		envFiles = []string{
-			fmt.Sprintf(".env.%s", appEnv),
-			".env",
-		}
-	} else {
-		// 如果没有设置 APP_ENV，只加载 .env
-		envFiles = []string{".env"}
-	}
-
-	// 尝试加载环境文件
-	var loaded bool
-	for _, envFile := range envFiles {
-		// 尝试多个可能的路径
-		envPaths := []string{
-			envFile,
-			fmt.Sprintf("./config/%s", envFile),
-			fmt.Sprintf("../%s", envFile),
+		// 根据 APP_ENV 确定要加载的 .env 文件
+		if appEnv != "" {
+			// 如果设置了 APP_ENV，优先加载 .env.{APP_ENV}
+			envFiles = []string{
+				fmt.Sprintf(".env.%s", appEnv),
+				".env",
+			}
+		} else {
+			// 如果没有设置 APP_ENV，只加载 .env
+			envFiles = []string{".env"}
 		}
 
-		for _, path := range envPaths {
-			if err := godotenv.Load(path); err == nil {
-				log.Printf("成功加载环境文件: %s", path)
-				loaded = true
+		// 尝试加载环境文件
+		var loaded bool
+		for _, envFile := range envFiles {
+			// 尝试多个可能的路径
+			envPaths := []string{
+				envFile,
+				fmt.Sprintf("./config/%s", envFile),
+				fmt.Sprintf("../%s", envFile),
+			}
+
+			for _, path := range envPaths {
+				if err := godotenv.Load(path); err == nil {
+					log.Printf("成功加载环境文件: %s", path)
+					loaded = true
+					break
+				}
+			}
+
+			if loaded {
 				break
 			}
 		}
 
-		if loaded {
-			break
+		if !loaded {
+			log.Printf("未找到环境文件，将使用环境变量和默认配置")
 		}
-	}
-
-	if !loaded {
-		log.Printf("未找到环境文件，将使用环境变量和默认配置")
-	}
+	})
 }
 
 // LoadDatabaseConfig 加载数据库配置文件
@@ -369,6 +375,11 @@ func LoadDatabaseConfig() (*DatabaseConfig, error) {
 	// 解析配置到结构体
 	if err := viper.Unmarshal(dbConfig); err != nil {
 		return nil, err
+	}
+
+	// 检查是否有 DB_CONNECTION 环境变量，如果有则覆盖 default
+	if dbConnection := os.Getenv("DB_CONNECTION"); dbConnection != "" {
+		dbConfig.Default = dbConnection
 	}
 
 	return dbConfig, nil

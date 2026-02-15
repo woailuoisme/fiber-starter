@@ -4,6 +4,7 @@ package database
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"fiber-starter/app/helpers"
@@ -22,14 +23,39 @@ var DB *gorm.DB
 
 // Connection 数据库连接结构体
 type Connection struct {
-	*gorm.DB
+	db     *gorm.DB
+	config *config.Config
+	mu     sync.RWMutex
 }
 
-// NewConnection 创建新的数据库连接
+// NewConnection 创建新的数据库连接管理器
 func NewConnection(cfg *config.Config) (*Connection, error) {
+	// 仅保存配置，不进行实际连接
+	return &Connection{
+		config: cfg,
+	}, nil
+}
+
+// GetDB 获取数据库实例（懒加载）
+func (c *Connection) GetDB() (*gorm.DB, error) {
+	c.mu.RLock()
+	if c.db != nil {
+		c.mu.RUnlock()
+		return c.db, nil
+	}
+	c.mu.RUnlock()
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// 双重检查
+	if c.db != nil {
+		return c.db, nil
+	}
+
 	// 获取默认连接配置
-	defaultConn := cfg.Database.Default
-	connConfig, exists := cfg.Database.Connections[defaultConn]
+	defaultConn := c.config.Database.Default
+	connConfig, exists := c.config.Database.Connections[defaultConn]
 	if !exists {
 		return nil, fmt.Errorf("数据库连接配置 '%s' 不存在", defaultConn)
 	}
@@ -37,7 +63,7 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 	dsn := buildDSN(connConfig)
 
 	// 创建 GORM DB 实例
-	db, err := createGormDB(connConfig.Driver, dsn, cfg.App.Debug)
+	db, err := createGormDB(connConfig.Driver, dsn, c.config.App.Debug)
 	if err != nil {
 		helpers.LogError("数据库连接失败",
 			zap.Error(err),
@@ -48,23 +74,19 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 	}
 
 	// 配置连接池
-	if err := configureConnectionPool(db, cfg.Database.Pool); err != nil {
+	if err := configureConnectionPool(db, c.config.Database.Pool); err != nil {
 		return nil, err
 	}
 
-	// 测试连接
-	if err := testConnection(db, connConfig); err != nil {
-		return nil, err
-	}
-
-	helpers.Info("数据库连接成功",
+	helpers.Info("数据库已连接",
 		zap.String("database", connConfig.Database),
 		zap.String("driver", connConfig.Driver))
 
-	// 设置全局DB实例
+	c.db = db
+	// 设置全局DB实例（为了兼容性）
 	DB = db
 
-	return &Connection{DB: db}, nil
+	return c.db, nil
 }
 
 // createGormDB 根据驱动创建 GORM DB 实例
@@ -166,7 +188,14 @@ func getLogLevel(debug bool) gormLogger.LogLevel {
 
 // Close 关闭数据库连接
 func (c *Connection) Close() error {
-	sqlDB, err := c.DB.DB()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.db == nil {
+		return nil
+	}
+
+	sqlDB, err := c.db.DB()
 	if err != nil {
 		helpers.LogError("获取底层sql.DB对象失败，无法关闭连接", zap.Error(err))
 		return err
@@ -177,13 +206,20 @@ func (c *Connection) Close() error {
 		return err
 	}
 
+	c.db = nil
 	helpers.Info("数据库连接已关闭")
 	return nil
 }
 
 // HealthCheck 检查数据库连接健康状态
 func (c *Connection) HealthCheck() error {
-	sqlDB, err := c.DB.DB()
+	// 尝试获取连接（如果未初始化会尝试连接）
+	db, err := c.GetDB()
+	if err != nil {
+		return err
+	}
+
+	sqlDB, err := db.DB()
 	if err != nil {
 		helpers.LogError("获取底层sql.DB对象失败", zap.Error(err))
 		return fmt.Errorf("failed to get underlying sql.DB: %w", err)
@@ -201,7 +237,12 @@ func (c *Connection) HealthCheck() error {
 
 // GetStats 获取数据库连接池统计信息
 func (c *Connection) GetStats() (map[string]interface{}, error) {
-	sqlDB, err := c.DB.DB()
+	db, err := c.GetDB()
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDB, err := db.DB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
 	}
@@ -222,9 +263,14 @@ func (c *Connection) GetStats() (map[string]interface{}, error) {
 
 // AutoMigrate 自动迁移数据库表
 func (c *Connection) AutoMigrate(models ...interface{}) error {
+	db, err := c.GetDB()
+	if err != nil {
+		return err
+	}
+
 	helpers.Info("开始数据库表自动迁移", zap.Int("modelCount", len(models)))
 
-	if err := c.DB.AutoMigrate(models...); err != nil {
+	if err := db.AutoMigrate(models...); err != nil {
 		helpers.LogError("数据库表自动迁移失败", zap.Error(err))
 		return err
 	}

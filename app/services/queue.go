@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"fiber-starter/config"
@@ -22,47 +23,59 @@ type QueueService interface {
 
 // queueService 队列服务实现
 type queueService struct {
-	server    *asynq.Server
-	client    *asynq.Client
-	mux       *asynq.ServeMux
-	config    *config.Config
-	isRunning bool
+	server     *asynq.Server
+	client     *asynq.Client
+	mux        *asynq.ServeMux
+	config     *config.Config
+	isRunning  bool
+	clientOnce sync.Once
+	serverOnce sync.Once
 }
 
 // NewQueueService 创建队列服务实例
 func NewQueueService(cfg *config.Config) QueueService {
-	// Redis连接配置
-	redisOpt := asynq.RedisClientOpt{
-		Addr:     fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port),
-		Password: cfg.Redis.Password,
-		DB:       cfg.Redis.DB + 1, // 使用不同的DB
-	}
-
-	// 创建服务器
-	server := asynq.NewServer(
-		redisOpt,
-		asynq.Config{
-			Concurrency: cfg.Queue.Concurrency,
-			Queues: map[string]int{
-				"critical": 6,
-				"default":  3,
-				"low":      1,
-			},
-		},
-	)
-
-	// 创建客户端
-	client := asynq.NewClient(redisOpt)
-
 	// 创建路由器
 	mux := asynq.NewServeMux()
 
 	return &queueService{
-		server: server,
-		client: client,
 		mux:    mux,
 		config: cfg,
 	}
+}
+
+// getRedisOpt 获取Redis配置
+func (q *queueService) getRedisOpt() asynq.RedisClientOpt {
+	return asynq.RedisClientOpt{
+		Addr:     fmt.Sprintf("%s:%s", q.config.Redis.Host, q.config.Redis.Port),
+		Password: q.config.Redis.Password,
+		DB:       q.config.Redis.DB + 1, // 使用不同的DB
+	}
+}
+
+// getClient 获取或初始化客户端（懒加载）
+func (q *queueService) getClient() *asynq.Client {
+	q.clientOnce.Do(func() {
+		q.client = asynq.NewClient(q.getRedisOpt())
+	})
+	return q.client
+}
+
+// getServer 获取或初始化服务器（懒加载）
+func (q *queueService) getServer() *asynq.Server {
+	q.serverOnce.Do(func() {
+		q.server = asynq.NewServer(
+			q.getRedisOpt(),
+			asynq.Config{
+				Concurrency: q.config.Queue.Concurrency,
+				Queues: map[string]int{
+					"critical": 6,
+					"default":  3,
+					"low":      1,
+				},
+			},
+		)
+	})
+	return q.server
 }
 
 // Enqueue 添加任务到队列
@@ -77,7 +90,7 @@ func (q *queueService) Enqueue(taskName string, payload interface{}, opts ...asy
 	task := asynq.NewTask(taskName, payloadBytes, opts...)
 
 	// 添加到队列
-	info, err := q.client.Enqueue(task)
+	info, err := q.getClient().Enqueue(task)
 	if err != nil {
 		return nil, fmt.Errorf("添加任务到队列失败: %w", err)
 	}
@@ -98,7 +111,7 @@ func (q *queueService) EnqueueIn(taskName string, payload interface{},
 	task := asynq.NewTask(taskName, payloadBytes, opts...)
 
 	// 延迟添加到队列
-	info, err := q.client.Enqueue(task, asynq.ProcessIn(delay))
+	info, err := q.getClient().Enqueue(task, asynq.ProcessIn(delay))
 	if err != nil {
 		return nil, fmt.Errorf("延迟添加任务到队列失败: %w", err)
 	}
@@ -119,7 +132,7 @@ func (q *queueService) EnqueueAt(taskName string, payload interface{},
 	task := asynq.NewTask(taskName, payloadBytes, opts...)
 
 	// 在指定时间添加到队列
-	info, err := q.client.Enqueue(task, asynq.ProcessAt(at))
+	info, err := q.getClient().Enqueue(task, asynq.ProcessAt(at))
 	if err != nil {
 		return nil, fmt.Errorf("定时添加任务到队列失败: %w", err)
 	}
@@ -142,7 +155,7 @@ func (q *queueService) StartWorker() error {
 	// 启动工作进程
 	go func() {
 		q.isRunning = true
-		if err := q.server.Run(q.mux); err != nil {
+		if err := q.getServer().Run(q.mux); err != nil {
 			fmt.Printf("队列工作进程启动失败: %v\n", err)
 		}
 	}()
@@ -157,11 +170,11 @@ func (q *queueService) StopWorker() error {
 	}
 
 	// 优雅关闭
-	q.server.Shutdown()
+	q.getServer().Shutdown()
 	q.isRunning = false
 
 	// 关闭客户端
-	_ = q.client.Close()
+	_ = q.getClient().Close()
 
 	return nil
 }

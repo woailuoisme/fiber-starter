@@ -27,7 +27,11 @@ func TestDatabaseConnection(t *testing.T) {
 	}()
 
 	// 测试连接是否成功
-	if conn.DB == nil {
+	db, err := conn.GetDB()
+	if err != nil {
+		t.Fatalf("获取数据库连接失败: %v", err)
+	}
+	if db == nil {
 		t.Fatal("数据库连接为空")
 	}
 
@@ -126,7 +130,12 @@ func TestDatabaseConnectionPool(t *testing.T) {
 	}()
 
 	// 获取底层 sql.DB
-	sqlDB, err := conn.DB.DB()
+	db, err := conn.GetDB()
+	if err != nil {
+		t.Fatalf("获取数据库连接失败: %v", err)
+	}
+
+	sqlDB, err := db.DB()
 	if err != nil {
 		t.Fatalf("获取底层sql.DB失败: %v", err)
 	}

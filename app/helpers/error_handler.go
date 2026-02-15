@@ -1,7 +1,7 @@
 package helpers
 
 import (
-	apierrors "fiber-starter/app/errors"
+	apierrors "fiber-starter/app/apierrors"
 	"fiber-starter/app/http/resources"
 	"fiber-starter/app/models"
 

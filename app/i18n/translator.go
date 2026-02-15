@@ -2,6 +2,13 @@ package i18n
 
 import (
 	"fiber-starter/app/helpers"
+
+	"github.com/go-playground/locales/en"
+	"github.com/go-playground/locales/zh"
+	ut "github.com/go-playground/universal-translator"
+	"github.com/go-playground/validator/v10"
+	en_translations "github.com/go-playground/validator/v10/translations/en"
+	zh_translations "github.com/go-playground/validator/v10/translations/zh"
 	"github.com/gofiber/fiber/v3"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"go.uber.org/zap"
@@ -11,17 +18,46 @@ import (
 type Translator struct {
 	localizer *i18n.Localizer
 	lang      string
+	trans     ut.Translator
 }
 
 // contextKey 用于在 Fiber 上下文中存储翻译器的键
 const contextKey = "translator"
 
+var (
+	uni      *ut.UniversalTranslator
+	validate *validator.Validate
+)
+
+func init() {
+	en := en.New()
+	zh := zh.New()
+	uni = ut.New(en, en, zh)
+	validate = validator.New()
+}
+
 // NewTranslator 创建翻译器
 func NewTranslator(lang string) *Translator {
 	localizer := GetLocalizer(lang)
+
+	// 获取对应语言的翻译器
+	trans, found := uni.GetTranslator(lang)
+	if !found {
+		trans, _ = uni.GetTranslator("en")
+	}
+
+	// 注册验证器翻译
+	switch lang {
+	case "zh-CN", "zh":
+		_ = zh_translations.RegisterDefaultTranslations(validate, trans)
+	default:
+		_ = en_translations.RegisterDefaultTranslations(validate, trans)
+	}
+
 	return &Translator{
 		localizer: localizer,
 		lang:      lang,
+		trans:     trans,
 	}
 }
 
@@ -78,40 +114,24 @@ func (t *Translator) TWithData(messageID string, data map[string]interface{}) st
 	return translation
 }
 
-// TPlural 翻译复数消息
-// count 用于确定使用哪个复数形式
-// data 包含要替换的变量（通常包含 Count）
-func (t *Translator) TPlural(messageID string, count int, data map[string]interface{}) string {
-	if t.localizer == nil {
-		helpers.Warn("Localizer 未初始化", zap.String("messageID", messageID))
-		return messageID
+// ValidateAndTranslate 验证并翻译错误
+func (t *Translator) ValidateAndTranslate(err error) map[string]string {
+	errs := make(map[string]string)
+	if err == nil {
+		return errs
 	}
 
-	// 确保 data 中包含 Count
-	if data == nil {
-		data = make(map[string]interface{})
-	}
-	data["Count"] = count
-
-	translation, err := t.localizer.Localize(&i18n.LocalizeConfig{
-		MessageID:    messageID,
-		PluralCount:  count,
-		TemplateData: data,
-		DefaultMessage: &i18n.Message{
-			ID: messageID,
-		},
-	})
-
-	if err != nil {
-		helpers.Warn("翻译失败",
-			zap.String("messageID", messageID),
-			zap.String("language", t.lang),
-			zap.Int("count", count),
-			zap.Error(err))
-		return messageID
+	validatorErrs, ok := err.(validator.ValidationErrors)
+	if !ok {
+		errs["error"] = err.Error()
+		return errs
 	}
 
-	return translation
+	for _, e := range validatorErrs {
+		errs[e.Field()] = e.Translate(t.trans)
+	}
+
+	return errs
 }
 
 // GetLanguage 获取当前语言

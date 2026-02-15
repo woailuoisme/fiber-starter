@@ -7,7 +7,7 @@ import (
 
 	"fiber-starter/app/helpers"
 	"fiber-starter/app/schedule"
-	"fiber-starter/config"
+
 	"github.com/spf13/cobra"
 )
 
@@ -25,13 +25,8 @@ func init() {
 }
 
 func runSchedule() {
-	// 初始化配置
-	if err := config.Init(); err != nil {
-		panic(err)
-	}
-
-	// 初始化日志
-	if err := helpers.Init(); err != nil {
+	// 初始化数据库连接（包含配置和日志初始化）
+	if err := initDB(); err != nil {
 		panic(err)
 	}
 

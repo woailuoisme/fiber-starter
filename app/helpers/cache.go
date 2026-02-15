@@ -43,20 +43,12 @@ func NewCacheService(cfg *config.Config) CacheService {
 		DB:       cfg.Redis.DB,
 	})
 
-	// 测试连接
-	ctx := context.Background()
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		Logger.Error("Redis连接失败",
-			zap.String("host", cfg.Redis.Host),
-			zap.String("port", cfg.Redis.Port),
-			zap.Int("db", cfg.Redis.DB),
-			zap.Error(err))
-	} else {
-		Logger.Info("Redis连接成功",
-			zap.String("host", cfg.Redis.Host),
-			zap.String("port", cfg.Redis.Port),
-			zap.Int("db", cfg.Redis.DB))
-	}
+	// 延迟连接：不在此处进行Ping检查
+	// 当实际调用命令时会自动连接
+	Logger.Info("Redis服务已配置 (延迟连接)",
+		zap.String("host", cfg.Redis.Host),
+		zap.String("port", cfg.Redis.Port),
+		zap.Int("db", cfg.Redis.DB))
 
 	return &redisCache{
 		client: rdb,
