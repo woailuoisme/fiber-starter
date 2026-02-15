@@ -1,0 +1,25 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+.DS_Store
+
+# 临时文件
+tmp/
+*.log
+
+# 测试文件
+*_test.go
+tests/
+
+# 文档
+*.md
+docs/
+
+# 其他
+.env
+storage/
+public/uploads/

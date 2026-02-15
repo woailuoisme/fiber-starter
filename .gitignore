@@ -1,30 +1,29 @@
-# Binaries for programs and plugins
+# Binaries
+# ------------------------------
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-
-# Test binary, built with `go test -c`
 *.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+debug
+__debug_bin
+bin/
+fiber-starter
+main
 
-# Dependency directories (remove the comment below to include it)
-vendor/
-
-# Go workspace file
-go.work
-
-# IDE specific files
+# IDEs
+# ------------------------------
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
+*.iml
 
-# OS generated files
+# OS Files
+# ------------------------------
 .DS_Store
 .DS_Store?
 ._*
@@ -33,79 +32,83 @@ go.work
 ehthumbs.db
 Thumbs.db
 
-# Environment variables
+# Dependency directories
+# ------------------------------
+vendor/
+
+# Go Workspace
+# ------------------------------
+go.work
+
+# Environment Variables
+# ------------------------------
 .env
 .env.local
 .env.*.local
+# Keep these as templates/defaults
+# !.env.example
+# !.env.dev
+# !.env.production
 
-# Log files
+# Logs
+# ------------------------------
 *.log
 logs/
+storage/logs/
 
 # Database
+# ------------------------------
 *.db
 *.sqlite
 *.sqlite3
 
-# Air live reload
-#.air.toml
+# Air (Live Reload)
+# ------------------------------
 tmp/
 
-# Build output
+# Build Output
+# ------------------------------
 dist/
 build/
 
-# Coverage reports
+# Test Coverage
+# ------------------------------
 coverage.txt
 coverage.html
 coverage.out
-
-# Debug files
-debug
-__debug_bin
-
-
-# Temporary files
-*.tmp
-*.temp
-
-# Cache directories
-.cache/
-storage/cache/*
-
-# Session files
-*.session
-
-# Profiling data
-*.prof
-*.pprof
-
-# Backup files
-*.bak
-*.backup
-
-# Test files
 test-results/
-coverage/
 
-# Local development
+# Cache
+# ------------------------------
+.cache/
+
+# Local Development
+# ------------------------------
 .local/
 
-# Docker
-.dockerignore
-
-# Kubernetes
-*.kubeconfig
-
 # Terraform
+# ------------------------------
 *.tfstate
 *.tfstate.*
 .terraform/
 
-# Local configuration overrides
-config/local.yaml
-config/development.yaml
-config/testing.yaml
+# Kubeconfig
+# ------------------------------
+*.kubeconfig
 
+# Storage (Local Uploads)
+# ------------------------------
+storage/app/public/*
+!storage/app/public/.gitkeep
+storage/framework/cache/*
+!storage/framework/cache/.gitkeep
+storage/framework/sessions/*
+!storage/framework/sessions/.gitkeep
+storage/framework/views/*
+!storage/framework/views/.gitkeep
+
+# Project Specific
+# ------------------------------
 .kiro
-
+.idea
+.vscode
