@@ -1,18 +1,20 @@
+// Package resources 定义HTTP响应结构和格式化工具
 package resources
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
-// ApiResponse 统一API响应结构
+// APIResponse 统一API响应结构
 // Requirements: 14.1, 14.2, 14.3
-type ApiResponse struct {
+type APIResponse struct {
 	Success  bool        `json:"success"`
 	Code     int         `json:"code"`
 	Message  string      `json:"message"`
@@ -52,10 +54,12 @@ type PaginatedResponse struct {
 	Meta  PaginationMeta `json:"meta"`
 }
 
-// Success 成功响应
-// Requirements: 14.2, 14.4
-func Success(c *fiber.Ctx, message string, data interface{}) error {
-	return c.Status(fiber.StatusOK).JSON(ApiResponse{
+// JSON 发送成功响应
+func JSON(c fiber.Ctx, data interface{}, message string) error {
+	if message == "" {
+		message = "success"
+	}
+	return c.Status(fiber.StatusOK).JSON(APIResponse{
 		Success: true,
 		Code:    fiber.StatusOK,
 		Message: message,
@@ -63,28 +67,47 @@ func Success(c *fiber.Ctx, message string, data interface{}) error {
 	})
 }
 
-// Error 错误响应
-// Requirements: 14.3, 14.7
-func Error(c *fiber.Ctx, code int, message string, errors interface{}) error {
-	response := ApiResponse{
+// Created 发送创建成功响应
+func Created(c fiber.Ctx, data interface{}, message string) error {
+	if message == "" {
+		message = "created"
+	}
+	return c.Status(fiber.StatusCreated).JSON(APIResponse{
+		Success: true,
+		Code:    fiber.StatusCreated,
+		Message: message,
+		Data:    data,
+	})
+}
+
+// Error 发送错误响应
+func Error(c fiber.Ctx, status int, message string, errors interface{}) error {
+	// 如果是内部服务器错误，且不在调试模式下，隐藏详细错误信息
+	if status == fiber.StatusInternalServerError && !IsDebugMode() {
+		message = "Internal Server Error"
+		errors = nil
+	}
+
+	return c.Status(status).JSON(APIResponse{
 		Success: false,
-		Code:    code,
+		Code:    status,
 		Message: message,
 		Errors:  errors,
-	}
-
-	// 如果是调试模式，添加调试信息
-	if IsDebugMode() {
-		response.Debugger = GetDebugger(c)
-	}
-
-	return c.Status(code).JSON(response)
+	})
 }
 
 // ErrorWithDebugger 带调试信息的错误响应
 // Requirements: 12.5, 12.6, 12.7, 12.8, 12.9
-func ErrorWithDebugger(c *fiber.Ctx, code int, message string, errors interface{}, exception string, file string, line int) error {
-	response := ApiResponse{
+func ErrorWithDebugger(
+	c fiber.Ctx,
+	code int,
+	message string,
+	errors interface{},
+	exception string,
+	file string,
+	line int,
+) error {
+	response := APIResponse{
 		Success: false,
 		Code:    code,
 		Message: message,
@@ -106,7 +129,7 @@ func ErrorWithDebugger(c *fiber.Ctx, code int, message string, errors interface{
 
 // Paginated 分页响应
 // Requirements: 14.5, 14.6
-func Paginated(c *fiber.Ctx, items []interface{}, currentPage, perPage int, total int64) error {
+func Paginated(c fiber.Ctx, items []interface{}, currentPage, perPage int, total int64) error {
 	lastPage := int((total + int64(perPage) - 1) / int64(perPage))
 	if lastPage < 1 {
 		lastPage = 1
@@ -136,7 +159,7 @@ func Paginated(c *fiber.Ctx, items []interface{}, currentPage, perPage int, tota
 		Meta:  meta,
 	}
 
-	return c.Status(fiber.StatusOK).JSON(ApiResponse{
+	return c.Status(fiber.StatusOK).JSON(APIResponse{
 		Success: true,
 		Code:    fiber.StatusOK,
 		Message: "Success",
@@ -146,7 +169,7 @@ func Paginated(c *fiber.Ctx, items []interface{}, currentPage, perPage int, tota
 
 // GetDebugger 获取调试信息
 // Requirements: 13.1, 12.6, 12.7, 12.8
-func GetDebugger(c *fiber.Ctx) *Debugger {
+func GetDebugger(c fiber.Ctx) *Debugger {
 	startTime := c.Locals("start_time")
 	var requestTime float64
 	if startTime != nil {
@@ -201,9 +224,10 @@ func IsDebugMode() bool {
 // FormatValidationErrors 格式化验证错误
 // Requirements: 14.7
 func FormatValidationErrors(err error) map[string][]string {
-	errors := make(map[string][]string)
+	errMap := make(map[string][]string)
 
-	if validationErrors, ok := err.(validator.ValidationErrors); ok {
+	var validationErrors validator.ValidationErrors
+	if errors.As(err, &validationErrors) {
 		for _, e := range validationErrors {
 			field := strings.ToLower(e.Field())
 			tag := e.Tag()
@@ -234,11 +258,11 @@ func FormatValidationErrors(err error) map[string][]string {
 				message = fmt.Sprintf("The %s field is invalid.", field)
 			}
 
-			errors[field] = append(errors[field], message)
+			errMap[field] = append(errMap[field], message)
 		}
 	}
 
-	return errors
+	return errMap
 }
 
 // SanitizeString 清理字符串
@@ -274,8 +298,8 @@ func GenerateSlug(text string) string {
 
 // SuccessResponse 创建成功响应对象（不直接返回给客户端）
 // Requirements: 14.2, 14.4
-func SuccessResponse(message string, data interface{}) ApiResponse {
-	return ApiResponse{
+func SuccessResponse(message string, data interface{}) APIResponse {
+	return APIResponse{
 		Success: true,
 		Code:    fiber.StatusOK,
 		Message: message,
@@ -285,8 +309,8 @@ func SuccessResponse(message string, data interface{}) ApiResponse {
 
 // ErrorResponse 创建错误响应对象（不直接返回给客户端）
 // Requirements: 14.3, 14.7
-func ErrorResponse(message string, errors interface{}) ApiResponse {
-	return ApiResponse{
+func ErrorResponse(message string, errors interface{}) APIResponse {
+	return APIResponse{
 		Success: false,
 		Code:    fiber.StatusBadRequest,
 		Message: message,

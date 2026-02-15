@@ -1,10 +1,11 @@
 package seeders
 
 import (
-	"fiber-starter/app/models"
-	"fiber-starter/database"
 	"math/rand"
 	"time"
+
+	"fiber-starter/app/models"
+	"fiber-starter/database"
 
 	"github.com/go-faker/faker/v4"
 	"golang.org/x/crypto/bcrypt"
@@ -112,7 +113,7 @@ func SeedRandomUsers(db *gorm.DB, count int) error {
 
 		// 随机设置一些用户为已验证邮箱
 		if i%3 == 0 { // 每3个用户中有1个已验证邮箱
-			daysAgo := rand.Intn(30) + 1
+			daysAgo := rand.Intn(30) + 1 //nolint:gosec // seeder
 			verifiedTime := time.Now().AddDate(0, 0, -daysAgo)
 			user.EmailVerifiedAt = &verifiedTime
 		}
@@ -228,16 +229,16 @@ func GenerateTestUsers(db *gorm.DB, count int) error {
 		}
 
 		// 随机设置邮箱验证状态
-		if rand.Intn(2) == 1 {
+		if rand.Intn(2) == 1 { //nolint:gosec // seeder
 			// 生成随机的验证时间（过去30天内）
-			daysAgo := rand.Intn(30) + 1
+			daysAgo := rand.Intn(30) + 1 //nolint:gosec // seeder
 			verifiedTime := time.Now().AddDate(0, 0, -daysAgo)
 			user.EmailVerifiedAt = &verifiedTime
 		}
 
 		// 随机设置用户状态
 		user.Status = models.UserStatusActive
-		if rand.Intn(10) == 0 { // 10% 概率为非活跃
+		if rand.Intn(10) == 0 { //nolint:gosec // seeder // 10% 概率为非活跃
 			user.Status = models.UserStatusInactive
 		}
 

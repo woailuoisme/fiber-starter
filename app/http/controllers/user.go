@@ -1,14 +1,15 @@
 package controllers
 
 import (
+	"strconv"
+
 	"fiber-starter/app/http/middleware"
 	"fiber-starter/app/http/resources"
 	"fiber-starter/app/models"
 	"fiber-starter/app/services"
-	"strconv"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // UserController 用户控制器
@@ -29,7 +30,7 @@ func NewUserController(userService services.UserService, validate *validator.Val
 type UpdateProfileRequest struct {
 	Name   string `json:"name" validate:"omitempty,min=2,max=100" example:"张三" swagger:"required,用户姓名"`
 	Phone  string `json:"phone" validate:"omitempty,e164" example:"+8613800138000" swagger:"optional,手机号码"`
-	Avatar string `json:"avatar" validate:"omitempty,url" example:"https://example.com/avatar.jpg" swagger:"optional,头像URL"`
+	Avatar string `json:"avatar" validate:"omitempty,url" example:"https://example.com/avatar.jpg" swagger:"optional,头像URL"` //nolint:lll
 }
 
 // GetUsers 获取用户列表
@@ -45,7 +46,7 @@ type UpdateProfileRequest struct {
 // @Failure 401 {object} helpers.APIResponse "未授权"
 // @Failure 500 {object} helpers.APIResponse "服务器错误"
 // @Router /api/users [get]
-func (c *UserController) GetUsers(ctx *fiber.Ctx) error {
+func (c *UserController) GetUsers(ctx fiber.Ctx) error {
 	// 获取分页参数
 	page, _ := strconv.Atoi(ctx.Query("page", "1"))
 	limit, _ := strconv.Atoi(ctx.Query("limit", "10"))
@@ -94,7 +95,7 @@ func (c *UserController) GetUsers(ctx *fiber.Ctx) error {
 // @Failure 401 {object} helpers.APIResponse "未授权"
 // @Failure 404 {object} helpers.APIResponse "用户不存在"
 // @Router /api/users/{id} [get]
-func (c *UserController) GetUser(ctx *fiber.Ctx) error {
+func (c *UserController) GetUser(ctx fiber.Ctx) error {
 	// 获取用户ID
 	idStr := ctx.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -125,7 +126,7 @@ func (c *UserController) GetUser(ctx *fiber.Ctx) error {
 // @Failure 401 {object} helpers.APIResponse "未授权"
 // @Failure 404 {object} helpers.APIResponse "用户不存在"
 // @Router /api/users/{id} [put]
-func (c *UserController) UpdateUser(ctx *fiber.Ctx) error {
+func (c *UserController) UpdateUser(ctx fiber.Ctx) error {
 	// 获取用户ID
 	idStr := ctx.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -135,13 +136,16 @@ func (c *UserController) UpdateUser(ctx *fiber.Ctx) error {
 
 	// 解析请求体
 	var req UpdateProfileRequest
-	if err := ctx.BodyParser(&req); err != nil {
+	if err := ctx.Bind().Body(&req); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("请求参数解析失败", err.Error()))
 	}
 
 	// 验证请求参数
 	if err := c.validator.Struct(&req); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("请求参数验证失败", resources.FormatValidationErrors(err)))
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse(
+			"请求参数验证失败",
+			resources.FormatValidationErrors(err),
+		))
 	}
 
 	// 构建更新数据
@@ -186,7 +190,7 @@ func (c *UserController) UpdateUser(ctx *fiber.Ctx) error {
 // @Failure 401 {object} helpers.APIResponse "未授权"
 // @Failure 404 {object} helpers.APIResponse "用户不存在"
 // @Router /api/users/{id} [delete]
-func (c *UserController) DeleteUser(ctx *fiber.Ctx) error {
+func (c *UserController) DeleteUser(ctx fiber.Ctx) error {
 	// 获取用户ID
 	idStr := ctx.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -215,7 +219,7 @@ func (c *UserController) DeleteUser(ctx *fiber.Ctx) error {
 // @Failure 400 {object} helpers.APIResponse "请求参数错误"
 // @Failure 401 {object} helpers.APIResponse "未授权"
 // @Router /api/v1/users/profile [put]
-func (c *UserController) UpdateProfile(ctx *fiber.Ctx) error {
+func (c *UserController) UpdateProfile(ctx fiber.Ctx) error {
 	// 从上下文中获取用户信息
 	user := middleware.GetUserFromContext(ctx)
 	if user == nil {
@@ -224,13 +228,16 @@ func (c *UserController) UpdateProfile(ctx *fiber.Ctx) error {
 
 	// 解析请求体
 	var req UpdateProfileRequest
-	if err := ctx.BodyParser(&req); err != nil {
+	if err := ctx.Bind().Body(&req); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("请求参数解析失败", err.Error()))
 	}
 
 	// 验证请求参数
 	if err := c.validator.Struct(&req); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("请求参数验证失败", resources.FormatValidationErrors(err)))
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse(
+			"请求参数验证失败",
+			resources.FormatValidationErrors(err),
+		))
 	}
 
 	// 构建更新资料
@@ -272,7 +279,7 @@ func (c *UserController) UpdateProfile(ctx *fiber.Ctx) error {
 // @Failure 401 {object} helpers.APIResponse "未授权"
 // @Failure 404 {object} helpers.APIResponse "用户不存在"
 // @Router /api/me [get]
-func (c *UserController) GetCurrentUser(ctx *fiber.Ctx) error {
+func (c *UserController) GetCurrentUser(ctx fiber.Ctx) error {
 	// 从上下文中获取用户ID
 	userID, ok := ctx.Locals("user_id").(uint)
 	if !ok {
@@ -305,7 +312,7 @@ func (c *UserController) GetCurrentUser(ctx *fiber.Ctx) error {
 // @Failure 401 {object} helpers.APIResponse "未授权"
 // @Failure 500 {object} helpers.APIResponse "服务器错误"
 // @Router /api/users/search [get]
-func (c *UserController) SearchUsers(ctx *fiber.Ctx) error {
+func (c *UserController) SearchUsers(ctx fiber.Ctx) error {
 	// 获取搜索参数
 	query := ctx.Query("q")
 	if query == "" {

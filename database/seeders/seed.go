@@ -1,9 +1,10 @@
+// Package seeders 处理数据库种子数据的生成和填充
 package seeders
 
 import (
-	"fiber-starter/database"
 	"log"
 
+	"fiber-starter/database"
 	"gorm.io/gorm"
 )
 

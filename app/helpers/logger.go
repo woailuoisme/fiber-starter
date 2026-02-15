@@ -1,21 +1,35 @@
+// Package helpers 提供各种辅助函数和工具
 package helpers
 
 import (
 	"os"
 	"path/filepath"
-	_ "path/filepath"
 	"strings"
-
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
 	"fiber-starter/config"
 
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // Logger 全局日志实例
 var Logger *zap.Logger
+
+const (
+	// DefaultLogDir 默认日志目录
+	DefaultLogDir = "./storage/logs"
+	// DefaultLogFile 默认日志文件名
+	DefaultLogFile = "app.log"
+	// DefaultMaxSize 默认日志文件最大大小 (MB)
+	DefaultMaxSize = 100
+	// DefaultMaxBackups 默认日志文件最大备份数
+	DefaultMaxBackups = 30
+	// DefaultMaxAge 默认日志文件最大保存时间 (天)
+	DefaultMaxAge = 90
+	// LogDirPerm 日志目录权限
+	LogDirPerm = 0755
+)
 
 // Init 初始化日志配置
 // Requirements: 17.1, 17.2, 17.3, 17.5, 17.6, 17.7, 22.11
@@ -29,15 +43,7 @@ func Init() error {
 
 	// 创建编码器配置
 	// Requirements: 17.5
-	encoderConfig := zap.NewProductionEncoderConfig()
-	encoderConfig.TimeKey = "timestamp"
-	encoderConfig.LevelKey = "level"
-	encoderConfig.MessageKey = "message"
-	encoderConfig.CallerKey = "caller"
-	encoderConfig.StacktraceKey = "stacktrace"
-	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	encoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
-	encoderConfig.EncodeDuration = zapcore.SecondsDurationEncoder
+	encoderConfig := createEncoderConfig()
 
 	// 创建多个核心以支持不同的输出格式
 	var cores []zapcore.Core
@@ -45,60 +51,21 @@ func Init() error {
 	// 输出到文件（带日志轮转）
 	// Requirements: 17.7
 	if logConfig.Output == "file" || logConfig.Output == "both" {
-		// 确保日志目录存在
-		logDir := "./storage/logs"
-		if err := os.MkdirAll(logDir, 0755); err != nil {
+		fileCore, err := createFileCore(encoderConfig, level)
+		if err != nil {
 			return err
 		}
-
-		//使用 lumberjack 实现日志轮转
-		//Requirements: 17.7
-		fileWriter := &lumberjack.Logger{
-			Filename:   filepath.Join(logDir, "app.log"),
-			MaxSize:    100, // MB
-			MaxBackups: 30,  // 保留30个备份
-			MaxAge:     90,  // 保留90天
-			Compress:   true,
-			LocalTime:  true,
-		}
-
-		// 文件输出使用 JSON 格式
-		fileEncoderConfig := encoderConfig
-		fileEncoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
-		fileEncoder := zapcore.NewJSONEncoder(fileEncoderConfig)
-
-		cores = append(cores, zapcore.NewCore(
-			fileEncoder,
-			zapcore.AddSync(fileWriter),
-			level,
-		))
+		cores = append(cores, fileCore)
 	}
 
 	// 输出到标准输出
 	if logConfig.Output == "stdout" || logConfig.Output == "both" || logConfig.Output == "" {
-		// 控制台输出使用彩色格式
-		consoleEncoderConfig := encoderConfig
-		consoleEncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-		consoleEncoder := zapcore.NewConsoleEncoder(consoleEncoderConfig)
-
-		cores = append(cores, zapcore.NewCore(
-			consoleEncoder,
-			zapcore.AddSync(os.Stdout),
-			level,
-		))
+		cores = append(cores, createConsoleCore(encoderConfig, level))
 	}
 
 	// 如果没有配置任何输出，默认输出到标准输出（彩色）
 	if len(cores) == 0 {
-		consoleEncoderConfig := encoderConfig
-		consoleEncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-		consoleEncoder := zapcore.NewConsoleEncoder(consoleEncoderConfig)
-
-		cores = append(cores, zapcore.NewCore(
-			consoleEncoder,
-			zapcore.AddSync(os.Stdout),
-			level,
-		))
+		cores = append(cores, createConsoleCore(encoderConfig, level))
 	}
 
 	// 创建核心
@@ -114,6 +81,64 @@ func Init() error {
 	)
 
 	return nil
+}
+
+// createEncoderConfig 创建编码器配置
+func createEncoderConfig() zapcore.EncoderConfig {
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.TimeKey = "timestamp"
+	encoderConfig.LevelKey = "level"
+	encoderConfig.MessageKey = "message"
+	encoderConfig.CallerKey = "caller"
+	encoderConfig.StacktraceKey = "stacktrace"
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
+	encoderConfig.EncodeDuration = zapcore.SecondsDurationEncoder
+	return encoderConfig
+}
+
+// createFileCore 创建文件输出核心
+func createFileCore(encoderConfig zapcore.EncoderConfig, level zapcore.Level) (zapcore.Core, error) {
+	// 确保日志目录存在
+	if err := os.MkdirAll(DefaultLogDir, LogDirPerm); err != nil {
+		return nil, err
+	}
+
+	// 使用 lumberjack 实现日志轮转
+	// Requirements: 17.7
+	fileWriter := &lumberjack.Logger{
+		Filename:   filepath.Join(DefaultLogDir, DefaultLogFile),
+		MaxSize:    DefaultMaxSize,    // MB
+		MaxBackups: DefaultMaxBackups, // 保留30个备份
+		MaxAge:     DefaultMaxAge,     // 保留90天
+		Compress:   true,
+		LocalTime:  true,
+	}
+
+	// 文件输出使用 JSON 格式
+	fileEncoderConfig := encoderConfig
+	fileEncoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
+	fileEncoder := zapcore.NewJSONEncoder(fileEncoderConfig)
+
+	return zapcore.NewCore(
+		fileEncoder,
+		zapcore.AddSync(fileWriter),
+		level,
+	), nil
+}
+
+// createConsoleCore 创建控制台输出核心
+func createConsoleCore(encoderConfig zapcore.EncoderConfig, level zapcore.Level) zapcore.Core {
+	// 控制台输出使用彩色格式
+	consoleEncoderConfig := encoderConfig
+	consoleEncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	consoleEncoder := zapcore.NewConsoleEncoder(consoleEncoderConfig)
+
+	return zapcore.NewCore(
+		consoleEncoder,
+		zapcore.AddSync(os.Stdout),
+		level,
+	)
 }
 
 // getLogLevel 根据字符串获取日志级别
@@ -160,6 +185,7 @@ func LogError(msg string, fields ...zapcore.Field) {
 	Logger.Error(msg, fields...)
 }
 
+// Error 记录错误日志（LogError 的别名）
 func Error(msg string, fields ...zapcore.Field) {
 	Logger.Error(msg, fields...)
 }

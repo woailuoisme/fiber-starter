@@ -5,18 +5,17 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/spf13/cobra"
-
 	"fiber-starter/app/helpers"
 	"fiber-starter/app/schedule"
 	"fiber-starter/config"
+	"github.com/spf13/cobra"
 )
 
 var scheduleCmd = &cobra.Command{
 	Use:   "schedule:run",
 	Short: "运行定时任务调度器",
 	Long:  "启动定时任务调度器，执行所有已注册的定时任务",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		runSchedule()
 	},
 }

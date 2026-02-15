@@ -1,6 +1,7 @@
 package command
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -10,7 +11,10 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/golang-migrate/migrate/v4"
+
+	// 引入 postgres 驱动
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	// 引入 file 驱动
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/spf13/cobra"
 )
@@ -28,7 +32,7 @@ var migrateRunCmd = &cobra.Command{
 	Short: "运行所有待执行的数据库迁移",
 	Long: `运行所有待执行的数据库迁移。
 这个命令会执行所有尚未运行的迁移，将数据库结构更新到最新状态。`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		runMigrations()
 	},
 }
@@ -39,7 +43,7 @@ var migrateRollbackCmd = &cobra.Command{
 	Short: "回滚最后一次数据库迁移",
 	Long: `回滚最后一次执行的数据库迁移。
 这个命令会撤销最后一次迁移操作，将数据库恢复到迁移前的状态。`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		rollbackMigrations()
 	},
 }
@@ -50,7 +54,7 @@ var migrateResetCmd = &cobra.Command{
 	Short: "重置数据库（删除所有表并重新运行迁移）",
 	Long: `重置数据库，删除所有表并重新运行所有迁移。
 警告：这个操作会删除所有数据，请谨慎使用！`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		resetDatabase()
 	},
 }
@@ -61,7 +65,7 @@ var migrateFreshCmd = &cobra.Command{
 	Short: "清空数据库并重新运行迁移和种子数据",
 	Long: `清空数据库，删除所有表并重新运行所有迁移，然后运行种子数据。
 警告：这个操作会删除所有数据，请谨慎使用！`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		freshDatabase()
 	},
 }
@@ -71,7 +75,7 @@ var migrateStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "显示迁移状态",
 	Long:  `显示数据库迁移的当前状态，包括已运行和待运行的迁移。`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		showMigrationStatus()
 	},
 }
@@ -89,7 +93,7 @@ var seedRunCmd = &cobra.Command{
 	Short: "运行所有种子数据",
 	Long: `运行所有种子数据，填充数据库的初始数据。
 这个命令会执行所有种子数据的创建操作。`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		runSeeds()
 	},
 }
@@ -101,10 +105,10 @@ var seedRunRandomCmd = &cobra.Command{
 	Long: `生成指定数量的随机测试数据。
 如果不指定数量，默认生成 10 条记录。`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		count := 10 // 默认数量
 		if len(args) > 0 {
-			fmt.Sscanf(args[0], "%d", &count)
+			_, _ = fmt.Sscanf(args[0], "%d", &count)
 		}
 		runRandomSeeds(count)
 	},
@@ -116,7 +120,7 @@ var seedClearCmd = &cobra.Command{
 	Short: "清除所有种子数据",
 	Long: `清除所有种子数据，删除由种子数据创建的记录。
 这个操作会删除所有种子数据，但不会删除表结构。`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		clearSeeds()
 	},
 }
@@ -127,7 +131,7 @@ var seedRefreshCmd = &cobra.Command{
 	Short: "刷新种子数据（清除后重新运行）",
 	Long: `刷新种子数据，先清除所有种子数据，然后重新运行。
 这个命令会先清除现有的种子数据，然后重新填充。`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		refreshSeeds()
 	},
 }
@@ -145,7 +149,7 @@ var dbSetupCmd = &cobra.Command{
 	Short: "设置数据库（运行迁移和种子数据）",
 	Long: `设置数据库，运行所有迁移并填充种子数据。
 这个命令会依次执行迁移和种子数据操作，完成数据库的初始化。`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		setupDatabase()
 	},
 }
@@ -196,14 +200,16 @@ func runMigrations() {
 		color.Red("获取迁移实例失败: %v", err)
 		os.Exit(1)
 	}
-	defer m.Close()
+	defer func() {
+		_, _ = m.Close()
+	}()
 
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		color.Red("迁移失败: %v", err)
 		os.Exit(1)
 	}
 
-	if err == migrate.ErrNoChange {
+	if errors.Is(err, migrate.ErrNoChange) {
 		color.Yellow("没有待执行的迁移")
 	} else {
 		color.Green("数据库迁移完成")
@@ -219,14 +225,16 @@ func rollbackMigrations() {
 		color.Red("获取迁移实例失败: %v", err)
 		os.Exit(1)
 	}
-	defer m.Close()
+	defer func() {
+		_, _ = m.Close()
+	}()
 
-	if err := m.Steps(-1); err != nil && err != migrate.ErrNoChange {
+	if err := m.Steps(-1); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		color.Red("回滚失败: %v", err)
 		os.Exit(1)
 	}
 
-	if err == migrate.ErrNoChange {
+	if errors.Is(err, migrate.ErrNoChange) {
 		color.Yellow("没有可回滚的迁移")
 	} else {
 		color.Green("数据库迁移回滚完成")
@@ -238,9 +246,9 @@ func resetDatabase() {
 	// 确认操作
 	fmt.Print("警告：这将删除所有数据！确定要继续吗？(y/N): ")
 	var response string
-	fmt.Scanln(&response)
+	_, _ = fmt.Scanln(&response)
 
-	if strings.ToLower(response) != "y" && strings.ToLower(response) != "yes" {
+	if !strings.EqualFold(response, "y") && !strings.EqualFold(response, "yes") {
 		color.Yellow("操作已取消")
 		return
 	}
@@ -249,20 +257,22 @@ func resetDatabase() {
 
 	m, err := getMigrate()
 	if err != nil {
-		color.Red("获取迁移实例失败: %v", err)
+		_, _ = color.New(color.FgRed).Printf("获取迁移实例失败: %v\n", err)
 		os.Exit(1)
 	}
-	defer m.Close()
+	defer func() {
+		_, _ = m.Close()
+	}()
 
 	// 回滚所有迁移
-	if err := m.Down(); err != nil && err != migrate.ErrNoChange {
-		color.Red("回滚失败: %v", err)
+	if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		_, _ = color.New(color.FgRed).Printf("回滚失败: %v\n", err)
 		os.Exit(1)
 	}
 
 	// 重新运行所有迁移
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		color.Red("迁移失败: %v", err)
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		_, _ = color.New(color.FgRed).Printf("迁移失败: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -274,9 +284,9 @@ func freshDatabase() {
 	// 确认操作
 	fmt.Print("警告：这将删除所有数据！确定要继续吗？(y/N): ")
 	var response string
-	fmt.Scanln(&response)
+	_, _ = fmt.Scanln(&response)
 
-	if strings.ToLower(response) != "y" && strings.ToLower(response) != "yes" {
+	if !strings.EqualFold(response, "y") && !strings.EqualFold(response, "yes") {
 		color.Yellow("操作已取消")
 		return
 	}
@@ -288,16 +298,18 @@ func freshDatabase() {
 		color.Red("获取迁移实例失败: %v", err)
 		os.Exit(1)
 	}
-	defer m.Close()
+	defer func() {
+		_, _ = m.Close()
+	}()
 
 	// 回滚所有迁移
-	if err := m.Down(); err != nil && err != migrate.ErrNoChange {
+	if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		color.Red("回滚失败: %v", err)
 		os.Exit(1)
 	}
 
 	// 重新运行所有迁移
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		color.Red("迁移失败: %v", err)
 		os.Exit(1)
 	}
@@ -321,15 +333,17 @@ func showMigrationStatus() {
 		color.Red("获取迁移实例失败: %v", err)
 		os.Exit(1)
 	}
-	defer m.Close()
+	defer func() {
+		_, _ = m.Close()
+	}()
 
 	version, dirty, err := m.Version()
-	if err != nil && err != migrate.ErrNilVersion {
+	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
 		color.Red("获取迁移版本失败: %v", err)
 		os.Exit(1)
 	}
 
-	if err == migrate.ErrNilVersion {
+	if errors.Is(err, migrate.ErrNilVersion) {
 		color.Yellow("数据库尚未运行任何迁移")
 	} else {
 		color.Green("当前迁移版本: %d", version)
@@ -402,9 +416,11 @@ func setupDatabase() {
 		color.Red("获取迁移实例失败: %v", err)
 		os.Exit(1)
 	}
-	defer m.Close()
+	defer func() {
+		_, _ = m.Close()
+	}()
 
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		color.Red("迁移失败: %v", err)
 		os.Exit(1)
 	}

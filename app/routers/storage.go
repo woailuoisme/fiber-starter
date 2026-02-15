@@ -2,8 +2,7 @@ package routers
 
 import (
 	"fiber-starter/app/http/controllers"
-
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // SetupStorageRoutes 设置存储相关路由

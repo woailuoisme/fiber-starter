@@ -86,7 +86,8 @@ func (q *queueService) Enqueue(taskName string, payload interface{}, opts ...asy
 }
 
 // EnqueueIn 延迟添加任务到队列
-func (q *queueService) EnqueueIn(taskName string, payload interface{}, delay time.Duration, opts ...asynq.Option) (*asynq.TaskInfo, error) {
+func (q *queueService) EnqueueIn(taskName string, payload interface{},
+	delay time.Duration, opts ...asynq.Option) (*asynq.TaskInfo, error) {
 	// 序列化负载
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -106,7 +107,8 @@ func (q *queueService) EnqueueIn(taskName string, payload interface{}, delay tim
 }
 
 // EnqueueAt 在指定时间添加任务到队列
-func (q *queueService) EnqueueAt(taskName string, payload interface{}, at time.Time, opts ...asynq.Option) (*asynq.TaskInfo, error) {
+func (q *queueService) EnqueueAt(taskName string, payload interface{},
+	at time.Time, opts ...asynq.Option) (*asynq.TaskInfo, error) {
 	// 序列化负载
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -159,7 +161,7 @@ func (q *queueService) StopWorker() error {
 	q.isRunning = false
 
 	// 关闭客户端
-	q.client.Close()
+	_ = q.client.Close()
 
 	return nil
 }

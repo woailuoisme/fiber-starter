@@ -15,12 +15,8 @@ import (
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gofiber/storage"
-	"github.com/gofiber/storage/bbolt"
-	"github.com/gofiber/storage/memory"
 	redisStorage "github.com/gofiber/storage/redis/v3"
 	"github.com/klauspost/compress/zstd"
-	minio "github.com/minio/minio-go/v7"
-	minioCredentials "github.com/minio/minio-go/v7/pkg/credentials"
 	"go.uber.org/zap"
 )
 
@@ -28,8 +24,11 @@ import (
 type CompressionType int
 
 const (
+	// CompressionNone no compression
 	CompressionNone CompressionType = iota
+	// CompressionGzip gzip compression
 	CompressionGzip
+	// CompressionZstd zstd compression
 	CompressionZstd
 )
 
@@ -42,11 +41,11 @@ type StorageService struct {
 	zstdDecoder *zstd.Decoder
 }
 
-// MinIOStorage MinIO存储适配器
-type MinIOStorage struct {
-	client *minio.Client
-	bucket string
-}
+// MinIOStorage MinIO存储适配器 (已废弃，使用S3Storage)
+// type MinIOStorage struct {
+// 	client *minio.Client
+// 	bucket string
+// }
 
 // S3Storage S3存储适配器
 type S3Storage struct {
@@ -57,56 +56,25 @@ type S3Storage struct {
 // NewStorageService 创建新的存储服务实例
 func NewStorageService(cfg *config.StorageConfig, redisCfg *config.RedisConfig) (*StorageService, error) {
 	var store storage.Storage
+	var err error
 
 	switch cfg.Driver {
 	case "redis":
-		// 使用Redis存储
-		// 如果密码为空，则不需要密码部分
-		var url string
-		if redisCfg.Password == "" {
-			url = fmt.Sprintf("redis://%s:%s/%d",
-				redisCfg.Host, redisCfg.Port, redisCfg.DB)
-		} else {
-			url = fmt.Sprintf("redis://:%s@%s:%s/%d",
-				redisCfg.Password, redisCfg.Host, redisCfg.Port, redisCfg.DB)
-		}
-		store = redisStorage.New(redisStorage.Config{
-			URL:   url,
-			Reset: cfg.Reset,
-		})
-
-	case "bbolt":
-		// 使用BBolt存储
-		store = bbolt.New(bbolt.Config{
-			Database: cfg.Database,
-			Bucket:   "fiber",
-			Reset:    false, // 不自动重置
-		})
-
+		store = createRedisStorage(cfg, redisCfg)
 	case "minio":
-		// 使用MinIO存储
-		minioStorage, err := NewMinIOStorage(cfg.MinIO)
-		if err != nil {
-			return nil, fmt.Errorf("初始化MinIO存储失败: %w", err)
-		}
-		store = minioStorage
-
+		store, err = createMinIOStorage(cfg)
 	case "s3":
-		// 使用S3存储
-		s3Storage, err := NewS3Storage(cfg.S3)
-		if err != nil {
-			return nil, fmt.Errorf("初始化S3存储失败: %w", err)
-		}
-		store = s3Storage
-
-	case "memory":
-		// 使用内存存储（默认）
-		store = memory.New(memory.Config{})
-
+		store, err = createS3Storage(cfg)
+	case "r2":
+		store, err = createR2Storage(cfg)
+	case "oss":
+		store, err = createOSSStorage(cfg)
 	default:
-		// 默认使用内存存储
-		helpers.Logger.Warn("未知的存储驱动，使用内存存储作为默认", zap.String("driver", cfg.Driver))
-		store = memory.New(memory.Config{})
+		store = createDefaultStorage(cfg, redisCfg)
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	helpers.Logger.Info("存储服务已初始化", zap.String("driver", cfg.Driver))
@@ -117,10 +85,92 @@ func NewStorageService(cfg *config.StorageConfig, redisCfg *config.RedisConfig) 
 	}, nil
 }
 
+func createRedisStorage(cfg *config.StorageConfig, redisCfg *config.RedisConfig) storage.Storage {
+	var url string
+	if redisCfg.Password == "" {
+		url = fmt.Sprintf("redis://%s:%s/%d",
+			redisCfg.Host, redisCfg.Port, redisCfg.DB)
+	} else {
+		url = fmt.Sprintf("redis://:%s@%s:%s/%d",
+			redisCfg.Password, redisCfg.Host, redisCfg.Port, redisCfg.DB)
+	}
+	return redisStorage.New(redisStorage.Config{
+		URL:   url,
+		Reset: cfg.Reset,
+	})
+}
+
+func createMinIOStorage(cfg *config.StorageConfig) (storage.Storage, error) {
+	if cfg.MinIO == nil {
+		return nil, fmt.Errorf("minio config cannot be empty")
+	}
+
+	scheme := "http"
+	if cfg.MinIO.UseSSL {
+		scheme = "https"
+	}
+	endpoint := fmt.Sprintf("%s://%s", scheme, cfg.MinIO.Endpoint)
+
+	s3Cfg := &config.S3StorageConfig{
+		AccessKeyID:     cfg.MinIO.AccessKeyID,
+		SecretAccessKey: cfg.MinIO.SecretAccessKey,
+		Region:          cfg.MinIO.Region,
+		Bucket:          cfg.MinIO.Bucket,
+		Endpoint:        endpoint,
+	}
+
+	s3Storage, err := NewS3Storage(s3Cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize minio storage (via s3 sdk): %w", err)
+	}
+
+	// 确保存储桶存在
+	if err := s3Storage.EnsureBucket(); err != nil {
+		return nil, fmt.Errorf("failed to ensure bucket: %w", err)
+	}
+
+	return s3Storage, nil
+}
+
+func createS3Storage(cfg *config.StorageConfig) (storage.Storage, error) {
+	s3Storage, err := NewS3Storage(cfg.S3)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize s3 storage: %w", err)
+	}
+	return s3Storage, nil
+}
+
+func createR2Storage(cfg *config.StorageConfig) (storage.Storage, error) {
+	if cfg.R2 == nil {
+		return nil, fmt.Errorf("r2 config cannot be empty")
+	}
+	s3Storage, err := NewS3Storage(cfg.R2)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize r2 storage: %w", err)
+	}
+	return s3Storage, nil
+}
+
+func createOSSStorage(cfg *config.StorageConfig) (storage.Storage, error) {
+	if cfg.OSS == nil {
+		return nil, fmt.Errorf("oss config cannot be empty")
+	}
+	s3Storage, err := NewS3Storage(cfg.OSS)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize oss storage: %w", err)
+	}
+	return s3Storage, nil
+}
+
+func createDefaultStorage(cfg *config.StorageConfig, redisCfg *config.RedisConfig) storage.Storage {
+	helpers.Logger.Warn("未知的存储驱动，尝试使用Redis存储作为默认", zap.String("driver", cfg.Driver))
+	return createRedisStorage(cfg, redisCfg)
+}
+
 // Get 获取存储值
 func (s *StorageService) Get(key string) ([]byte, error) {
 	if s.storage == nil {
-		return nil, fmt.Errorf("存储未初始化")
+		return nil, fmt.Errorf("storage not initialized")
 	}
 
 	value, err := s.storage.Get(key)
@@ -132,7 +182,7 @@ func (s *StorageService) Get(key string) ([]byte, error) {
 	if s.compression != CompressionNone {
 		decompressed, err := s.decompressData(value)
 		if err != nil {
-			return nil, fmt.Errorf("解压数据失败: %w", err)
+			return nil, fmt.Errorf("failed to decompress data: %w", err)
 		}
 		value = decompressed
 	}
@@ -146,7 +196,7 @@ func (s *StorageService) Set(key string, value []byte, ttl time.Duration) error 
 	if s.compression != CompressionNone {
 		compressed, err := s.compressData(value)
 		if err != nil {
-			return fmt.Errorf("压缩数据失败: %w", err)
+			return fmt.Errorf("failed to compress data: %w", err)
 		}
 		value = compressed
 	}
@@ -167,7 +217,7 @@ func (s *StorageService) Reset() error {
 // Close 关闭存储服务
 func (s *StorageService) Close() error {
 	if s.zstdEncoder != nil {
-		s.zstdEncoder.Close()
+		_ = s.zstdEncoder.Close()
 	}
 	if s.zstdDecoder != nil {
 		s.zstdDecoder.Close()
@@ -187,14 +237,14 @@ func (s *StorageService) SetCompression(compressionType CompressionType) error {
 		// 初始化Zstd编码器
 		encoder, err := zstd.NewWriter(nil)
 		if err != nil {
-			return fmt.Errorf("创建Zstd编码器失败: %w", err)
+			return fmt.Errorf("failed to create zstd encoder: %w", err)
 		}
 		s.zstdEncoder = encoder
 
 		// 初始化Zstd解码器
 		decoder, err := zstd.NewReader(nil)
 		if err != nil {
-			return fmt.Errorf("创建Zstd解码器失败: %w", err)
+			return fmt.Errorf("failed to create zstd decoder: %w", err)
 		}
 		s.zstdDecoder = decoder
 
@@ -205,7 +255,7 @@ func (s *StorageService) SetCompression(compressionType CompressionType) error {
 		// 无压缩
 
 	default:
-		return fmt.Errorf("不支持的压缩类型: %d", compressionType)
+		return fmt.Errorf("unsupported compression type: %d", compressionType)
 	}
 
 	return nil
@@ -232,22 +282,22 @@ func (s *StorageService) compressData(data []byte) ([]byte, error) {
 		writer := gzip.NewWriter(&buf)
 		_, err := writer.Write(data)
 		if err != nil {
-			return nil, fmt.Errorf("Gzip压缩失败: %w", err)
+			return nil, fmt.Errorf("gzip compression failed: %w", err)
 		}
 		err = writer.Close()
 		if err != nil {
-			return nil, fmt.Errorf("关闭Gzip写入器失败: %w", err)
+			return nil, fmt.Errorf("failed to close gzip writer: %w", err)
 		}
 		return buf.Bytes(), nil
 
 	case CompressionZstd:
 		if s.zstdEncoder == nil {
-			return nil, fmt.Errorf("Zstd编码器未初始化")
+			return nil, fmt.Errorf("zstd encoder not initialized")
 		}
 		return s.zstdEncoder.EncodeAll(data, nil), nil
 
 	default:
-		return nil, fmt.Errorf("不支持的压缩类型: %d", s.compression)
+		return nil, fmt.Errorf("unsupported compression type: %d", s.compression)
 	}
 }
 
@@ -260,24 +310,27 @@ func (s *StorageService) decompressData(data []byte) ([]byte, error) {
 	case CompressionGzip:
 		reader, err := gzip.NewReader(bytes.NewReader(data))
 		if err != nil {
-			return nil, fmt.Errorf("创建Gzip读取器失败: %w", err)
+			return nil, fmt.Errorf("failed to create gzip reader: %w", err)
 		}
-		defer reader.Close()
+		// 使用匿名函数确保正确关闭并忽略错误
+		defer func() {
+			_ = reader.Close()
+		}()
 
 		result, err := io.ReadAll(reader)
 		if err != nil {
-			return nil, fmt.Errorf("Gzip解压失败: %w", err)
+			return nil, fmt.Errorf("gzip decompression failed: %w", err)
 		}
 		return result, nil
 
 	case CompressionZstd:
 		if s.zstdDecoder == nil {
-			return nil, fmt.Errorf("Zstd解码器未初始化")
+			return nil, fmt.Errorf("zstd decoder not initialized")
 		}
 		return s.zstdDecoder.DecodeAll(data, nil)
 
 	default:
-		return nil, fmt.Errorf("不支持的压缩类型: %d", s.compression)
+		return nil, fmt.Errorf("unsupported compression type: %d", s.compression)
 	}
 }
 
@@ -354,52 +407,21 @@ func (s *StorageService) SetExpire(key string, ttl time.Duration) error {
 	return s.Set(key, val, ttl)
 }
 
-// NewMinIOStorage 创建MinIO存储实例
-func NewMinIOStorage(cfg *config.MinIOStorageConfig) (*MinIOStorage, error) {
-	if cfg == nil {
-		return nil, fmt.Errorf("MinIO配置不能为空")
-	}
-
-	// 创建MinIO客户端
-	minioClient, err := minio.New(cfg.Endpoint, &minio.Options{
-		Creds:  minioCredentials.NewStaticV4(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
-		Secure: cfg.UseSSL,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("创建MinIO客户端失败: %w", err)
-	}
-
-	// 检查存储桶是否存在，如果不存在则创建
-	ctx := context.Background()
-	exists, err := minioClient.BucketExists(ctx, cfg.Bucket)
-	if err != nil {
-		return nil, fmt.Errorf("检查存储桶失败: %w", err)
-	}
-
-	if !exists {
-		err = minioClient.MakeBucket(ctx, cfg.Bucket, minio.MakeBucketOptions{Region: cfg.Region})
-		if err != nil {
-			return nil, fmt.Errorf("创建存储桶失败: %w", err)
-		}
-		helpers.Logger.Info("MinIO存储桶已创建", zap.String("bucket", cfg.Bucket))
-	}
-
-	return &MinIOStorage{
-		client: minioClient,
-		bucket: cfg.Bucket,
-	}, nil
-}
+// NewMinIOStorage 创建MinIO存储实例 (已废弃，直接使用S3兼容模式)
+// func NewMinIOStorage(cfg *config.MinIOStorageConfig) (*MinIOStorage, error) {
+// 	return nil, fmt.Errorf("NewMinIOStorage is deprecated")
+// }
 
 // NewS3Storage 创建S3存储实例
 func NewS3Storage(cfg *config.S3StorageConfig) (*S3Storage, error) {
 	if cfg == nil {
-		return nil, fmt.Errorf("S3配置不能为空")
+		return nil, fmt.Errorf("s3 config cannot be empty")
 	}
 
 	// 创建AWS配置选项
 	configOptions := []func(*awsConfig.LoadOptions) error{
 		awsConfig.WithCredentialsProvider(aws.NewCredentialsCache(
-			aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
+			aws.CredentialsProviderFunc(func(_ context.Context) (aws.Credentials, error) {
 				return aws.Credentials{
 					AccessKeyID:     cfg.AccessKeyID,
 					SecretAccessKey: cfg.SecretAccessKey,
@@ -409,28 +431,16 @@ func NewS3Storage(cfg *config.S3StorageConfig) (*S3Storage, error) {
 		awsConfig.WithRegion(cfg.Region),
 	}
 
-	// 如果有自定义端点，添加端点解析器
-	if cfg.Endpoint != "" {
-		configOptions = append(configOptions, awsConfig.WithEndpointResolverWithOptions(
-			aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-				return aws.Endpoint{
-					URL:               cfg.Endpoint,
-					HostnameImmutable: true,
-					Source:            aws.EndpointSourceCustom,
-				}, nil
-			}),
-		))
-	}
-
 	// 创建AWS配置
 	awsCfg, err := awsConfig.LoadDefaultConfig(context.Background(), configOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("创建AWS配置失败: %w", err)
+		return nil, fmt.Errorf("failed to create aws config: %w", err)
 	}
 
 	// 创建S3客户端
 	s3Client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		if cfg.Endpoint != "" {
+			o.BaseEndpoint = aws.String(cfg.Endpoint)
 			o.UsePathStyle = true
 		}
 	})
@@ -441,76 +451,30 @@ func NewS3Storage(cfg *config.S3StorageConfig) (*S3Storage, error) {
 	}, nil
 }
 
-// Get 获取存储值 (MinIO实现)
-func (m *MinIOStorage) Get(key string) ([]byte, error) {
-	ctx := context.Background()
-	obj, err := m.client.GetObject(ctx, m.bucket, key, minio.GetObjectOptions{})
-	if err != nil {
-		return nil, err
-	}
-	defer obj.Close()
+// Get 获取存储值 (MinIO实现 - 已废弃)
+// func (m *MinIOStorage) Get(key string) ([]byte, error) {
+// 	return nil, fmt.Errorf("deprecated")
+// }
 
-	stat, err := obj.Stat()
-	if err != nil {
-		return nil, err
-	}
+// Set 设置存储值 (MinIO实现 - 已废弃)
+// func (m *MinIOStorage) Set(key string, value []byte, ttl time.Duration) error {
+// 	return fmt.Errorf("deprecated")
+// }
 
-	buf := make([]byte, stat.Size)
-	_, err = obj.Read(buf)
-	if err != nil {
-		return nil, err
-	}
+// Delete 删除存储值 (MinIO实现 - 已废弃)
+// func (m *MinIOStorage) Delete(key string) error {
+// 	return fmt.Errorf("deprecated")
+// }
 
-	return buf, nil
-}
+// Reset 重置存储 (MinIO实现 - 已废弃)
+// func (m *MinIOStorage) Reset() error {
+// 	return fmt.Errorf("deprecated")
+// }
 
-// Set 设置存储值 (MinIO实现)
-func (m *MinIOStorage) Set(key string, value []byte, ttl time.Duration) error {
-	ctx := context.Background()
-	_, err := m.client.PutObject(ctx, m.bucket, key, bytes.NewReader(value), int64(len(value)), minio.PutObjectOptions{
-		ContentType: "application/octet-stream",
-	})
-	return err
-}
-
-// Delete 删除存储值 (MinIO实现)
-func (m *MinIOStorage) Delete(key string) error {
-	ctx := context.Background()
-	return m.client.RemoveObject(ctx, m.bucket, key, minio.RemoveObjectOptions{})
-}
-
-// Reset 重置存储 (MinIO实现)
-func (m *MinIOStorage) Reset() error {
-	ctx := context.Background()
-	objectsCh := make(chan minio.ObjectInfo)
-
-	// 列出所有对象
-	go func() {
-		defer close(objectsCh)
-		for object := range m.client.ListObjects(ctx, m.bucket, minio.ListObjectsOptions{}) {
-			if object.Err != nil {
-				return
-			}
-			objectsCh <- object
-		}
-	}()
-
-	// 删除所有对象
-	errorCh := m.client.RemoveObjects(ctx, m.bucket, objectsCh, minio.RemoveObjectsOptions{})
-	for err := range errorCh {
-		if err.Err != nil {
-			return err.Err
-		}
-	}
-
-	return nil
-}
-
-// Close 关闭存储连接 (MinIO实现)
-func (m *MinIOStorage) Close() error {
-	// MinIO客户端不需要显式关闭
-	return nil
-}
+// Close 关闭存储连接 (MinIO实现 - 已废弃)
+// func (m *MinIOStorage) Close() error {
+// 	return nil
+// }
 
 // Get 获取存储值 (S3实现)
 func (s *S3Storage) Get(key string) ([]byte, error) {
@@ -522,13 +486,15 @@ func (s *S3Storage) Get(key string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer result.Body.Close()
+	defer func() {
+		_ = result.Body.Close()
+	}()
 
 	return io.ReadAll(result.Body)
 }
 
 // Set 设置存储值 (S3实现)
-func (s *S3Storage) Set(key string, value []byte, ttl time.Duration) error {
+func (s *S3Storage) Set(key string, value []byte, _ time.Duration) error {
 	ctx := context.Background()
 	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucket),
@@ -572,6 +538,28 @@ func (s *S3Storage) Reset() error {
 		}
 	}
 
+	return nil
+}
+
+// EnsureBucket 确保存储桶存在 (S3实现)
+func (s *S3Storage) EnsureBucket() error {
+	ctx := context.Background()
+	_, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{
+		Bucket: aws.String(s.bucket),
+	})
+	if err == nil {
+		return nil
+	}
+
+	// 如果存储桶不存在，则创建
+	// 注意：这里我们简单地假设所有错误都意味着存储桶不存在或无法访问
+	// 在生产环境中，应该更仔细地检查错误类型
+	_, err = s.client.CreateBucket(ctx, &s3.CreateBucketInput{
+		Bucket: aws.String(s.bucket),
+	})
+	if err != nil {
+		return fmt.Errorf("create bucket failed: %w", err)
+	}
 	return nil
 }
 

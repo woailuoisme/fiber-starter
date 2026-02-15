@@ -1,3 +1,4 @@
+// Package models 定义应用程序的数据模型
 package models
 
 import (
@@ -25,9 +26,12 @@ type User struct {
 type UserStatus string
 
 const (
-	UserStatusActive   UserStatus = "active"
+	// UserStatusActive active user status
+	UserStatusActive UserStatus = "active"
+	// UserStatusInactive inactive user status
 	UserStatusInactive UserStatus = "inactive"
-	UserStatusBanned   UserStatus = "banned"
+	// UserStatusBanned banned user status
+	UserStatusBanned UserStatus = "banned"
 )
 
 // TableName 指定表名
@@ -35,13 +39,13 @@ func (User) TableName() string {
 	return "users"
 }
 
-// BeforeCreate GORM钩子 - 创建前
-func (u *User) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate 创建前钩子
+func (u *User) BeforeCreate(_ *gorm.DB) error {
 	return nil
 }
 
-// BeforeUpdate GORM钩子 - 更新前
-func (u *User) BeforeUpdate(tx *gorm.DB) error {
+// BeforeUpdate 更新前钩子
+func (u *User) BeforeUpdate(_ *gorm.DB) error {
 	return nil
 }
 

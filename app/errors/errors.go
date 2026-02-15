@@ -1,4 +1,5 @@
-package errors
+// Package apierrors defines error types and codes for the application.
+package apierrors
 
 import (
 	"errors"
@@ -21,7 +22,7 @@ const (
 	ErrCodeTimeout        ErrorCode = "TIMEOUT_ERROR"
 
 	// ErrCodeInvalidCredentials 认证相关错误码
-	ErrCodeInvalidCredentials ErrorCode = "INVALID_CREDENTIALS"
+	ErrCodeInvalidCredentials ErrorCode = "INVALID_CREDENTIALS" //nolint:gosec // Error code constant, not a credential
 	ErrCodeTokenExpired       ErrorCode = "TOKEN_EXPIRED"
 	ErrCodeTokenInvalid       ErrorCode = "TOKEN_INVALID"
 	ErrCodeUserNotFound       ErrorCode = "USER_NOT_FOUND"

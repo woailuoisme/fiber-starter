@@ -1,11 +1,11 @@
+// Package bootstrap 处理应用程序的初始化和启动流程
 package bootstrap
 
 import (
+	"context"
 	"errors"
 	"os/exec"
-
-	"github.com/gofiber/fiber/v2"
-	"go.uber.org/zap"
+	"time"
 
 	"fiber-starter/app/helpers"
 	"fiber-starter/app/http/controllers"
@@ -15,7 +15,11 @@ import (
 	"fiber-starter/app/routers"
 	"fiber-starter/config"
 
+	// 引入 swagger 文档
 	_ "fiber-starter/docs"
+
+	"github.com/gofiber/fiber/v3"
+	"go.uber.org/zap"
 )
 
 // App 启动应用程序
@@ -39,36 +43,8 @@ func App() {
 		helpers.Fatal("注册依赖失败", zap.Error(err))
 	}
 
-	// 获取 Fiber 配置
-	cfg := config.GlobalConfig.App.Fiber
-
-	// 设置并发数，如果配置为 0 则使用默认值
-	concurrency := cfg.Concurrency
-	if concurrency == 0 {
-		concurrency = 256 * 1024 // 默认 256K 并发连接
-	}
-
-	// 设置请求体大小限制，如果配置为 0 则使用默认值
-	bodyLimit := cfg.BodyLimit
-	if bodyLimit == 0 {
-		bodyLimit = 4 * 1024 * 1024 // 默认 4MB
-	}
-
 	// 创建 Fiber 应用
-	app := fiber.New(fiber.Config{
-		Prefork:      cfg.Prefork,
-		ServerHeader: cfg.ServerHeader,
-		BodyLimit:    bodyLimit,
-		Concurrency:  concurrency,
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
-			code := fiber.StatusInternalServerError
-			var e *fiber.Error
-			if errors.As(err, &e) {
-				code = e.Code
-			}
-			return c.Status(code).JSON(resources.ErrorResponse(err.Error(), nil))
-		},
-	})
+	app := createFiberApp()
 
 	// 配置中间件
 	middleware.SetupMiddleware(app)
@@ -80,7 +56,6 @@ func App() {
 	err = container.Invoke(func(authController *controllers.AuthController,
 		userController *controllers.UserController,
 		storageController *controllers.StorageController) {
-
 		// 配置路由
 		routers.SetupRoutes(app, authController, userController, storageController)
 	})
@@ -98,14 +73,49 @@ func App() {
 	port := ":" + config.GetString("app.port")
 
 	// 尝试清理占用的端口
-	if err := killPortProcess(config.GetString("app.port")); err != nil {
+	if err := killPortProcess(config.GetString("app.port")); err != nil { //nolint:gosec // trusted input
 		helpers.Warn("清理端口进程时出现警告", zap.Error(err))
 	}
 
 	helpers.Info("服务器启动在端口 ", zap.String("port", config.GetString("app.port")))
-	if err := app.Listen(port); err != nil {
+	if err := app.Listen(port, fiber.ListenConfig{
+		EnablePrefork:         config.GlobalConfig.App.Fiber.Prefork,
+		DisableStartupMessage: true,
+	}); err != nil {
 		helpers.Fatal("服务器启动失败", zap.Error(err))
 	}
+}
+
+// createFiberApp 创建并配置 Fiber 应用
+func createFiberApp() *fiber.App {
+	// 获取 Fiber 配置
+	cfg := config.GlobalConfig.App.Fiber
+
+	// 设置并发数，如果配置为 0 则使用默认值
+	concurrency := cfg.Concurrency
+	if concurrency == 0 {
+		concurrency = 256 * 1024 // 默认 256K 并发连接
+	}
+
+	// 设置请求体大小限制，如果配置为 0 则使用默认值
+	bodyLimit := cfg.BodyLimit
+	if bodyLimit == 0 {
+		bodyLimit = 4 * 1024 * 1024 // 默认 4MB
+	}
+
+	return fiber.New(fiber.Config{
+		ServerHeader: cfg.ServerHeader,
+		BodyLimit:    bodyLimit,
+		Concurrency:  concurrency,
+		ErrorHandler: func(c fiber.Ctx, err error) error {
+			code := fiber.StatusInternalServerError
+			var e *fiber.Error
+			if errors.As(err, &e) {
+				code = e.Code
+			}
+			return c.Status(code).JSON(resources.ErrorResponse(err.Error(), nil))
+		},
+	})
 }
 
 // printRoutes 打印所有注册的路由
@@ -116,15 +126,18 @@ func printRoutes(app *fiber.App) {
 
 // killPortProcess 清理占用指定端口的进程
 func killPortProcess(port string) error {
+	// 创建带超时的上下文
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	// 在 macOS 上使用 lsof 查找占用端口的进程
 	cmd := "lsof -ti:" + port + " | xargs kill -9 2>/dev/null || true"
 
-	// 使用 sh -c 执行命令
-	execCmd := exec.Command("sh", "-c", cmd)
-	if err := execCmd.Run(); err != nil {
-		// 忽略错误，因为可能端口没有被占用
-		return nil
-	}
+	// 使用 exec.CommandContext 执行命令
+	// Requirements: noctx
+	execCmd := exec.CommandContext(ctx, "sh", "-c", cmd) //nolint:gosec // Command constructed internally for process management
+	// 忽略错误，因为可能端口没有被占用
+	_ = execCmd.Run()
 
 	return nil
 }

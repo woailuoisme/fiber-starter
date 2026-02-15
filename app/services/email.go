@@ -5,8 +5,7 @@ import (
 	"fmt"
 
 	"fiber-starter/config"
-
-	"gopkg.in/mail.v2"
+	"github.com/wneessen/go-mail"
 )
 
 // EmailService 邮件服务接口
@@ -31,43 +30,62 @@ func NewEmailService(cfg *config.Config) EmailService {
 
 // SendEmail 发送邮件
 func (s *emailService) SendEmail(to, subject, body string, isHTML bool) error {
-	e := mail.NewMessage()
+	m := mail.NewMsg()
 
 	// 设置发件人
-	e.SetHeader("From", fmt.Sprintf("%s <%s>", s.config.Mail.FromName, s.config.Mail.FromAddress))
+	if err := m.FromFormat(s.config.Mail.FromName, s.config.Mail.FromAddress); err != nil {
+		return fmt.Errorf("设置发件人失败: %w", err)
+	}
+
 	// 设置收件人
-	e.SetHeader("To", to)
+	if err := m.To(to); err != nil {
+		return fmt.Errorf("设置收件人失败: %w", err)
+	}
+
 	// 设置主题
-	e.SetHeader("Subject", subject)
+	m.Subject(subject)
 
 	// 设置邮件内容
+	contentType := mail.TypeTextPlain
 	if isHTML {
-		e.SetBody("text/html", body)
-	} else {
-		e.SetBody("text/plain", body)
+		contentType = mail.TypeTextHTML
+	}
+	m.SetBodyString(contentType, body)
+
+	// 配置客户端选项
+	options := []mail.Option{
+		mail.WithPort(s.config.Mail.Port),
+		mail.WithSMTPAuth(mail.SMTPAuthPlain),
+		mail.WithUsername(s.config.Mail.Username),
+		mail.WithPassword(s.config.Mail.Password),
+	}
+
+	// 配置TLS
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: s.config.Mail.TLSInsecure, //nolint:gosec // Configuration driven TLS skip verify
+	}
+	options = append(options, mail.WithTLSConfig(tlsConfig))
+
+	// 根据加密类型设置
+	switch s.config.Mail.Encryption {
+	case "ssl":
+		// SSL通常意味着隐式TLS (端口465)
+		options = append(options, mail.WithSSL())
+	case "tls":
+		// TLS通常意味着STARTTLS (端口587)
+		options = append(options, mail.WithTLSPolicy(mail.TLSMandatory))
+	default:
+		options = append(options, mail.WithTLSPolicy(mail.NoTLS))
 	}
 
 	// 创建SMTP客户端
-	d := mail.NewDialer(s.config.Mail.Host, s.config.Mail.Port, s.config.Mail.Username, s.config.Mail.Password)
-
-	// 配置TLS
-	d.TLSConfig = &tls.Config{
-		InsecureSkipVerify: s.config.Mail.TLSInsecure,
-	}
-
-	// 根据加密类型设置
-	if s.config.Mail.Encryption == "ssl" {
-		d.StartTLSPolicy = mail.MandatoryStartTLS
-	} else if s.config.Mail.Encryption == "tls" {
-		d.StartTLSPolicy = mail.MandatoryStartTLS
-	} else {
-		d.StartTLSPolicy = mail.NoStartTLS
+	c, err := mail.NewClient(s.config.Mail.Host, options...)
+	if err != nil {
+		return fmt.Errorf("创建邮件客户端失败: %w", err)
 	}
 
 	// 发送邮件
-	err := d.DialAndSend(e)
-
-	if err != nil {
+	if err := c.DialAndSend(m); err != nil {
 		return fmt.Errorf("发送邮件失败: %w", err)
 	}
 

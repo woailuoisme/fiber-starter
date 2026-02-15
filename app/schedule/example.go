@@ -1,11 +1,11 @@
+// Package schedule 定义应用程序的定时任务
 package schedule
 
 import (
 	"time"
 
-	"go.uber.org/zap"
-
 	"fiber-starter/app/helpers"
+	"go.uber.org/zap"
 )
 
 // TestScheduleTask 测试定时任务（每10秒执行一次）

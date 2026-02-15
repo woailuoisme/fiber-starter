@@ -4,25 +4,33 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/compress"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/etag"
-	"github.com/gofiber/fiber/v2/middleware/favicon"
-	"github.com/gofiber/fiber/v2/middleware/helmet"
-	"github.com/gofiber/fiber/v2/middleware/limiter"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/monitor"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/fiber/v2/middleware/requestid"
-	"github.com/gofiber/fiber/v2/middleware/timeout"
+	"github.com/gofiber/contrib/v3/monitor"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/compress"
+	"github.com/gofiber/fiber/v3/middleware/cors"
+	"github.com/gofiber/fiber/v3/middleware/etag"
+	"github.com/gofiber/fiber/v3/middleware/favicon"
+	"github.com/gofiber/fiber/v3/middleware/helmet"
+	"github.com/gofiber/fiber/v3/middleware/limiter"
+	"github.com/gofiber/fiber/v3/middleware/logger"
+	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/gofiber/fiber/v3/middleware/requestid"
+	"github.com/gofiber/fiber/v3/middleware/timeout"
 	"go.uber.org/zap"
 )
 
+// Logger global logger instance
 var Logger *zap.Logger
 
 // SetupMiddleware 配置所有中间件
 func SetupMiddleware(app *fiber.App) {
+	setupCoreMiddleware(app)
+	setupSecurityMiddleware(app)
+	setupMonitoringMiddleware(app)
+}
+
+// setupCoreMiddleware 配置核心中间件
+func setupCoreMiddleware(app *fiber.App) {
 	// Favicon中间件 - 提供网站图标
 	app.Use(favicon.New(favicon.Config{
 		File: "./public/favicon.ico",
@@ -30,7 +38,7 @@ func SetupMiddleware(app *fiber.App) {
 	}))
 
 	// 备用SVG favicon - 如果.ico文件不存在
-	app.Get("/favicon.svg", func(c *fiber.Ctx) error {
+	app.Get("/favicon.svg", func(c fiber.Ctx) error {
 		return c.SendFile("./public/favicon.svg")
 	})
 
@@ -47,13 +55,16 @@ func SetupMiddleware(app *fiber.App) {
 		Format:     "[${time}] ${status} - ${method} ${path} ${latency}\n",
 		TimeFormat: "2006-01-02 15:04:05",
 	}))
+}
 
+// setupSecurityMiddleware 配置安全中间件
+func setupSecurityMiddleware(app *fiber.App) {
 	// CORS中间件 - 处理跨域请求
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000,http://127.0.0.1:3000,https://localhost:3000",
-		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,Cache-Control,X-Requested-With",
-		ExposeHeaders:    "Content-Length",
+		AllowOrigins:     []string{"http://localhost:3000", "http://127.0.0.1:3000", "https://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "HEAD", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "Cache-Control", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           86400, // 24小时
 	}))
@@ -61,6 +72,28 @@ func SetupMiddleware(app *fiber.App) {
 	// 安全头中间件 - 添加安全相关的HTTP头
 	app.Use(helmet.New())
 
+	// 限流中间件 - 限制请求频率
+	app.Use(limiter.New(limiter.Config{
+		Next: func(c fiber.Ctx) bool {
+			// 跳过健康检查和监控端点
+			return c.Path() == "/health" || c.Path() == "/monitor"
+		},
+		Max:        100,             // 最大请求数
+		Expiration: 1 * time.Minute, // 时间窗口
+		KeyGenerator: func(c fiber.Ctx) string {
+			return c.IP() // 使用IP作为限流键
+		},
+		LimitReached: func(c fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "请求过于频繁，请稍后再试",
+				"code":  "RATE_LIMIT_EXCEEDED",
+			})
+		},
+	}))
+}
+
+// setupMonitoringMiddleware 配置监控和性能中间件
+func setupMonitoringMiddleware(app *fiber.App) {
 	// 压缩中间件 - 压缩响应数据
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed, // 最佳速度压缩
@@ -69,27 +102,8 @@ func SetupMiddleware(app *fiber.App) {
 	// ETag中间件 - 生成ETag用于缓存
 	app.Use(etag.New())
 
-	// 限流中间件 - 限制请求频率
-	app.Use(limiter.New(limiter.Config{
-		Next: func(c *fiber.Ctx) bool {
-			// 跳过健康检查和监控端点
-			return c.Path() == "/health" || c.Path() == "/monitor"
-		},
-		Max:        100,             // 最大请求数
-		Expiration: 1 * time.Minute, // 时间窗口
-		KeyGenerator: func(c *fiber.Ctx) string {
-			return c.IP() // 使用IP作为限流键
-		},
-		LimitReached: func(c *fiber.Ctx) error {
-			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"error": "请求过于频繁，请稍后再试",
-				"code":  "RATE_LIMIT_EXCEEDED",
-			})
-		},
-	}))
-
 	// 超时中间件 - 设置请求超时
-	app.Use(timeout.New(func(c *fiber.Ctx) error {
+	app.Use(timeout.New(func(c fiber.Ctx) error {
 		// 跳过健康检查和监控端点
 		if c.Path() == "/health" || c.Path() == "/monitor" || c.Path() == "/swagger/*" {
 			return c.Next()
@@ -97,10 +111,10 @@ func SetupMiddleware(app *fiber.App) {
 
 		// 设置超时处理
 		return c.Next()
-	}, 30*time.Second))
+	}, timeout.Config{Timeout: 30 * time.Second}))
 
 	// 自定义超时处理中间件
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		if err := c.Next(); err != nil {
 			if err.Error() == "context deadline exceeded" || err.Error() == "request timeout" {
 				return c.Status(fiber.StatusRequestTimeout).JSON(fiber.Map{
@@ -122,7 +136,7 @@ func SetupMiddleware(app *fiber.App) {
 }
 
 // SetupAuthMiddleware 配置认证相关的中间件
-func SetupAuthMiddleware(app *fiber.App) {
+func SetupAuthMiddleware(_ *fiber.App) {
 	// 这里可以添加认证相关的全局中间件
 	// 例如：API密钥验证、黑名单检查等
 }
@@ -130,7 +144,7 @@ func SetupAuthMiddleware(app *fiber.App) {
 // SetupTimeoutRedirect 配置超时重定向中间件
 func SetupTimeoutRedirect(app *fiber.App) {
 	// 自定义重定向中间件
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		// 检查是否需要重定向的条件
 		shouldRedirect := false
 		redirectURL := ""
@@ -139,7 +153,7 @@ func SetupTimeoutRedirect(app *fiber.App) {
 		userAgent := c.Get("User-Agent")
 		if len(userAgent) > 0 && c.Path() == "/" {
 			// 检查是否为移动设备
-			if isMobile(userAgent) && !c.QueryBool("desktop", false) {
+			if isMobile(userAgent) && !fiber.Query[bool](c, "desktop", false) {
 				shouldRedirect = true
 				redirectURL = "/mobile"
 			}
@@ -159,7 +173,7 @@ func SetupTimeoutRedirect(app *fiber.App) {
 
 		// 执行重定向
 		if shouldRedirect {
-			return c.Redirect(redirectURL, fiber.StatusMovedPermanently)
+			return c.Redirect().Status(fiber.StatusMovedPermanently).To(redirectURL)
 		}
 
 		return c.Next()
@@ -198,9 +212,11 @@ func GetFaviconHTMLTags() string {
 	<link rel="apple-touch-icon" href="/favicon.svg">
 	`
 }
+
+// SetupErrorHandling configures the error handling middleware
 func SetupErrorHandling(app *fiber.App) {
 	// 自定义404处理
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		if c.Route() == nil {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "请求的资源不存在",
@@ -211,7 +227,7 @@ func SetupErrorHandling(app *fiber.App) {
 	})
 
 	// 全局错误处理
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		// 捕获路由处理函数中的错误
 		if err := c.Next(); err != nil {
 			// 记录错误日志

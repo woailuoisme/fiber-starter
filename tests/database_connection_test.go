@@ -1,9 +1,10 @@
 package tests
 
 import (
+	"testing"
+
 	"fiber-starter/config"
 	"fiber-starter/database"
-	"testing"
 )
 
 // TestDatabaseConnection 测试数据库连接
@@ -21,7 +22,9 @@ func TestDatabaseConnection(t *testing.T) {
 		t.Skipf("跳过测试：无法连接数据库 - %v", err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// 测试连接是否成功
 	if conn.DB == nil {
@@ -46,7 +49,9 @@ func TestDatabaseHealthCheck(t *testing.T) {
 		t.Skipf("跳过测试：无法连接数据库 - %v", err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// 执行健康检查
 	err = conn.HealthCheck()
@@ -72,7 +77,9 @@ func TestDatabaseConnectionStats(t *testing.T) {
 		t.Skipf("跳过测试：无法连接数据库 - %v", err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// 获取连接池统计信息
 	stats, err := conn.GetStats()
@@ -114,7 +121,9 @@ func TestDatabaseConnectionPool(t *testing.T) {
 		t.Skipf("跳过测试：无法连接数据库 - %v", err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// 获取底层 sql.DB
 	sqlDB, err := conn.DB.DB()

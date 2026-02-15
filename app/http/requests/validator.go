@@ -1,14 +1,17 @@
+// Package requests 处理HTTP请求验证逻辑
 package requests
 
 import (
-	"fiber-starter/app/exceptions"
-	"fiber-starter/app/http/resources"
+	"errors"
 	"reflect"
 	"regexp"
 	"strings"
 
+	"fiber-starter/app/exceptions"
+	"fiber-starter/app/http/resources"
+
 	"github.com/go-playground/validator/v10"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Validator 全局验证器实例
@@ -28,16 +31,16 @@ func InitValidator() {
 // registerCustomValidations 注册自定义验证规则
 func registerCustomValidations() {
 	// 手机号验证
-	Validator.RegisterValidation("phone", validatePhone)
+	_ = Validator.RegisterValidation("phone", validatePhone)
 
 	// 正整数验证
-	Validator.RegisterValidation("positive_int", validatePositiveInt)
+	_ = Validator.RegisterValidation("positive_int", validatePositiveInt)
 
 	// 正数验证（包括小数）
-	Validator.RegisterValidation("positive", validatePositive)
+	_ = Validator.RegisterValidation("positive", validatePositive)
 
 	// 价格验证（正整数，以分为单位）
-	Validator.RegisterValidation("price", validatePrice)
+	_ = Validator.RegisterValidation("price", validatePrice)
 }
 
 // validatePhone 验证手机号
@@ -89,7 +92,8 @@ func ValidateStruct(s interface{}) error {
 	if err != nil {
 		// 格式化验证错误
 		// Requirements: 10.6
-		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+		var validationErrors validator.ValidationErrors
+		if errors.As(err, &validationErrors) {
 			errors := resources.FormatValidationErrors(validationErrors)
 			return exceptions.NewValidationExceptionWithErrors("Validation failed", errors)
 		}
@@ -101,9 +105,9 @@ func ValidateStruct(s interface{}) error {
 
 // ValidateRequest 验证请求并解析到结构体
 // Requirements: 10.1, 10.6, 10.7
-func ValidateRequest(c *fiber.Ctx, req interface{}) error {
+func ValidateRequest(c fiber.Ctx, req interface{}) error {
 	// 解析请求体
-	if err := c.BodyParser(req); err != nil {
+	if err := c.Bind().Body(req); err != nil {
 		return exceptions.NewBadRequestException("Invalid request body")
 	}
 
@@ -146,8 +150,8 @@ func ValidateMaxLength(value string, maxLength int) bool {
 }
 
 // ValidateRange 验证数值范围
-func ValidateRange(value, min, max int) bool {
-	return value >= min && value <= max
+func ValidateRange(value, minValue, maxValue int) bool {
+	return value >= minValue && value <= maxValue
 }
 
 // ValidatePositiveNumber 验证正数

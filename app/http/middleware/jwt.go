@@ -8,7 +8,7 @@ import (
 	"fiber-starter/app/models"
 	"fiber-starter/config"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -20,9 +20,12 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
+// BearerSchema Bearer 认证前缀
+const BearerSchema = "Bearer"
+
 // JWTAuth JWT认证中间件
 func JWTAuth(cfg *config.Config) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// 从请求头获取token
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
@@ -33,7 +36,7 @@ func JWTAuth(cfg *config.Config) fiber.Handler {
 
 		// 检查Bearer前缀
 		tokenParts := strings.Split(authHeader, " ")
-		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
+		if len(tokenParts) != 2 || tokenParts[0] != BearerSchema {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Invalid authorization header format",
 			})
@@ -42,7 +45,7 @@ func JWTAuth(cfg *config.Config) fiber.Handler {
 		tokenString := tokenParts[1]
 
 		// 解析和验证token
-		token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(_ *jwt.Token) (interface{}, error) {
 			return []byte(cfg.JWT.Secret), nil
 		})
 
@@ -77,20 +80,20 @@ func JWTAuth(cfg *config.Config) fiber.Handler {
 
 // OptionalJWTAuth 可选JWT认证中间件（不强制要求认证）
 func OptionalJWTAuth(cfg *config.Config) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
 			return c.Next()
 		}
 
 		tokenParts := strings.Split(authHeader, " ")
-		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
+		if len(tokenParts) != 2 || tokenParts[0] != BearerSchema {
 			return c.Next()
 		}
 
 		tokenString := tokenParts[1]
 
-		token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(_ *jwt.Token) (interface{}, error) {
 			return []byte(cfg.JWT.Secret), nil
 		})
 
@@ -147,7 +150,7 @@ func GenerateRefreshToken(user *models.User, cfg *config.Config) (string, error)
 
 // ValidateToken 验证JWT令牌
 func ValidateToken(tokenString string, cfg *config.Config) (*JWTClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(_ *jwt.Token) (interface{}, error) {
 		return []byte(cfg.JWT.Secret), nil
 	})
 
@@ -163,7 +166,7 @@ func ValidateToken(tokenString string, cfg *config.Config) (*JWTClaims, error) {
 }
 
 // GetUserFromContext 从Fiber上下文中获取用户信息
-func GetUserFromContext(c *fiber.Ctx) *models.User {
+func GetUserFromContext(c fiber.Ctx) *models.User {
 	user, ok := c.Locals("user").(*models.User)
 	if !ok {
 		return nil
@@ -172,7 +175,7 @@ func GetUserFromContext(c *fiber.Ctx) *models.User {
 }
 
 // GetCurrentUser 从上下文获取当前用户信息
-func GetCurrentUser(c *fiber.Ctx) *JWTClaims {
+func GetCurrentUser(c fiber.Ctx) *JWTClaims {
 	if claims, ok := c.Locals("user_claims").(*JWTClaims); ok {
 		return claims
 	}
@@ -180,7 +183,7 @@ func GetCurrentUser(c *fiber.Ctx) *JWTClaims {
 }
 
 // GetCurrentUserID 从上下文获取当前用户ID
-func GetCurrentUserID(c *fiber.Ctx) uint {
+func GetCurrentUserID(c fiber.Ctx) uint {
 	if userID, ok := c.Locals("user_id").(uint); ok {
 		return userID
 	}
@@ -188,12 +191,12 @@ func GetCurrentUserID(c *fiber.Ctx) uint {
 }
 
 // IsAuthenticated 检查用户是否已认证
-func IsAuthenticated(c *fiber.Ctx) bool {
+func IsAuthenticated(c fiber.Ctx) bool {
 	return GetCurrentUser(c) != nil
 }
 
 // GetTokenFromContext 从上下文获取JWT令牌
-func GetTokenFromContext(c *fiber.Ctx) string {
+func GetTokenFromContext(c fiber.Ctx) string {
 	// 从请求头获取token
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {
@@ -211,7 +214,7 @@ func GetTokenFromContext(c *fiber.Ctx) string {
 
 // JWTProtected 保护路由的JWT中间件
 func JWTProtected() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// 检查全局配置是否已初始化
 		if config.GlobalConfig == nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(resources.ErrorResponse("配置未初始化", nil))

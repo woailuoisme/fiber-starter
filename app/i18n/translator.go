@@ -1,11 +1,10 @@
 package i18n
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"fiber-starter/app/helpers"
+	"github.com/gofiber/fiber/v3"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"go.uber.org/zap"
-
-	"fiber-starter/app/helpers"
 )
 
 // Translator 翻译器
@@ -121,7 +120,7 @@ func (t *Translator) GetLanguage() string {
 }
 
 // GetFromContext 从 Fiber 上下文获取翻译器
-func GetFromContext(c *fiber.Ctx) *Translator {
+func GetFromContext(c fiber.Ctx) *Translator {
 	translator := c.Locals(contextKey)
 	if translator == nil {
 		// 如果上下文中没有翻译器，创建一个默认的
@@ -138,7 +137,7 @@ func GetFromContext(c *fiber.Ctx) *Translator {
 }
 
 // SetToContext 设置翻译器到上下文
-func SetToContext(c *fiber.Ctx, t *Translator) {
+func SetToContext(c fiber.Ctx, t *Translator) {
 	c.Locals(contextKey, t)
 }
 

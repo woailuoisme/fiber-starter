@@ -1,9 +1,8 @@
+// Package middleware 提供应用程序的中间件
 package middleware
 
 import (
-	"fiber-starter/app/exceptions"
-	"fiber-starter/app/helpers"
-	"fiber-starter/app/http/resources"
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -11,14 +10,18 @@ import (
 	"strings"
 	"time"
 
+	"fiber-starter/app/exceptions"
+	"fiber-starter/app/helpers"
+	"fiber-starter/app/http/resources"
+
 	"github.com/go-playground/validator/v10"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"
 )
 
 // ErrorHandler 全局错误处理中间件
 // Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.10, 12.11
-func ErrorHandler(c *fiber.Ctx) error {
+func ErrorHandler(c fiber.Ctx) error {
 	// 执行下一个处理器
 	err := c.Next()
 
@@ -31,54 +34,64 @@ func ErrorHandler(c *fiber.Ctx) error {
 	// Requirements: 12.4, 12.11
 	logError(c, err)
 
-	// 处理 ApiException
+	// 处理 APIException
 	// Requirements: 12.1, 11.13
-	if apiErr, ok := err.(*exceptions.ApiException); ok {
-		return handleApiException(c, apiErr)
+	apiErr := &exceptions.APIException{}
+	if errors.As(err, &apiErr) {
+		return handleAPIException(c, apiErr)
 	}
 
 	// 处理 ValidationException
-	if valErr, ok := err.(*exceptions.ValidationException); ok {
-		return handleApiException(c, valErr.ApiException)
+	valErr := &exceptions.ValidationException{}
+	if errors.As(err, &valErr) {
+		return handleAPIException(c, valErr.APIException)
 	}
 
 	// 处理 AuthenticationException
-	if authErr, ok := err.(*exceptions.AuthenticationException); ok {
-		return handleApiException(c, authErr.ApiException)
+	authErr := &exceptions.AuthenticationException{}
+	if errors.As(err, &authErr) {
+		return handleAPIException(c, authErr.APIException)
 	}
 
 	// 处理 AuthorizationException
-	if authzErr, ok := err.(*exceptions.AuthorizationException); ok {
-		return handleApiException(c, authzErr.ApiException)
+	authzErr := &exceptions.AuthorizationException{}
+	if errors.As(err, &authzErr) {
+		return handleAPIException(c, authzErr.APIException)
 	}
 
 	// 处理 NotFoundException
-	if notFoundErr, ok := err.(*exceptions.NotFoundException); ok {
-		return handleApiException(c, notFoundErr.ApiException)
+	notFoundErr := &exceptions.NotFoundException{}
+	if errors.As(err, &notFoundErr) {
+		return handleAPIException(c, notFoundErr.APIException)
 	}
 
 	// 处理 BadRequestException
-	if badReqErr, ok := err.(*exceptions.BadRequestException); ok {
-		return handleApiException(c, badReqErr.ApiException)
+	badReqErr := &exceptions.BadRequestException{}
+	if errors.As(err, &badReqErr) {
+		return handleAPIException(c, badReqErr.APIException)
 	}
 
 	// 处理 ConflictException
-	if conflictErr, ok := err.(*exceptions.ConflictException); ok {
-		return handleApiException(c, conflictErr.ApiException)
+	conflictErr := &exceptions.ConflictException{}
+	if errors.As(err, &conflictErr) {
+		return handleAPIException(c, conflictErr.APIException)
 	}
 
 	// 处理 ServerException
-	if serverErr, ok := err.(*exceptions.ServerException); ok {
-		return handleApiException(c, serverErr.ApiException)
+	serverErr := &exceptions.ServerException{}
+	if errors.As(err, &serverErr) {
+		return handleAPIException(c, serverErr.APIException)
 	}
 
 	// 处理验证错误
-	if validationErrors, ok := err.(validator.ValidationErrors); ok {
+	var validationErrors validator.ValidationErrors
+	if errors.As(err, &validationErrors) {
 		return handleValidationError(c, validationErrors)
 	}
 
 	// 处理 Fiber 框架错误
-	if fiberErr, ok := err.(*fiber.Error); ok {
+	fiberErr := &fiber.Error{}
+	if errors.As(err, &fiberErr) {
 		return handleFiberError(c, fiberErr)
 	}
 
@@ -87,9 +100,9 @@ func ErrorHandler(c *fiber.Ctx) error {
 	return handleUnknownError(c, err)
 }
 
-// handleApiException 处理 API 异常
+// handleAPIException 处理 API 异常
 // Requirements: 12.1, 11.13
-func handleApiException(c *fiber.Ctx, apiErr *exceptions.ApiException) error {
+func handleAPIException(c fiber.Ctx, apiErr *exceptions.APIException) error {
 	// 获取调用栈信息
 	_, file, line, _ := runtime.Caller(2)
 
@@ -99,14 +112,14 @@ func handleApiException(c *fiber.Ctx, apiErr *exceptions.ApiException) error {
 		apiErr.Code,
 		apiErr.Message,
 		apiErr.Errors,
-		"ApiException",
+		"APIException",
 		file,
 		line,
 	)
 }
 
 // handleValidationError 处理验证错误
-func handleValidationError(c *fiber.Ctx, validationErrors validator.ValidationErrors) error {
+func handleValidationError(c fiber.Ctx, validationErrors validator.ValidationErrors) error {
 	errors := resources.FormatValidationErrors(validationErrors)
 	_, file, line, _ := runtime.Caller(1)
 
@@ -122,7 +135,7 @@ func handleValidationError(c *fiber.Ctx, validationErrors validator.ValidationEr
 }
 
 // handleFiberError 处理 Fiber 框架错误
-func handleFiberError(c *fiber.Ctx, fiberErr *fiber.Error) error {
+func handleFiberError(c fiber.Ctx, fiberErr *fiber.Error) error {
 	message := fiberErr.Message
 
 	// 根据状态码提供更友好的错误信息
@@ -164,7 +177,7 @@ func handleFiberError(c *fiber.Ctx, fiberErr *fiber.Error) error {
 
 // handleUnknownError 处理未知错误
 // Requirements: 12.2, 12.3
-func handleUnknownError(c *fiber.Ctx, err error) error {
+func handleUnknownError(c fiber.Ctx, err error) error {
 	message := "Internal server error"
 
 	// 在开发环境中，可以返回更详细的错误信息
@@ -187,7 +200,7 @@ func handleUnknownError(c *fiber.Ctx, err error) error {
 
 // logError 记录错误日志
 // Requirements: 12.4, 12.11
-func logError(c *fiber.Ctx, err error) {
+func logError(c fiber.Ctx, err error) {
 	// 构建日志信息
 	logMsg := fmt.Sprintf(
 		"[%s] %s %s - %s",
@@ -203,7 +216,8 @@ func logError(c *fiber.Ctx, err error) {
 	}
 
 	// 根据错误类型选择日志级别
-	if apiErr, ok := err.(*exceptions.ApiException); ok {
+	apiErr := &exceptions.APIException{}
+	if errors.As(err, &apiErr) {
 		if apiErr.Code >= 500 {
 			helpers.Logger.Error(logMsg, zap.Int("code", apiErr.Code))
 		} else {
@@ -241,14 +255,14 @@ func getValue(key string) string {
 // RecoveryMiddleware 恢复中间件，用于捕获panic
 // Requirements: 12.2, 12.3
 func RecoveryMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		defer func() {
 			if r := recover(); r != nil {
 				// 记录panic信息
 				helpers.LogError("PANIC: "+fmt.Sprint(r), zap.String("stack", string(debug.Stack())))
 
 				// 返回内部服务器错误
-				resources.ErrorWithDebugger(c, 500, "Internal server error", nil, "Panic", "", 0)
+				_ = resources.ErrorWithDebugger(c, 500, "Internal server error", nil, "Panic", "", 0)
 			}
 		}()
 
@@ -258,7 +272,7 @@ func RecoveryMiddleware() fiber.Handler {
 
 // RequestIDMiddleware 请求ID中间件
 func RequestIDMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// 获取现有的请求ID
 		requestID := c.Get("X-Request-ID")
 
@@ -280,7 +294,7 @@ func RequestIDMiddleware() fiber.Handler {
 // RequestTimerMiddleware 请求计时中间件
 // Requirements: 12.6, 12.8
 func RequestTimerMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// 记录请求开始时间
 		c.Locals("start_time", time.Now())
 

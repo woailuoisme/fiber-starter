@@ -11,20 +11,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// generateCmd represents the generate command
-var generateCmd = &cobra.Command{
-	Use:   "generate",
-	Short: "生成安全密钥",
-	Long:  `生成各种类型的安全密钥，包括 JWT 密钥等`,
-}
-
 // jwtGenerateCmd represents the jwt:generate command
 var jwtGenerateCmd = &cobra.Command{
 	Use:   "jwt:generate",
 	Short: "生成并替换 JWT 密钥",
 	Long: `生成一个新的安全 JWT 密钥并自动替换 .env 文件中的 JWT_SECRET 值。
 这个命令会生成一个 32 字节的随机密钥，并将其更新到 .env 文件中。`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		generateAndReplaceJWTSecret()
 	},
 }
@@ -35,7 +28,7 @@ func generateJWTSecret() (string, error) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	if err != nil {
-		return "", fmt.Errorf("生成随机密钥失败: %v", err)
+		return "", fmt.Errorf("生成随机密钥失败: %w", err)
 	}
 
 	// 转换为 base64 字符串
@@ -55,7 +48,7 @@ func updateEnvFile(newSecret string) error {
 	// 读取文件内容
 	content, err := os.ReadFile(envFile)
 	if err != nil {
-		return fmt.Errorf("读取 .env 文件失败: %v", err)
+		return fmt.Errorf("读取 .env 文件失败: %w", err)
 	}
 
 	// 将内容按行分割
@@ -77,9 +70,9 @@ func updateEnvFile(newSecret string) error {
 
 	// 将修改后的内容写回文件
 	newContent := strings.Join(lines, "\n")
-	err = os.WriteFile(envFile, []byte(newContent), 0644)
+	err = os.WriteFile(envFile, []byte(newContent), 0600)
 	if err != nil {
-		return fmt.Errorf("写入 .env 文件失败: %v", err)
+		return fmt.Errorf("写入 .env 文件失败: %w", err)
 	}
 
 	return nil

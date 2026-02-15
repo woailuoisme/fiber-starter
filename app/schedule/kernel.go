@@ -1,10 +1,9 @@
 package schedule
 
 import (
+	"fiber-starter/app/helpers"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
-
-	"fiber-starter/app/helpers"
 )
 
 // Kernel 定时任务内核

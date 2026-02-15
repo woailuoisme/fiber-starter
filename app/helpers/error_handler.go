@@ -1,22 +1,22 @@
 package helpers
 
 import (
-	"fiber-starter/app/errors"
+	apierrors "fiber-starter/app/errors"
 	"fiber-starter/app/http/resources"
 	"fiber-starter/app/models"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // HandleError 统一错误处理函数
-func HandleError(ctx *fiber.Ctx, err error) error {
+func HandleError(ctx fiber.Ctx, err error) error {
 	if err == nil {
 		return nil
 	}
 
 	// 如果是应用程序错误，直接返回
-	if errors.IsAppError(err) {
-		appErr, _ := errors.GetAppError(err)
+	if apierrors.IsAppError(err) {
+		appErr, _ := apierrors.GetAppError(err)
 		return ctx.Status(appErr.StatusCode).JSON(resources.ErrorResponse(appErr.Message, fiber.Map{
 			"code":    appErr.Code,
 			"details": appErr.Details,
@@ -25,71 +25,74 @@ func HandleError(ctx *fiber.Ctx, err error) error {
 
 	// 处理其他类型的错误
 	return ctx.Status(fiber.StatusInternalServerError).JSON(resources.ErrorResponse("内部服务器错误", fiber.Map{
-		"code": errors.ErrCodeInternalServer,
+		"code": apierrors.ErrCodeInternalServer,
 	}))
 }
 
 // HandleValidationError 处理验证错误
-func HandleValidationError(ctx *fiber.Ctx, err error) error {
-	return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("请求参数验证失败", resources.FormatValidationErrors(err)))
+func HandleValidationError(ctx fiber.Ctx, err error) error {
+	return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse(
+		"请求参数验证失败",
+		resources.FormatValidationErrors(err),
+	))
 }
 
 // HandleSuccess 处理成功响应
-func HandleSuccess(ctx *fiber.Ctx, message string, data interface{}) error {
+func HandleSuccess(ctx fiber.Ctx, message string, data interface{}) error {
 	return ctx.Status(fiber.StatusOK).JSON(resources.SuccessResponse(message, data))
 }
 
 // HandleCreated 处理创建成功响应
-func HandleCreated(ctx *fiber.Ctx, message string, data interface{}) error {
+func HandleCreated(ctx fiber.Ctx, message string, data interface{}) error {
 	return ctx.Status(fiber.StatusCreated).JSON(resources.SuccessResponse(message, data))
 }
 
 // HandleNotFound 处理未找到错误
-func HandleNotFound(ctx *fiber.Ctx, message string) error {
+func HandleNotFound(ctx fiber.Ctx, message string) error {
 	return ctx.Status(fiber.StatusNotFound).JSON(resources.ErrorResponse(message, fiber.Map{
-		"code": errors.ErrCodeNotFound,
+		"code": apierrors.ErrCodeNotFound,
 	}))
 }
 
 // HandleBadRequest 处理请求错误
-func HandleBadRequest(ctx *fiber.Ctx, message string) error {
+func HandleBadRequest(ctx fiber.Ctx, message string) error {
 	return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse(message, fiber.Map{
-		"code": errors.ErrCodeBadRequest,
+		"code": apierrors.ErrCodeBadRequest,
 	}))
 }
 
 // HandleUnauthorized 处理未授权错误
-func HandleUnauthorized(ctx *fiber.Ctx, message string) error {
+func HandleUnauthorized(ctx fiber.Ctx, message string) error {
 	return ctx.Status(fiber.StatusUnauthorized).JSON(resources.ErrorResponse(message, fiber.Map{
-		"code": errors.ErrCodeUnauthorized,
+		"code": apierrors.ErrCodeUnauthorized,
 	}))
 }
 
 // HandleForbidden 处理禁止访问错误
-func HandleForbidden(ctx *fiber.Ctx, message string) error {
+func HandleForbidden(ctx fiber.Ctx, message string) error {
 	return ctx.Status(fiber.StatusForbidden).JSON(resources.ErrorResponse(message, fiber.Map{
-		"code": errors.ErrCodeForbidden,
+		"code": apierrors.ErrCodeForbidden,
 	}))
 }
 
 // HandleConflict 处理冲突错误
-func HandleConflict(ctx *fiber.Ctx, message string) error {
+func HandleConflict(ctx fiber.Ctx, message string) error {
 	return ctx.Status(fiber.StatusConflict).JSON(resources.ErrorResponse(message, fiber.Map{
-		"code": errors.ErrCodeConflict,
+		"code": apierrors.ErrCodeConflict,
 	}))
 }
 
 // ParseAndValidate 解析和验证请求参数
-func ParseAndValidate(ctx *fiber.Ctx, req interface{}, validate interface{}) error {
+func ParseAndValidate(ctx fiber.Ctx, req interface{}, validate interface{}) error {
 	// 解析请求体
-	if err := ctx.BodyParser(req); err != nil {
-		return errors.BadRequestWithDetails("请求参数解析失败", err.Error())
+	if err := ctx.Bind().Body(req); err != nil {
+		return apierrors.BadRequestWithDetails("请求参数解析失败", err.Error())
 	}
 
 	// 验证请求参数
 	if validator, ok := validate.(interface{ Struct(interface{}) error }); ok {
 		if err := validator.Struct(req); err != nil {
-			return errors.ValidationWithDetails("请求参数验证失败", FormatValidationErrorsToString(err))
+			return apierrors.ValidationWithDetails("请求参数验证失败", FormatValidationErrorsToString(err))
 		}
 	}
 
@@ -114,12 +117,12 @@ func FormatValidationErrorsToString(err error) string {
 }
 
 // HandleUserResponse 处理用户响应
-func HandleUserResponse(ctx *fiber.Ctx, message string, user *models.User) error {
+func HandleUserResponse(ctx fiber.Ctx, message string, user *models.User) error {
 	return HandleSuccess(ctx, message, user.ToSafeUser())
 }
 
 // HandleUserListResponse 处理用户列表响应
-func HandleUserListResponse(ctx *fiber.Ctx, message string, users []models.User, total int64, page, limit int) error {
+func HandleUserListResponse(ctx fiber.Ctx, message string, users []models.User, total int64, page, limit int) error {
 	userResponses := make([]models.SafeUser, len(users))
 	for i, user := range users {
 		userResponses[i] = user.ToSafeUser()
@@ -137,7 +140,7 @@ func HandleUserListResponse(ctx *fiber.Ctx, message string, users []models.User,
 }
 
 // HandlePaginationResponse 处理分页响应
-func HandlePaginationResponse(ctx *fiber.Ctx, message string, data interface{}, total int64, page, limit int) error {
+func HandlePaginationResponse(ctx fiber.Ctx, message string, data interface{}, total int64, page, limit int) error {
 	return HandleSuccess(ctx, message, fiber.Map{
 		"data": data,
 		"pagination": fiber.Map{
@@ -174,7 +177,7 @@ func parseInt(s string) (int, error) {
 	var result int
 	for _, r := range s {
 		if r < '0' || r > '9' {
-			return 0, errors.BadRequest("无效的数字格式")
+			return 0, apierrors.BadRequest("无效的数字格式")
 		}
 		result = result*10 + int(r-'0')
 	}

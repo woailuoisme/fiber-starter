@@ -85,7 +85,7 @@ func (s UserStatus) CanLogin() bool {
 	return s == UserStatusActive || s == UserStatusPending
 }
 
-// FromString 通过字符串值获取枚举实例
+// UserStatusFromString 通过字符串值获取枚举实例
 func UserStatusFromString(value string) (UserStatus, error) {
 	// 首先尝试直接匹配枚举值
 	status := UserStatus(value)
@@ -106,7 +106,7 @@ func UserStatusFromString(value string) (UserStatus, error) {
 	return "", fmt.Errorf("invalid user status: %s", value)
 }
 
-// MustFromString 类似FromString，但遇到错误时panic
+// UserStatusMustFromString 类似FromString，但遇到错误时panic
 func UserStatusMustFromString(value string) UserStatus {
 	status, err := UserStatusFromString(value)
 	if err != nil {
@@ -115,12 +115,12 @@ func UserStatusMustFromString(value string) UserStatus {
 	return status
 }
 
-// Values 获取所有有效的状态值
+// UserStatusValues 获取所有有效的状态值
 func UserStatusValues() []UserStatus {
 	return GetValuesFromMap(userStatusMap)
 }
 
-// SortedValues 获取按优先级排序的状态值
+// UserStatusSortedValues 获取按优先级排序的状态值
 func UserStatusSortedValues() []UserStatus {
 	infos := GetInfosFromMap(userStatusMap)
 	sortedInfos := SortByPriority(infos)
@@ -132,22 +132,22 @@ func UserStatusSortedValues() []UserStatus {
 	return values
 }
 
-// GetOptions 获取所有用户状态及其标签的数组
+// UserStatusGetOptions 获取所有用户状态及其标签的数组
 func UserStatusGetOptions() map[string]string {
 	return CreateOptionsMap(userStatusMap)
 }
 
-// GetOptionsWithColor 获取包含颜色的选项数组
+// UserStatusGetOptionsWithColor 获取包含颜色的选项数组
 func UserStatusGetOptionsWithColor() map[string]map[string]string {
 	return CreateOptionsWithColorMap(userStatusMap)
 }
 
-// GetAllInfo 获取所有状态信息
+// UserStatusGetAllInfo 获取所有状态信息
 func UserStatusGetAllInfo() []EnumInfo[UserStatus] {
 	return GetInfosFromMap(userStatusMap)
 }
 
-// GetSortedInfo 获取按优先级排序的状态信息
+// UserStatusGetSortedInfo 获取按优先级排序的状态信息
 func UserStatusGetSortedInfo() []EnumInfo[UserStatus] {
 	infos := GetInfosFromMap(userStatusMap)
 	return SortByPriority(infos)

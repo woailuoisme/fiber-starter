@@ -69,7 +69,7 @@ queue:
 
 # 存储配置
 storage:
-  driver: "minio"         # local, minio, s3
+  driver: "minio"         # minio, s3, r2, oss
   database: "./storage/storage.db"
   reset: false
   gc_interval: 10
@@ -86,6 +86,18 @@ storage:
     region: "us-east-1"
     bucket: "lunchbox-media"
     endpoint: ""
+  r2:
+    access_key_id: ""
+    secret_access_key: ""
+    region: "auto"
+    bucket: "lunchbox-media"
+    endpoint: "https://<accountid>.r2.cloudflarestorage.com"
+  oss:
+    access_key_id: ""
+    secret_access_key: ""
+    region: "oss-cn-hangzhou"
+    bucket: "lunchbox-media"
+    endpoint: "oss-cn-hangzhou.aliyuncs.com"
 
 # WebSocket配置
 websocket:
@@ -116,6 +128,11 @@ business:
   device:
     channel_count: 53      # 每台设备的货道数量
     channel_max_capacity: 4 # 每个货道的最大容量
+
+# Meilisearch配置
+meilisearch:
+  host: "http://localhost:7700"
+  api_key: ""
 
 # 安全配置
 security:

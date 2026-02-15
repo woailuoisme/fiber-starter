@@ -1,99 +1,102 @@
+# https://golangci-lint.run/
+# 2024-2025 Recommended Configuration for Go Projects
+
+version: "2"
+
 run:
   timeout: 5m
   issues-exit-code: 1
-  tests: true
+  tests: false
+  allow-parallel-runners: true
 
 output:
-  format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
-
-linters-settings:
-  govet:
-    check-shadowing: true
-  golint:
-    min-confidence: 0
-  gocyclo:
-    min-complexity: 15
-  maligned:
-    suggest-new: true
-  dupl:
-    threshold: 100
-  goconst:
-    min-len: 2
-    min-occurrences: 2
-  misspell:
-    locale: US
-  lll:
-    line-length: 140
-  goimports:
-    local-prefixes: fiber-starter
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-    disabled-checks:
-      - dupImport
-      - ifElseChain
-      - octalLiteral
-      - whyNoLint
-      - wrapperFunc
+  sort-results: true
 
 linters:
   disable-all: true
   enable:
-    - bodyclose
-    - deadcode
-    - depguard
-    - dogsled
-    - dupl
-    - errcheck
-    - exportloopref
-    - exhaustive
-    - gochecknoinits
-    - goconst
-    - gocritic
-    - gocyclo
-    - gofmt
-    - goimports
-    - golint
-    - gomnd
-    - goprintffuncname
-    - gosec
-    - gosimple
-    - govet
-    - ineffassign
-    - interfacer
-    - lll
-    - misspell
-    - nakedret
-    - noctx
-    - nolintlint
-    - rowserrcheck
-    - scopelint
-    - staticcheck
-    - structcheck
-    - stylecheck
-    - typecheck
-    - unconvert
-    - unparam
-    - unused
-    - varcheck
-    - whitespace
+    # --- 核心静态分析 ---
+    - govet         # Go 官方静态分析
+    - staticcheck   # 包含 gosimple, stylecheck, unused
+    - errcheck      # 检查未处理的错误
+    - ineffassign   # 检查无效的赋值
+
+    # --- 代码风格与最佳实践 ---
+    - revive        # Golint 替代品
+    - misspell      # 拼写检查
+    - unconvert     # 检查不必要的类型转换
+    - unparam       # 检查未使用的函数参数
+    - goconst       # 检查重复的字符串常量
+    - prealloc      # 切片预分配建议
+    - makezero      # 检查切片初始化长度
+    - nilerr        # 检查 nil 错误返回
+
+    # --- 安全 ---
+    - gosec         # 安全检查
+
+linters-settings:
+  govet:
+    enable:
+      - shadow
+
+  revive:
+    ignore-generated-header: true
+    severity: warning
+    rules:
+      - name: atomic
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+      - name: redefines-builtin-id
+      # 显式禁用干扰性规则
+      - name: exported
+        disabled: true
+      - name: package-comments
+        disabled: true
+
+  lll:
+    line-length: 120
+    tab-width: 4
+
+  gosec:
+    excludes:
+      - G104 # 忽略未检查的错误 (由 errcheck 处理)
 
 issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
   exclude-rules:
     - path: _test\.go
       linters:
-        - gomnd
-        - goconst
-        - gocyclo
         - errcheck
-        - dupl
         - gosec
-    - path: cmd/
+        - lll
+        - goconst
+
+    - path: docs/docs.go
+      linters:
+        - all
+
+    - path: (main\.go|cmd/.*)
       linters:
         - gochecknoinits

@@ -1,3 +1,4 @@
+// Package services 提供应用程序的业务逻辑服务
 package services
 
 import (
@@ -246,12 +247,13 @@ func (s *authService) ResetPassword(token, email, newPassword string) error {
 	}
 
 	// 更新用户密码
-	if err := s.db.Model(&models.User{}).Where("email = ?", email).Update("password", string(hashedPassword)).Error; err != nil {
+	if err := s.db.Model(&models.User{}).Where("email = ?", email).
+		Update("password", string(hashedPassword)).Error; err != nil {
 		return fmt.Errorf("密码重置失败: %w", err)
 	}
 
 	// 删除重置令牌
-	s.cache.Delete(cacheKey)
+	_ = s.cache.Delete(cacheKey)
 
 	return nil
 }

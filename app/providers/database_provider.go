@@ -2,7 +2,6 @@ package providers
 
 import (
 	"fiber-starter/database"
-
 	"go.uber.org/dig"
 	"gorm.io/gorm"
 )

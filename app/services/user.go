@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"fiber-starter/app/models"
-
 	"gorm.io/gorm"
 )
 
@@ -166,7 +165,9 @@ func (s *userService) SearchUsers(query string, page, limit int) ([]models.User,
 	searchPattern := "%" + query + "%"
 
 	// 获取总数
-	if err := s.db.Model(&models.User{}).Where("name LIKE ? OR email LIKE ?", searchPattern, searchPattern).Count(&total).Error; err != nil {
+	if err := s.db.Model(&models.User{}).
+		Where("name LIKE ? OR email LIKE ?", searchPattern, searchPattern).
+		Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("获取搜索结果总数失败: %w", err)
 	}
 

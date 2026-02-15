@@ -1,3 +1,4 @@
+// Package enums 定义应用程序中使用的枚举类型
 package enums
 
 import (

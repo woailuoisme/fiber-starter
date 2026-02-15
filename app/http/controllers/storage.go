@@ -5,8 +5,7 @@ import (
 
 	"fiber-starter/app/helpers"
 	"fiber-starter/app/services"
-
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // StorageController 存储控制器
@@ -31,9 +30,9 @@ func NewStorageController(storageService *services.StorageService) *StorageContr
 // @Success 200 {object} helpers.Response
 // @Failure 400 {object} helpers.Response
 // @Router /api/storage/set [post]
-func (c *StorageController) SetKey(ctx *fiber.Ctx) error {
+func (c *StorageController) SetKey(ctx fiber.Ctx) error {
 	var req SetKeyRequest
-	if err := ctx.BodyParser(&req); err != nil {
+	if err := ctx.Bind().Body(&req); err != nil {
 		return helpers.HandleBadRequest(ctx, "无效的请求参数")
 	}
 
@@ -68,7 +67,7 @@ func (c *StorageController) SetKey(ctx *fiber.Ctx) error {
 // @Failure 400 {object} helpers.Response
 // @Failure 404 {object} helpers.Response
 // @Router /api/storage/get/{key} [get]
-func (c *StorageController) GetKey(ctx *fiber.Ctx) error {
+func (c *StorageController) GetKey(ctx fiber.Ctx) error {
 	key := ctx.Params("key")
 	if key == "" {
 		return helpers.HandleBadRequest(ctx, "存储键不能为空")
@@ -97,7 +96,7 @@ func (c *StorageController) GetKey(ctx *fiber.Ctx) error {
 // @Success 200 {object} helpers.Response
 // @Failure 400 {object} helpers.Response
 // @Router /api/storage/delete/{key} [delete]
-func (c *StorageController) DeleteKey(ctx *fiber.Ctx) error {
+func (c *StorageController) DeleteKey(ctx fiber.Ctx) error {
 	key := ctx.Params("key")
 	if key == "" {
 		return helpers.HandleBadRequest(ctx, "存储键不能为空")
@@ -121,7 +120,7 @@ func (c *StorageController) DeleteKey(ctx *fiber.Ctx) error {
 // @Success 200 {object} helpers.Response
 // @Failure 400 {object} helpers.Response
 // @Router /api/storage/exists/{key} [get]
-func (c *StorageController) Exists(ctx *fiber.Ctx) error {
+func (c *StorageController) Exists(ctx fiber.Ctx) error {
 	key := ctx.Params("key")
 	if key == "" {
 		return helpers.HandleBadRequest(ctx, "存储键不能为空")
@@ -150,9 +149,9 @@ func (c *StorageController) Exists(ctx *fiber.Ctx) error {
 // @Success 200 {object} helpers.Response
 // @Failure 400 {object} helpers.Response
 // @Router /api/storage/expire [post]
-func (c *StorageController) SetExpire(ctx *fiber.Ctx) error {
+func (c *StorageController) SetExpire(ctx fiber.Ctx) error {
 	var req SetExpireRequest
-	if err := ctx.BodyParser(&req); err != nil {
+	if err := ctx.Bind().Body(&req); err != nil {
 		return helpers.HandleBadRequest(ctx, "无效的请求参数")
 	}
 
@@ -178,7 +177,7 @@ func (c *StorageController) SetExpire(ctx *fiber.Ctx) error {
 // @Success 200 {object} helpers.Response
 // @Failure 500 {object} helpers.Response
 // @Router /api/storage/reset [post]
-func (c *StorageController) Reset(ctx *fiber.Ctx) error {
+func (c *StorageController) Reset(ctx fiber.Ctx) error {
 	err := c.storageService.Reset()
 	if err != nil {
 		return helpers.HandleError(ctx, err)

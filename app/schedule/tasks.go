@@ -1,9 +1,8 @@
 package schedule
 
 import (
-	"go.uber.org/zap"
-
 	"fiber-starter/app/helpers"
+	"go.uber.org/zap"
 )
 
 // ExampleTask 示例任务

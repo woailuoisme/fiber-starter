@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
@@ -28,7 +29,20 @@ func TestStorageService(t *testing.T) {
 
 // testStorageDriver 测试指定驱动的存储功能
 func testStorageDriver(t *testing.T, driver string) {
-	// 创建临时配置
+	// 创建存储服务
+	storageService, err := createTestStorageService(driver)
+	if err != nil {
+		t.Fatalf("创建存储服务失败: %v", err)
+	}
+
+	testKey := "test_key_" + driver
+	testValue := []byte("test_value_" + driver)
+
+	performStorageOperations(t, storageService, testKey, testValue)
+}
+
+// createTestStorageService 创建测试用的存储服务
+func createTestStorageService(driver string) (*services.StorageService, error) {
 	storageCfg := &config.StorageConfig{
 		Driver:   driver,
 		Database: "./test_storage.db",
@@ -41,18 +55,13 @@ func testStorageDriver(t *testing.T, driver string) {
 		DB:       0,
 	}
 
-	// 创建存储服务
-	storageService, err := services.NewStorageService(storageCfg, redisCfg)
-	if err != nil {
-		t.Fatalf("创建存储服务失败: %v", err)
-	}
+	return services.NewStorageService(storageCfg, redisCfg)
+}
 
-	// 测试设置和获取值
-	testKey := "test_key_" + driver
-	testValue := []byte("test_value_" + driver)
-
+// performStorageOperations 执行存储操作测试
+func performStorageOperations(t *testing.T, storageService *services.StorageService, testKey string, testValue []byte) {
 	// 设置值
-	err = storageService.Set(testKey, testValue, time.Minute)
+	err := storageService.Set(testKey, testValue, time.Minute)
 	if err != nil {
 		t.Errorf("设置存储值失败: %v", err)
 	}
@@ -63,7 +72,7 @@ func testStorageDriver(t *testing.T, driver string) {
 		t.Errorf("获取存储值失败: %v", err)
 	}
 
-	if string(value) != string(testValue) {
+	if !bytes.Equal(value, testValue) {
 		t.Errorf("值不匹配，期望 %s，实际 %s", string(testValue), string(value))
 	}
 
@@ -98,8 +107,6 @@ func testStorageDriver(t *testing.T, driver string) {
 	if err == nil {
 		t.Errorf("获取不存在的键应该返回错误")
 	}
-
-	t.Logf("存储驱动 %s 测试通过", driver)
 }
 
 // TestStorageServiceExpire 测试存储过期功能

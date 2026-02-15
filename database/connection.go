@@ -1,3 +1,4 @@
+// Package database 处理数据库连接和管理
 package database
 
 import (
@@ -10,8 +11,8 @@ import (
 	"fiber-starter/config"
 
 	"go.uber.org/zap"
-	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
 )
@@ -35,26 +36,8 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 
 	dsn := buildDSN(connConfig)
 
-	var db *gorm.DB
-	var err error
-
-	// 根据数据库类型选择驱动
-	switch strings.ToLower(connConfig.Driver) {
-	case "mysql":
-		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
-			Logger: gormLogger.Default.LogMode(getLogLevel(cfg.App.Debug)),
-		})
-	case "postgres", "postgresql":
-		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-			Logger: gormLogger.Default.LogMode(getLogLevel(cfg.App.Debug)),
-		})
-	default:
-		// 默认使用MySQL
-		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
-			Logger: gormLogger.Default.LogMode(getLogLevel(cfg.App.Debug)),
-		})
-	}
-
+	// 创建 GORM DB 实例
+	db, err := createGormDB(connConfig.Driver, dsn, cfg.App.Debug)
 	if err != nil {
 		helpers.LogError("数据库连接失败",
 			zap.Error(err),
@@ -64,34 +47,14 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// 获取底层的sql.DB对象进行连接池配置
-	sqlDB, err := db.DB()
-	if err != nil {
-		helpers.LogError("获取底层sql.DB对象失败", zap.Error(err))
-		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
+	// 配置连接池
+	if err := configureConnectionPool(db, cfg.Database.Pool); err != nil {
+		return nil, err
 	}
-
-	// 设置连接池参数
-	sqlDB.SetMaxIdleConns(cfg.Database.Pool.MaxIdleConns)                                    // 最大空闲连接数
-	sqlDB.SetMaxOpenConns(cfg.Database.Pool.MaxOpenConns)                                    // 最大打开连接数
-	sqlDB.SetConnMaxLifetime(time.Duration(cfg.Database.Pool.ConnMaxLifetime) * time.Second) // 连接最大生存时间
-	if cfg.Database.Pool.ConnMaxIdleTime > 0 {
-		sqlDB.SetConnMaxIdleTime(time.Duration(cfg.Database.Pool.ConnMaxIdleTime) * time.Second)
-	}
-
-	helpers.Info("数据库连接池配置完成",
-		zap.Int("maxIdleConns", cfg.Database.Pool.MaxIdleConns),
-		zap.Int("maxOpenConns", cfg.Database.Pool.MaxOpenConns),
-		zap.Int("connMaxLifetime", cfg.Database.Pool.ConnMaxLifetime))
 
 	// 测试连接
-	if err := sqlDB.Ping(); err != nil {
-		helpers.LogError("数据库连接测试失败",
-			zap.Error(err),
-			zap.String("host", connConfig.Host),
-			zap.String("port", connConfig.Port),
-			zap.String("database", connConfig.Database))
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+	if err := testConnection(db, connConfig); err != nil {
+		return nil, err
 	}
 
 	helpers.Info("数据库连接成功",
@@ -104,28 +67,71 @@ func NewConnection(cfg *config.Config) (*Connection, error) {
 	return &Connection{DB: db}, nil
 }
 
+// createGormDB 根据驱动创建 GORM DB 实例
+func createGormDB(driver, dsn string, debug bool) (*gorm.DB, error) {
+	logLevel := getLogLevel(debug)
+	gormConfig := &gorm.Config{
+		Logger: gormLogger.Default.LogMode(logLevel),
+	}
+
+	switch strings.ToLower(driver) {
+	case "sqlite", "sqlite3":
+		return gorm.Open(sqlite.Open(dsn), gormConfig)
+	case "postgres", "postgresql":
+		return gorm.Open(postgres.Open(dsn), gormConfig)
+	default:
+		// 默认使用SQLite
+		return gorm.Open(sqlite.Open(dsn), gormConfig)
+	}
+}
+
+// configureConnectionPool 配置数据库连接池
+func configureConnectionPool(db *gorm.DB, poolConfig config.DBPoolConfig) error {
+	sqlDB, err := db.DB()
+	if err != nil {
+		helpers.LogError("获取底层sql.DB对象失败", zap.Error(err))
+		return fmt.Errorf("failed to get underlying sql.DB: %w", err)
+	}
+
+	sqlDB.SetMaxIdleConns(poolConfig.MaxIdleConns)
+	sqlDB.SetMaxOpenConns(poolConfig.MaxOpenConns)
+	sqlDB.SetConnMaxLifetime(time.Duration(poolConfig.ConnMaxLifetime) * time.Second)
+	if poolConfig.ConnMaxIdleTime > 0 {
+		sqlDB.SetConnMaxIdleTime(time.Duration(poolConfig.ConnMaxIdleTime) * time.Second)
+	}
+
+	helpers.Info("数据库连接池配置完成",
+		zap.Int("maxIdleConns", poolConfig.MaxIdleConns),
+		zap.Int("maxOpenConns", poolConfig.MaxOpenConns),
+		zap.Int("connMaxLifetime", poolConfig.ConnMaxLifetime))
+
+	return nil
+}
+
+// testConnection 测试数据库连接
+func testConnection(db *gorm.DB, connConfig config.DBConnection) error {
+	sqlDB, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get underlying sql.DB: %w", err)
+	}
+
+	if err := sqlDB.Ping(); err != nil {
+		helpers.LogError("数据库连接测试失败",
+			zap.Error(err),
+			zap.String("host", connConfig.Host),
+			zap.String("port", connConfig.Port),
+			zap.String("database", connConfig.Database))
+		return fmt.Errorf("failed to ping database: %w", err)
+	}
+	return nil
+}
+
 // buildDSN 构建数据库连接字符串
 func buildDSN(cfg config.DBConnection) string {
 	// 根据数据库类型构建不同的DSN
 	switch strings.ToLower(cfg.Driver) {
-	case "mysql":
-		charset := cfg.Charset
-		if charset == "" {
-			charset = "utf8mb4"
-		}
-		timezone := cfg.Timezone
-		if timezone == "" {
-			timezone = "Local"
-		}
-		return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=True&loc=%s",
-			cfg.Username,
-			cfg.Password,
-			cfg.Host,
-			cfg.Port,
-			cfg.Database,
-			charset,
-			timezone,
-		)
+	case "sqlite", "sqlite3":
+		return cfg.Database
 	case "postgres", "postgresql":
 		sslmode := cfg.SSLMode
 		if sslmode == "" {
@@ -145,24 +151,8 @@ func buildDSN(cfg config.DBConnection) string {
 			timezone,
 		)
 	default:
-		// 默认使用MySQL格式
-		charset := cfg.Charset
-		if charset == "" {
-			charset = "utf8mb4"
-		}
-		timezone := cfg.Timezone
-		if timezone == "" {
-			timezone = "Local"
-		}
-		return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=True&loc=%s",
-			cfg.Username,
-			cfg.Password,
-			cfg.Host,
-			cfg.Port,
-			cfg.Database,
-			charset,
-			timezone,
-		)
+		// 默认使用SQLite
+		return cfg.Database
 	}
 }
 

@@ -1,3 +1,4 @@
+// Package i18n 处理国际化和本地化逻辑
 package i18n
 
 import (
@@ -5,12 +6,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"fiber-starter/app/helpers"
+	"fiber-starter/config"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"go.uber.org/zap"
 	"golang.org/x/text/language"
-
-	"fiber-starter/app/helpers"
-	"fiber-starter/config"
 )
 
 // Bundle 全局翻译包
@@ -63,7 +63,7 @@ func LoadLanguageFiles() error {
 	// 检查语言目录是否存在
 	if _, err := os.Stat(languageDir); os.IsNotExist(err) {
 		helpers.Warn("语言目录不存在，将创建目录", zap.String("dir", languageDir))
-		if err := os.MkdirAll(languageDir, 0755); err != nil {
+		if err := os.MkdirAll(languageDir, 0750); err != nil {
 			return err
 		}
 	}

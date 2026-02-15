@@ -3,12 +3,12 @@ package helpers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"fiber-starter/config"
-
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -112,7 +112,7 @@ func (c *redisCache) Get(key string) (string, error) {
 
 	val, err := c.client.Get(ctx, cacheKey).Result()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			Logger.Debug("缓存键不存在", zap.String("key", cacheKey))
 			return "", redis.Nil
 		}

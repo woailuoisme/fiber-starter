@@ -4,17 +4,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"go.uber.org/zap"
-
 	"fiber-starter/app/helpers"
 	"fiber-starter/config"
+	"github.com/gofiber/fiber/v3"
+	"go.uber.org/zap"
 )
 
 // Middleware 语言检测中间件
 // 按优先级检测用户语言：Query > Cookie > Accept-Language Header > Default
 func Middleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// 检测用户语言
 		lang := detectLanguage(c)
 
@@ -33,7 +32,7 @@ func Middleware() fiber.Handler {
 
 // detectLanguage 检测用户语言偏好
 // 优先级：Query > Cookie > Accept-Language Header > Default
-func detectLanguage(c *fiber.Ctx) string {
+func detectLanguage(c fiber.Ctx) string {
 	// 1. 检查 query 参数
 	if lang := c.Query("lang"); lang != "" {
 		if IsSupported(lang) {
@@ -136,7 +135,7 @@ func normalizeLanguageCode(code string) string {
 }
 
 // setLanguageCookie 设置语言 Cookie
-func setLanguageCookie(c *fiber.Ctx, lang string) {
+func setLanguageCookie(c fiber.Ctx, lang string) {
 	cfg := config.GlobalConfig.I18n
 
 	c.Cookie(&fiber.Cookie{
@@ -153,13 +152,13 @@ func setLanguageCookie(c *fiber.Ctx, lang string) {
 }
 
 // GetLanguageCookie 获取语言 Cookie
-func GetLanguageCookie(c *fiber.Ctx) string {
+func GetLanguageCookie(c fiber.Ctx) string {
 	cfg := config.GlobalConfig.I18n
 	return c.Cookies(cfg.CookieName)
 }
 
 // ClearLanguageCookie 清除语言 Cookie
-func ClearLanguageCookie(c *fiber.Ctx) {
+func ClearLanguageCookie(c fiber.Ctx) {
 	cfg := config.GlobalConfig.I18n
 
 	c.Cookie(&fiber.Cookie{
@@ -175,7 +174,7 @@ func ClearLanguageCookie(c *fiber.Ctx) {
 }
 
 // SetLanguage 设置用户语言（通过 Cookie）
-func SetLanguage(c *fiber.Ctx, lang string) error {
+func SetLanguage(c fiber.Ctx, lang string) error {
 	if !IsSupported(lang) {
 		return fiber.NewError(fiber.StatusBadRequest, "不支持的语言: "+lang)
 	}
@@ -190,7 +189,7 @@ func SetLanguage(c *fiber.Ctx, lang string) error {
 }
 
 // GetCurrentLanguage 获取当前请求的语言
-func GetCurrentLanguage(c *fiber.Ctx) string {
+func GetCurrentLanguage(c fiber.Ctx) string {
 	translator := GetFromContext(c)
 	if translator != nil {
 		return translator.GetLanguage()

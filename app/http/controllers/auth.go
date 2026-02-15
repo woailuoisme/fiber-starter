@@ -1,14 +1,15 @@
+// Package controllers implements the HTTP controllers.
 package controllers
 
 import (
-	"fiber-starter/app/errors"
+	apierrors "fiber-starter/app/errors"
 	"fiber-starter/app/helpers"
 	"fiber-starter/app/http/middleware"
 	"fiber-starter/app/models"
 	"fiber-starter/app/services"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // AuthController 认证控制器
@@ -40,7 +41,7 @@ type LoginRequest struct {
 
 // RefreshTokenRequest 刷新令牌请求结构
 type RefreshTokenRequest struct {
-	RefreshToken string `json:"refresh_token" validate:"required" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." swagger:"required,刷新令牌"`
+	RefreshToken string `json:"refresh_token" validate:"required" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." swagger:"required,刷新令牌"` //nolint:lll
 }
 
 // ChangePasswordRequest 修改密码请求结构
@@ -71,7 +72,7 @@ type ConfirmResetPasswordRequest struct {
 // @Failure 400 {object} helpers.APIResponse "请求参数错误"
 // @Failure 409 {object} helpers.APIResponse "邮箱已被注册"
 // @Router /api/v1/auth/register [post]
-func (c *AuthController) Register(ctx *fiber.Ctx) error {
+func (c *AuthController) Register(ctx fiber.Ctx) error {
 	var req RegisterRequest
 
 	// 解析和验证请求参数
@@ -114,7 +115,7 @@ func (c *AuthController) Register(ctx *fiber.Ctx) error {
 // @Failure 400 {object} helpers.APIResponse "请求参数错误"
 // @Failure 401 {object} helpers.APIResponse "认证失败"
 // @Router /api/v1/auth/login [post]
-func (c *AuthController) Login(ctx *fiber.Ctx) error {
+func (c *AuthController) Login(ctx fiber.Ctx) error {
 	var req LoginRequest
 
 	// 解析和验证请求参数
@@ -151,7 +152,7 @@ func (c *AuthController) Login(ctx *fiber.Ctx) error {
 // @Failure 400 {object} helpers.APIResponse "请求参数错误"
 // @Failure 401 {object} helpers.APIResponse "认证失败"
 // @Router /api/v1/auth/refresh [post]
-func (c *AuthController) RefreshToken(ctx *fiber.Ctx) error {
+func (c *AuthController) RefreshToken(ctx fiber.Ctx) error {
 	var req RefreshTokenRequest
 
 	// 解析和验证请求参数
@@ -183,17 +184,17 @@ func (c *AuthController) RefreshToken(ctx *fiber.Ctx) error {
 // @Failure 401 {object} helpers.APIResponse "未授权"
 // @Failure 500 {object} helpers.APIResponse "服务器错误"
 // @Router /api/v1/auth/logout [post]
-func (c *AuthController) Logout(ctx *fiber.Ctx) error {
+func (c *AuthController) Logout(ctx fiber.Ctx) error {
 	// 从上下文中获取用户信息
 	user := middleware.GetUserFromContext(ctx)
 	if user == nil {
-		return helpers.HandleError(ctx, errors.Unauthorized("未认证用户"))
+		return helpers.HandleError(ctx, apierrors.Unauthorized("未认证用户"))
 	}
 
 	// 获取令牌
 	token := middleware.GetTokenFromContext(ctx)
 	if token == "" {
-		return helpers.HandleError(ctx, errors.BadRequest("无法获取访问令牌"))
+		return helpers.HandleError(ctx, apierrors.BadRequest("无法获取访问令牌"))
 	}
 
 	// 调用认证服务登出
@@ -217,21 +218,21 @@ func (c *AuthController) Logout(ctx *fiber.Ctx) error {
 // @Failure 400 {object} helpers.APIResponse "请求参数错误"
 // @Failure 401 {object} helpers.APIResponse "未授权"
 // @Router /api/v1/auth/change-password [post]
-func (c *AuthController) ChangePassword(ctx *fiber.Ctx) error {
+func (c *AuthController) ChangePassword(ctx fiber.Ctx) error {
 	// 从上下文中获取用户信息
 	user := middleware.GetUserFromContext(ctx)
 	if user == nil {
-		return helpers.HandleError(ctx, errors.Unauthorized("未认证用户"))
+		return helpers.HandleError(ctx, apierrors.Unauthorized("未认证用户"))
 	}
 
 	var req ChangePasswordRequest
-	if err := ctx.BodyParser(&req); err != nil {
-		return helpers.HandleError(ctx, errors.BadRequest("请求参数解析失败"))
+	if err := ctx.Bind().Body(&req); err != nil {
+		return helpers.HandleError(ctx, apierrors.BadRequest("请求参数解析失败"))
 	}
 
 	// 验证请求参数
 	if err := c.validate.Struct(req); err != nil {
-		return helpers.HandleError(ctx, errors.ValidationWithDetails("请求参数验证失败", helpers.FormatValidationErrorsToString(err)))
+		return helpers.HandleError(ctx, apierrors.ValidationWithDetails("请求参数验证失败", helpers.FormatValidationErrorsToString(err)))
 	}
 
 	// 调用认证服务修改密码
@@ -253,15 +254,15 @@ func (c *AuthController) ChangePassword(ctx *fiber.Ctx) error {
 // @Success 200 {object} helpers.APIResponse "邮件发送成功"
 // @Failure 400 {object} helpers.APIResponse "请求参数错误"
 // @Router /api/v1/auth/reset-password [post]
-func (c *AuthController) ResetPassword(ctx *fiber.Ctx) error {
+func (c *AuthController) ResetPassword(ctx fiber.Ctx) error {
 	var req ResetPasswordRequest
-	if err := ctx.BodyParser(&req); err != nil {
-		return helpers.HandleError(ctx, errors.BadRequest("请求参数解析失败"))
+	if err := ctx.Bind().Body(&req); err != nil {
+		return helpers.HandleError(ctx, apierrors.BadRequest("请求参数解析失败"))
 	}
 
 	// 验证请求参数
 	if err := c.validate.Struct(req); err != nil {
-		return helpers.HandleError(ctx, errors.ValidationWithDetails("请求参数验证失败", helpers.FormatValidationErrorsToString(err)))
+		return helpers.HandleError(ctx, apierrors.ValidationWithDetails("请求参数验证失败", helpers.FormatValidationErrorsToString(err)))
 	}
 
 	// 调用认证服务发送重置邮件
@@ -283,15 +284,15 @@ func (c *AuthController) ResetPassword(ctx *fiber.Ctx) error {
 // @Success 200 {object} helpers.APIResponse "重置成功"
 // @Failure 400 {object} helpers.APIResponse "请求参数错误"
 // @Router /api/v1/auth/confirm-reset-password [post]
-func (c *AuthController) ConfirmResetPassword(ctx *fiber.Ctx) error {
+func (c *AuthController) ConfirmResetPassword(ctx fiber.Ctx) error {
 	var req ConfirmResetPasswordRequest
-	if err := ctx.BodyParser(&req); err != nil {
-		return helpers.HandleError(ctx, errors.BadRequest("请求参数解析失败"))
+	if err := ctx.Bind().Body(&req); err != nil {
+		return helpers.HandleError(ctx, apierrors.BadRequest("请求参数解析失败"))
 	}
 
 	// 验证请求参数
 	if err := c.validate.Struct(req); err != nil {
-		return helpers.HandleError(ctx, errors.ValidationWithDetails("请求参数验证失败", helpers.FormatValidationErrorsToString(err)))
+		return helpers.HandleError(ctx, apierrors.ValidationWithDetails("请求参数验证失败", helpers.FormatValidationErrorsToString(err)))
 	}
 
 	// 调用认证服务重置密码
@@ -313,11 +314,11 @@ func (c *AuthController) ConfirmResetPassword(ctx *fiber.Ctx) error {
 // @Success 200 {object} helpers.APIResponse "获取成功"
 // @Failure 401 {object} helpers.APIResponse "未授权"
 // @Router /api/v1/auth/profile [get]
-func (c *AuthController) GetProfile(ctx *fiber.Ctx) error {
+func (c *AuthController) GetProfile(ctx fiber.Ctx) error {
 	// 从上下文中获取用户信息
 	user := middleware.GetUserFromContext(ctx)
 	if user == nil {
-		return helpers.HandleError(ctx, errors.Unauthorized("未认证用户"))
+		return helpers.HandleError(ctx, apierrors.Unauthorized("未认证用户"))
 	}
 
 	return helpers.HandleSuccess(ctx, "获取用户资料成功", fiber.Map{

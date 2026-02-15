@@ -1,8 +1,8 @@
+// Package providers 管理应用程序的服务提供者
 package providers
 
 import (
 	"fiber-starter/config"
-
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/dig"
 )

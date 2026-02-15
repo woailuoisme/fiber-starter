@@ -1,11 +1,11 @@
 package providers
 
 import (
+	"fmt"
+
 	"fiber-starter/app/http/controllers"
 	"fiber-starter/app/services"
 	"fiber-starter/config"
-	"fmt"
-
 	"go.uber.org/dig"
 )
 
@@ -83,6 +83,11 @@ func (c *Container) RegisterServices() error {
 		return services.NewStorageService(&cfg.Storage, redisCfg)
 	}); err != nil {
 		return fmt.Errorf("failed to provide storage service: %w", err)
+	}
+
+	// 搜索服务
+	if err := c.Provide(services.NewSearchService); err != nil {
+		return fmt.Errorf("failed to provide search service: %w", err)
 	}
 
 	return nil

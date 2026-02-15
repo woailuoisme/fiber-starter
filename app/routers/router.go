@@ -1,19 +1,23 @@
+// Package routers 定义应用程序的HTTP路由
 package routers
 
 import (
 	"fiber-starter/app/http/controllers"
 	"fiber-starter/app/http/middleware"
-
 	_ "fiber-starter/docs" // swagger docs
-
-	"github.com/gofiber/fiber/v2"
-	fiberSwagger "github.com/swaggo/fiber-swagger"
+	fiberSwagger "github.com/gofiber/contrib/v3/swaggo"
+	"github.com/gofiber/fiber/v3"
 )
 
 // SetupRoutes 配置API路由
-func SetupRoutes(app *fiber.App, authController *controllers.AuthController, userController *controllers.UserController, storageController *controllers.StorageController) {
+func SetupRoutes(
+	app *fiber.App,
+	authController *controllers.AuthController,
+	userController *controllers.UserController,
+	storageController *controllers.StorageController,
+) {
 	// 根路径处理
-	app.Get("/", func(c *fiber.Ctx) error {
+	app.Get("/", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"message": "欢迎使用 Fiber Starter API",
 			"version": "1.0.0",
@@ -24,7 +28,7 @@ func SetupRoutes(app *fiber.App, authController *controllers.AuthController, use
 	})
 
 	// 处理 Vite 相关请求（如果有的话）
-	app.Get("/@vite/:path*", func(c *fiber.Ctx) error {
+	app.Get("/@vite/:path*", func(c fiber.Ctx) error {
 		// 这是一个纯后端 API，不提供 Vite 服务
 		return c.Status(404).JSON(fiber.Map{
 			"error":    "Vite 开发服务器不可用，这是一个纯后端 API 服务",
@@ -34,10 +38,10 @@ func SetupRoutes(app *fiber.App, authController *controllers.AuthController, use
 	})
 
 	// Swagger 文档路由
-	app.Get("/swagger/*", fiberSwagger.WrapHandler)
+	app.Get("/swagger/*", fiberSwagger.HandlerDefault)
 
 	// 健康检查
-	app.Get("/health", func(c *fiber.Ctx) error {
+	app.Get("/health", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"status": "ok",
 		})

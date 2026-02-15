@@ -1,30 +1,32 @@
 package i18n
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 
-	"github.com/go-playground/validator/v10"
-
 	"fiber-starter/app/helpers"
+
+	"github.com/go-playground/validator/v10"
 )
 
 // TranslateValidationErrors 翻译验证错误
 // 返回字段名到错误消息的映射
 func TranslateValidationErrors(err error, t *Translator) map[string]string {
-	errors := make(map[string]string)
+	errMap := make(map[string]string)
 
 	if err == nil {
-		return errors
+		return errMap
 	}
 
 	// 检查是否是验证错误
-	validationErrors, ok := err.(validator.ValidationErrors)
+	var validationErrors validator.ValidationErrors
+	ok := errors.As(err, &validationErrors)
 	if !ok {
 		// 如果不是验证错误，返回原始错误消息
-		errors["error"] = err.Error()
-		return errors
+		errMap["error"] = err.Error()
+		return errMap
 	}
 
 	// 翻译每个验证错误
@@ -38,10 +40,10 @@ func TranslateValidationErrors(err error, t *Translator) map[string]string {
 		// 翻译错误消息
 		errorMessage := translateFieldError(fieldError, translatedFieldName, t)
 
-		errors[fieldName] = errorMessage
+		errMap[fieldName] = errorMessage
 	}
 
-	return errors
+	return errMap
 }
 
 // translateFieldError 翻译单个字段错误
@@ -81,94 +83,61 @@ func translateFieldError(fe validator.FieldError, fieldName string, t *Translato
 	return translation
 }
 
+// defaultErrorMessages 默认错误消息模板
+var defaultErrorMessages = map[string]string{
+	"required":    "%s is required",
+	"email":       "%s must be a valid email address",
+	"min":         "%s must be at least %s characters",
+	"max":         "%s must be at most %s characters",
+	"len":         "%s must be %s characters",
+	"gte":         "%s must be greater than or equal to %s",
+	"lte":         "%s must be less than or equal to %s",
+	"gt":          "%s must be greater than %s",
+	"lt":          "%s must be less than %s",
+	"eqfield":     "%s must be equal to %s",
+	"nefield":     "%s must not be equal to %s",
+	"oneof":       "%s must be one of [%s]",
+	"url":         "%s must be a valid URL",
+	"uri":         "%s must be a valid URI",
+	"alpha":       "%s must contain only alphabetic characters",
+	"alphanum":    "%s must contain only alphanumeric characters",
+	"numeric":     "%s must be a valid numeric value",
+	"number":      "%s must be a valid number",
+	"hexadecimal": "%s must be a valid hexadecimal",
+	"hexcolor":    "%s must be a valid hex color",
+	"rgb":         "%s must be a valid RGB color",
+	"rgba":        "%s must be a valid RGBA color",
+	"hsl":         "%s must be a valid HSL color",
+	"hsla":        "%s must be a valid HSLA color",
+	"uuid":        "%s must be a valid UUID",
+	"uuid3":       "%s must be a valid UUID v3",
+	"uuid4":       "%s must be a valid UUID v4",
+	"uuid5":       "%s must be a valid UUID v5",
+	"isbn":        "%s must be a valid ISBN",
+	"isbn10":      "%s must be a valid ISBN-10",
+	"isbn13":      "%s must be a valid ISBN-13",
+	"json":        "%s must be valid JSON",
+	"latitude":    "%s must be a valid latitude",
+	"longitude":   "%s must be a valid longitude",
+	"ssn":         "%s must be a valid SSN",
+	"ipv4":        "%s must be a valid IPv4 address",
+	"ipv6":        "%s must be a valid IPv6 address",
+	"ip":          "%s must be a valid IP address",
+	"cidr":        "%s must be a valid CIDR notation",
+	"mac":         "%s must be a valid MAC address",
+	"datetime":    "%s must be a valid datetime",
+}
+
 // getDefaultErrorMessage 获取默认错误消息（当翻译不存在时）
 func getDefaultErrorMessage(tag, fieldName, param string) string {
-	switch tag {
-	case "required":
-		return fmt.Sprintf("%s is required", fieldName)
-	case "email":
-		return fmt.Sprintf("%s must be a valid email address", fieldName)
-	case "min":
-		return fmt.Sprintf("%s must be at least %s characters", fieldName, param)
-	case "max":
-		return fmt.Sprintf("%s must be at most %s characters", fieldName, param)
-	case "len":
-		return fmt.Sprintf("%s must be %s characters", fieldName, param)
-	case "gte":
-		return fmt.Sprintf("%s must be greater than or equal to %s", fieldName, param)
-	case "lte":
-		return fmt.Sprintf("%s must be less than or equal to %s", fieldName, param)
-	case "gt":
-		return fmt.Sprintf("%s must be greater than %s", fieldName, param)
-	case "lt":
-		return fmt.Sprintf("%s must be less than %s", fieldName, param)
-	case "eqfield":
-		return fmt.Sprintf("%s must be equal to %s", fieldName, param)
-	case "nefield":
-		return fmt.Sprintf("%s must not be equal to %s", fieldName, param)
-	case "oneof":
-		return fmt.Sprintf("%s must be one of [%s]", fieldName, param)
-	case "url":
-		return fmt.Sprintf("%s must be a valid URL", fieldName)
-	case "uri":
-		return fmt.Sprintf("%s must be a valid URI", fieldName)
-	case "alpha":
-		return fmt.Sprintf("%s must contain only alphabetic characters", fieldName)
-	case "alphanum":
-		return fmt.Sprintf("%s must contain only alphanumeric characters", fieldName)
-	case "numeric":
-		return fmt.Sprintf("%s must be a valid numeric value", fieldName)
-	case "number":
-		return fmt.Sprintf("%s must be a valid number", fieldName)
-	case "hexadecimal":
-		return fmt.Sprintf("%s must be a valid hexadecimal", fieldName)
-	case "hexcolor":
-		return fmt.Sprintf("%s must be a valid hex color", fieldName)
-	case "rgb":
-		return fmt.Sprintf("%s must be a valid RGB color", fieldName)
-	case "rgba":
-		return fmt.Sprintf("%s must be a valid RGBA color", fieldName)
-	case "hsl":
-		return fmt.Sprintf("%s must be a valid HSL color", fieldName)
-	case "hsla":
-		return fmt.Sprintf("%s must be a valid HSLA color", fieldName)
-	case "uuid":
-		return fmt.Sprintf("%s must be a valid UUID", fieldName)
-	case "uuid3":
-		return fmt.Sprintf("%s must be a valid UUID v3", fieldName)
-	case "uuid4":
-		return fmt.Sprintf("%s must be a valid UUID v4", fieldName)
-	case "uuid5":
-		return fmt.Sprintf("%s must be a valid UUID v5", fieldName)
-	case "isbn":
-		return fmt.Sprintf("%s must be a valid ISBN", fieldName)
-	case "isbn10":
-		return fmt.Sprintf("%s must be a valid ISBN-10", fieldName)
-	case "isbn13":
-		return fmt.Sprintf("%s must be a valid ISBN-13", fieldName)
-	case "json":
-		return fmt.Sprintf("%s must be valid JSON", fieldName)
-	case "latitude":
-		return fmt.Sprintf("%s must be a valid latitude", fieldName)
-	case "longitude":
-		return fmt.Sprintf("%s must be a valid longitude", fieldName)
-	case "ssn":
-		return fmt.Sprintf("%s must be a valid SSN", fieldName)
-	case "ipv4":
-		return fmt.Sprintf("%s must be a valid IPv4 address", fieldName)
-	case "ipv6":
-		return fmt.Sprintf("%s must be a valid IPv6 address", fieldName)
-	case "ip":
-		return fmt.Sprintf("%s must be a valid IP address", fieldName)
-	case "cidr":
-		return fmt.Sprintf("%s must be a valid CIDR notation", fieldName)
-	case "mac":
-		return fmt.Sprintf("%s must be a valid MAC address", fieldName)
-	case "datetime":
-		return fmt.Sprintf("%s must be a valid datetime", fieldName)
-	default:
-		return fmt.Sprintf("%s failed validation for '%s'", fieldName, tag)
+	if format, ok := defaultErrorMessages[tag]; ok {
+		// 根据格式化占位符数量决定参数
+		if strings.Count(format, "%s") == 2 {
+			return fmt.Sprintf(format, fieldName, param)
+		}
+		return fmt.Sprintf(format, fieldName)
 	}
+	return fmt.Sprintf("%s failed validation for '%s'", fieldName, tag)
 }
 
 // GetFieldName 获取字段的翻译名称
@@ -228,7 +197,7 @@ func toFriendlyName(field string) string {
 }
 
 // RegisterValidatorTranslations 注册验证器翻译（预留接口）
-func RegisterValidatorTranslations(v *validator.Validate) {
+func RegisterValidatorTranslations(_ *validator.Validate) {
 	// 这里可以注册自定义验证规则的翻译
 	helpers.Info("验证器翻译已注册")
 }
@@ -237,7 +206,7 @@ func RegisterValidatorTranslations(v *validator.Validate) {
 func GetValidationErrorsAsString(err error, t *Translator) string {
 	errors := TranslateValidationErrors(err, t)
 
-	var messages []string
+	messages := make([]string, 0, len(errors))
 	for _, msg := range errors {
 		messages = append(messages, msg)
 	}
