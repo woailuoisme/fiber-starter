@@ -1,0 +1,454 @@
+# Atlas 数据库迁移工具使用手册
+
+本项目使用 [Atlas](https://atlasgo.io) 作为数据库迁移管理工具，支持 PostgreSQL 和 SQLite 两种数据库。
+
+## 目录
+
+- [安装](#安装)
+- [配置说明](#配置说明)
+- [基础概念](#基础概念)
+- [常用命令](#常用命令)
+- [项目工作流](#项目工作流)
+- [故障排除](#故障排除)
+
+---
+
+## 安装
+
+### macOS / Linux
+
+```bash
+curl -sSf https://atlasgo.sh | sh
+```
+
+### Windows
+
+```powershell
+iwr https://atlasgo.sh | iex
+```
+
+### 使用 Homebrew
+
+```bash
+brew install atlas
+```
+
+### 验证安装
+
+```bash
+atlas version
+```
+
+---
+
+## 配置说明
+
+本项目的 Atlas 配置文件位于项目根目录的 `atlas.hcl`。
+
+### PostgreSQL 配置
+
+```hcl
+env "postgres" {
+  schema {
+    src = "file://database/schema.pg.hcl"
+  }
+
+  migration {
+    dir = "file://database/migrations/atlas/postgres"
+  }
+
+  url = var.pg_url
+
+  dev = "postgres://postgres:password@host.docker.internal:5432/postgres?search_path=public&sslmode=disable"
+}
+```
+
+### SQLite 配置
+
+```hcl
+env "sqlite" {
+  schema {
+    src = "file://database/schema.lt.hcl"
+  }
+
+  migration {
+    dir = "file://database/migrations/atlas/sqlite"
+  }
+
+  url = "sqlite://database/lunchbox_vending.sqlite?_fk=1"
+
+  dev = "sqlite://file?mode=memory&_fk=1"
+}
+```
+
+### 配置说明
+
+| 配置项 | 说明 |
+|--------|------|
+| `schema.src` | 目标数据库 schema 定义文件 (HCL 格式) |
+| `migration.dir` | 迁移文件存放目录 |
+| `url` | 生产数据库连接 URL |
+| `dev` | 开发用数据库连接 URL (用于计算 diff) |
+
+---
+
+## 基础概念
+
+### 声明式迁移 (Declarative)
+
+Atlas 采用声明式迁移方式：你定义期望的数据库状态，Atlas 自动计算需要执行的迁移语句。
+
+### 工作目录
+
+| 目录 | 说明 |
+|------|------|
+| `database/schema.pg.hcl` | PostgreSQL 数据库 Schema 定义 |
+| `database/schema.lt.hcl` | SQLite 数据库 Schema 定义 |
+| `database/migrations/atlas/postgres` | PostgreSQL 迁移文件 |
+| `database/migrations/atlas/sqlite` | SQLite 迁移文件 |
+
+### 环境变量
+
+| 变量 | 说明 |
+|------|------|
+| `DATABASE_URL` | 数据库连接 URL (PostgreSQL) |
+| `SQLITE_DSN` | SQLite 数据源名称 |
+
+---
+
+## 常用命令
+
+### 生成迁移
+
+生成新的迁移文件（根据 Schema 变更）：
+
+```bash
+# PostgreSQL
+atlas migrate diff <migration_name> --env postgres
+
+# SQLite
+atlas migrate diff <migration_name> --env sqlite
+```
+
+示例：
+
+```bash
+make atlas-diff-postgres NAME=add_users_table
+make atlas-diff-sqlite NAME=add_users_table
+```
+
+或在 Makefile 中指定：
+
+```bash
+NAME=create_products make atlas-diff-postgres
+```
+
+### 应用迁移
+
+将迁移应用到数据库：
+
+```bash
+# PostgreSQL
+atlas migrate apply --env postgres
+
+# SQLite
+atlas migrate apply --env sqlite
+```
+
+使用 Makefile：
+
+```bash
+make atlas-apply-postgres
+make atlas-apply-sqlite
+```
+
+### 查看迁移状态
+
+```bash
+# PostgreSQL
+atlas migrate status --env postgres
+
+# SQLite
+atlas migrate status --env sqlite
+```
+
+### 检查 Schema 差异
+
+比较当前数据库与 Schema 定义的差异：
+
+```bash
+# PostgreSQL
+atlas schema diff --env postgres
+
+# SQLite
+atlas schema diff --env sqlite
+```
+
+### 检查数据库结构
+
+查看当前数据库结构：
+
+```bash
+# PostgreSQL
+atlas schema inspect --env postgres
+
+# SQLite
+atlas schema inspect --env sqlite
+```
+
+---
+
+## 项目工作流
+
+### 日常工作流程
+
+#### 1. 修改 Schema 定义
+
+编辑 `database/schema.pg.hcl` (PostgreSQL) 或 `database/schema.lt.hcl` (SQLite)：
+
+```hcl
+table "products" {
+  schema = schema.public
+
+  column "id" {
+    type = bigint
+    null = false
+    identity {
+      generated = "BY DEFAULT"
+    }
+  }
+
+  column "name" {
+    type = varchar(255)
+    null = false
+  }
+
+  // 添加新列
+  column "description" {
+    type = text
+    null = true
+  }
+
+  primary_key {
+    columns = [column.id]
+  }
+}
+```
+
+#### 2. 生成迁移
+
+```bash
+# 生成迁移文件
+atlas migrate diff add_products_table --env postgres
+```
+
+这会在 `database/migrations/atlas/postgres/` 目录下创建新的迁移文件。
+
+#### 3. 应用迁移（开发环境）
+
+```bash
+# 设置数据库 URL
+export DATABASE_URL="postgres://user:password@localhost:5432/mydb?sslmode=disable"
+
+# 应用迁移
+atlas migrate apply --env postgres
+```
+
+#### 4. 验证
+
+```bash
+# 检查数据库状态
+atlas migrate status --env postgres
+
+# 查看数据库结构
+atlas schema inspect --env postgres
+```
+
+### 使用 Makefile 简化操作
+
+项目提供了 Makefile 快捷命令：
+
+```bash
+# 生成 PostgreSQL 迁移
+make atlas-diff-postgres NAME=add_new_table
+
+# 生成 SQLite 迁移
+make atlas-diff-sqlite NAME=add_new_table
+
+# 应用 PostgreSQL 迁移
+make atlas-apply-postgres
+
+# 应用 SQLite 迁移
+make atlas-apply-sqlite
+```
+
+### 完整示例：添加新表
+
+1. **编辑 Schema 文件** (`database/schema.pg.hcl`)：
+
+```hcl
+table "orders" {
+  schema = schema.public
+
+  column "id" {
+    type = bigint
+    null = false
+    identity {
+      generated = "BY DEFAULT"
+    }
+  }
+
+  column "user_id" {
+    type = bigint
+    null = false
+  }
+
+  column "total" {
+    type = decimal(10, 2)
+    null = false
+  }
+
+  column "status" {
+    type = varchar(20)
+    null = false
+    default = "pending"
+  }
+
+  column "created_at" {
+    type = timestamptz
+    null = false
+    default = sql("CURRENT_TIMESTAMP")
+  }
+
+  primary_key {
+    columns = [column.id]
+  }
+
+  foreign_key "fk_orders_user" {
+    columns = [column.user_id]
+    ref_columns = [table.users.column.id]
+    on_update = CASCADE
+    on_delete = CASCADE
+  }
+}
+```
+
+2. **生成迁移**：
+
+```bash
+atlas migrate diff create_orders_table --env postgres
+```
+
+3. **查看生成的迁移文件** (`database/migrations/atlas/postgres/`)：
+
+```sql
+-- Create "orders" table
+CREATE TABLE "orders" (
+  "id" bigint NOT NULL GENERATED BY DEFAULT AS IDENTITY,
+  "user_id" bigint NOT NULL,
+  "total" decimal(10,2) NOT NULL,
+  "status" varchar(20) NOT NULL DEFAULT 'pending',
+  "created_at" timestamptz NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+  PRIMARY KEY ("id"),
+  CONSTRAINT "fk_orders_user" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON UPDATE CASCADE ON DELETE CASCADE
+);
+```
+
+4. **应用到数据库**：
+
+```bash
+atlas migrate apply --env postgres
+```
+
+---
+
+## 故障排除
+
+### 连接数据库失败
+
+确保设置了正确的数据库 URL：
+
+```bash
+# PostgreSQL
+export DATABASE_URL="postgres://user:password@localhost:5432/mydb?sslmode=disable"
+
+# 或在命令中指定
+atlas migrate apply --env postgres --url "postgres://user:password@localhost:5432/mydb?sslmode=disable"
+```
+
+### Dev URL 配置问题
+
+Atlas 需要一个开发数据库来计算 schema diff。如果 `dev` URL 配置不正确，可能导致迁移生成失败。
+
+确保 `atlas.hcl` 中的 dev URL 指向一个可用的数据库：
+
+```hcl
+dev = "postgres://postgres:password@host.docker.internal:5432/postgres?search_path=public&sslmode=disable"
+```
+
+### 迁移冲突
+
+如果多个开发者同时生成了迁移，可能出现冲突。解决方法：
+
+1. 合并相关的迁移文件
+2. 重新排序迁移文件（按时间戳）
+3. 确保每次迁移都是独立的
+
+### 使用 SQL 迁移
+
+如果更喜欢传统的 SQL 迁移方式，项目也支持 `database/sql/` 目录下的 SQL 迁移文件：
+
+```bash
+# 运行 SQL 迁移
+make migrate
+```
+
+这使用 Go 语言的迁移工具，与 Atlas 是独立的系统。
+
+---
+
+## 高级用法
+
+### 审计迁移
+
+使用 `atlas migrate lint` 检查迁移质量：
+
+```bash
+atlas migrate lint --env postgres
+```
+
+### 事务模式
+
+PostgreSQL 默认使用事务模式应用迁移。如需禁用：
+
+```hcl
+migration {
+  dir = "file://database/migrations/atlas/postgres"
+  txmode = "none"  # 禁用事务
+}
+```
+
+### 多 Schema 支持
+
+如需支持多个 schema：
+
+```hcl
+schema "public" {}
+schema "extensions" {}
+
+table "users" {
+  schema = schema.public
+  // ...
+}
+```
+
+---
+
+## 参考链接
+
+- [Atlas 官方文档](https://atlasgo.io)
+- [Atlas Getting Started](https://atlasgo.io/getting-started)
+- [Atlas HCL Schema Reference](https://atlasgo.io/atlas-schema/hcl)
+- [项目 atlas.hcl 配置](file:///Users/seaside/Projects/go/fiber-starter/atlas.hcl)
+- [PostgreSQL Schema 定义](file:///Users/seaside/Projects/go/fiber-starter/database/schema.pg.hcl)
+- [SQLite Schema 定义](file:///Users/seaside/Projects/go/fiber-starter/database/schema.lt.hcl)

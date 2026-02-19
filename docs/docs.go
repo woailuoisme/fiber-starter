@@ -9,16 +9,7 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "termsOfService": "http://swagger.io/terms/",
-        "contact": {
-            "name": "API Support",
-            "url": "http://www.swagger.io/support",
-            "email": "support@swagger.io"
-        },
-        "license": {
-            "name": "MIT",
-            "url": "https://opensource.org/licenses/MIT"
-        },
+        "contact": {},
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -26,12 +17,7 @@ const docTemplate = `{
     "paths": {
         "/api/me": {
             "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "获取当前登录用户的详细信息",
+                "description": "Get the current authenticated user's details.",
                 "consumes": [
                     "application/json"
                 ],
@@ -39,26 +25,260 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户资料"
+                    "Profile"
                 ],
-                "summary": "获取当前用户信息",
+                "summary": "Get current user",
                 "responses": {
                     "200": {
-                        "description": "获取成功",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "未授权",
+                        "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "用户不存在",
+                        "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/storage/delete/{key}": {
+            "delete": {
+                "description": "Delete a value by key.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "storage"
+                ],
+                "summary": "Delete key",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Storage key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/storage/exists/{key}": {
+            "get": {
+                "description": "Check whether a key exists.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "storage"
+                ],
+                "summary": "Check key existence",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Storage key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/storage/expire": {
+            "post": {
+                "description": "Set expiration time for an existing key.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "storage"
+                ],
+                "summary": "Set key expiration",
+                "parameters": [
+                    {
+                        "description": "Set expiration payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.SetExpireRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/storage/get/{key}": {
+            "get": {
+                "description": "Get a value by key.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "storage"
+                ],
+                "summary": "Get key",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Storage key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/storage/reset": {
+            "post": {
+                "description": "Delete all stored data.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "storage"
+                ],
+                "summary": "Reset storage",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/storage/set": {
+            "post": {
+                "description": "Store a key-value pair.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "storage"
+                ],
+                "summary": "Set key",
+                "parameters": [
+                    {
+                        "description": "Set key payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.SetKeyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
                 }
@@ -66,12 +286,7 @@ const docTemplate = `{
         },
         "/api/users": {
             "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "分页获取用户列表，需要管理员权限",
+                "description": "Get a paginated list of users (admin only).",
                 "consumes": [
                     "application/json"
                 ],
@@ -79,55 +294,55 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户管理"
+                    "Users"
                 ],
-                "summary": "获取用户列表",
+                "summary": "List users",
                 "parameters": [
                     {
                         "type": "integer",
                         "default": 1,
-                        "description": "页码",
+                        "description": "Page number",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "default": 10,
-                        "description": "每页数量",
+                        "description": "Items per page",
                         "name": "limit",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "获取成功",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "未授权",
+                        "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "500": {
-                        "description": "服务器错误",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/users/search": {
-            "get": {
+                },
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
-                ],
-                "description": "根据关键词搜索用户，需要管理员权限",
+                ]
+            }
+        },
+        "/api/users/search": {
+            "get": {
+                "description": "Search users by keyword (admin only).",
                 "consumes": [
                     "application/json"
                 ],
@@ -135,13 +350,13 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户管理"
+                    "Users"
                 ],
-                "summary": "搜索用户",
+                "summary": "Search users",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "搜索关键词",
+                        "description": "Search keyword",
                         "name": "q",
                         "in": "query",
                         "required": true
@@ -149,54 +364,54 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "default": 1,
-                        "description": "页码",
+                        "description": "Page number",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "default": 10,
-                        "description": "每页数量",
+                        "description": "Items per page",
                         "name": "limit",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "搜索成功",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "请求参数错误",
+                        "description": "Bad request",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "未授权",
+                        "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "500": {
-                        "description": "服务器错误",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/users/{id}": {
-            "get": {
+                },
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
-                ],
-                "description": "根据用户ID获取用户详细信息，需要管理员权限",
+                ]
+            }
+        },
+        "/api/users/{id}": {
+            "get": {
+                "description": "Get a user by ID (admin only).",
                 "consumes": [
                     "application/json"
                 ],
@@ -204,13 +419,13 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户管理"
+                    "Users"
                 ],
-                "summary": "获取单个用户",
+                "summary": "Get user",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "用户ID",
+                        "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -218,38 +433,38 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "获取成功",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "无效的用户ID",
+                        "description": "Invalid user ID",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "未授权",
+                        "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "用户不存在",
+                        "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                }
-            },
-            "put": {
+                },
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
-                ],
-                "description": "更新指定用户的信息，需要管理员权限",
+                ]
+            },
+            "put": {
+                "description": "Update a user by ID (admin only).",
                 "consumes": [
                     "application/json"
                 ],
@@ -257,19 +472,19 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户管理"
+                    "Users"
                 ],
-                "summary": "更新用户信息",
+                "summary": "Update user",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "用户ID",
+                        "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "更新用户信息请求",
+                        "description": "Update user payload",
                         "name": "user",
                         "in": "body",
                         "required": true,
@@ -280,38 +495,38 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "更新成功",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "请求参数错误",
+                        "description": "Bad request",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "未授权",
+                        "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "用户不存在",
+                        "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                }
-            },
-            "delete": {
+                },
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
-                ],
-                "description": "删除指定用户，需要管理员权限",
+                ]
+            },
+            "delete": {
+                "description": "Delete a user by ID (admin only).",
                 "consumes": [
                     "application/json"
                 ],
@@ -319,13 +534,13 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户管理"
+                    "Users"
                 ],
-                "summary": "删除用户",
+                "summary": "Delete user",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "用户ID",
+                        "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -333,35 +548,40 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "删除成功",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "无效的用户ID",
+                        "description": "Invalid user ID",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "未授权",
+                        "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "用户不存在",
+                        "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
             }
         },
-        "/api/v1/auth/login": {
+        "/api/v1/auth/change-password": {
             "post": {
-                "description": "用户身份验证",
+                "description": "Change the current user's password.",
                 "consumes": [
                     "application/json"
                 ],
@@ -369,12 +589,103 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "认证"
+                    "Auth"
                 ],
-                "summary": "用户登录",
+                "summary": "Change password",
                 "parameters": [
                     {
-                        "description": "登录信息",
+                        "description": "Change password payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ChangePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/confirm-reset-password": {
+            "post": {
+                "description": "Set a new password using a reset token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Confirm reset password",
+                "parameters": [
+                    {
+                        "description": "Confirm reset password payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ConfirmResetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/login": {
+            "post": {
+                "description": "Authenticate a user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login",
+                "parameters": [
+                    {
+                        "description": "Login payload",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -385,29 +696,29 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "登录成功",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "请求参数错误",
+                        "description": "Bad request",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "认证失败",
+                        "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
                 }
             }
         },
-        "/api/v1/auth/refresh": {
+        "/api/v1/auth/logout": {
             "post": {
-                "description": "使用刷新令牌获取新的访问令牌",
+                "description": "Log out the current user.",
                 "consumes": [
                     "application/json"
                 ],
@@ -415,12 +726,86 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "认证"
+                    "Auth"
                 ],
-                "summary": "刷新令牌",
+                "summary": "Logout",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/profile": {
+            "get": {
+                "description": "Get the current user's profile.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Get profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/refresh": {
+            "post": {
+                "description": "Exchange a refresh token for a new access token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Refresh token",
                 "parameters": [
                     {
-                        "description": "刷新令牌信息",
+                        "description": "Refresh token payload",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -431,21 +816,21 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "刷新成功",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "请求参数错误",
+                        "description": "Bad request",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "认证失败",
+                        "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
                 }
@@ -453,7 +838,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/register": {
             "post": {
-                "description": "创建新用户账户",
+                "description": "Create a new user account.",
                 "consumes": [
                     "application/json"
                 ],
@@ -461,12 +846,12 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "认证"
+                    "Auth"
                 ],
-                "summary": "用户注册",
+                "summary": "Register",
                 "parameters": [
                     {
-                        "description": "注册信息",
+                        "description": "Register payload",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -477,34 +862,29 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "注册成功",
+                        "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "请求参数错误",
+                        "description": "Bad request",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "409": {
-                        "description": "邮箱已被注册",
+                        "description": "Email already registered",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
                 }
             }
         },
-        "/api/v1/users/profile": {
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "更新当前登录用户的个人信息",
+        "/api/v1/auth/reset-password": {
+            "post": {
+                "description": "Send a password reset email.",
                 "consumes": [
                     "application/json"
                 ],
@@ -512,12 +892,52 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户管理"
+                    "Auth"
                 ],
-                "summary": "更新个人资料",
+                "summary": "Reset password",
                 "parameters": [
                     {
-                        "description": "更新个人资料请求",
+                        "description": "Reset password payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ResetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/resources.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/profile": {
+            "put": {
+                "description": "Update the current user's profile.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update profile",
+                "parameters": [
+                    {
+                        "description": "Update profile payload",
                         "name": "user",
                         "in": "body",
                         "required": true,
@@ -528,28 +948,65 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "更新成功",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "请求参数错误",
+                        "description": "Bad request",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "未授权",
+                        "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
             }
         }
     },
     "definitions": {
+        "controllers.ChangePasswordRequest": {
+            "type": "object",
+            "required": [
+                "current_password",
+                "new_password"
+            ],
+            "properties": {
+                "current_password": {
+                    "type": "string"
+                },
+                "new_password": {
+                    "type": "string",
+                    "minLength": 6
+                }
+            }
+        },
+        "controllers.ConfirmResetPasswordRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "token"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "minLength": 6
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
         "controllers.LoginRequest": {
             "type": "object",
             "required": [
@@ -595,12 +1052,58 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 100,
                     "minLength": 2,
-                    "example": "张三"
+                    "example": "Alice"
                 },
                 "password": {
                     "type": "string",
                     "minLength": 6,
                     "example": "password123"
+                }
+            }
+        },
+        "controllers.ResetPasswordRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.SetExpireRequest": {
+            "type": "object",
+            "required": [
+                "key",
+                "ttl"
+            ],
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "ttl": {
+                    "description": "Expiration in seconds.",
+                    "type": "integer"
+                }
+            }
+        },
+        "controllers.SetKeyRequest": {
+            "type": "object",
+            "required": [
+                "key",
+                "value"
+            ],
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "ttl": {
+                    "description": "Expiration in seconds. 0 uses the default TTL.",
+                    "type": "integer"
+                },
+                "value": {
+                    "type": "string"
                 }
             }
         },
@@ -615,7 +1118,7 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 100,
                     "minLength": 2,
-                    "example": "张三"
+                    "example": "Alice"
                 },
                 "phone": {
                     "type": "string",
@@ -623,10 +1126,16 @@ const docTemplate = `{
                 }
             }
         },
-        "helpers.APIResponse": {
+        "resources.APIResponse": {
             "type": "object",
             "properties": {
+                "code": {
+                    "type": "integer"
+                },
                 "data": {},
+                "debugger": {
+                    "$ref": "#/definitions/resources.Debugger"
+                },
                 "errors": {},
                 "message": {
                     "type": "string"
@@ -635,26 +1144,48 @@ const docTemplate = `{
                     "type": "boolean"
                 }
             }
-        }
-    },
-    "securityDefinitions": {
-        "BearerAuth": {
-            "description": "Type \"Bearer\" followed by a space and JWT token.",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
+        },
+        "resources.Debugger": {
+            "type": "object",
+            "properties": {
+                "exception": {
+                    "type": "string"
+                },
+                "file": {
+                    "type": "string"
+                },
+                "line": {
+                    "type": "integer"
+                },
+                "memory_usage": {
+                    "type": "string"
+                },
+                "query_count": {
+                    "type": "integer"
+                },
+                "request_time": {
+                    "description": "milliseconds",
+                    "type": "number"
+                },
+                "trace": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
         }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
-	Host:             "localhost:3000",
-	BasePath:         "/api/v1",
+	Version:          "",
+	Host:             "",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Fiber Starter API",
-	Description:      "这是一个基于 Fiber 框架的 Go 项目启动模板 API 文档",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

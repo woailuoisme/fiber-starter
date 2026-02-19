@@ -6,13 +6,13 @@
 
 ### 1. 定义任务
 
-在 `app/schedule/tasks.go` 中定义你的任务函数：
+在 `internal/scheduler/tasks.go` 中定义你的任务函数：
 
 ```go
 package schedule
 
 import (
-	"fiber-starter/app/helpers"
+	"fiber-starter/internal/platform/helpers"
 	"go.uber.org/zap"
 )
 
@@ -24,7 +24,7 @@ func MyTask() {
 
 ### 2. 注册任务
 
-在 `app/schedule/kernel.go` 的 `Schedule()` 方法中注册任务：
+在 `internal/scheduler/kernel.go` 的 `Schedule()` 方法中注册任务：
 
 ```go
 func (k *Kernel) Schedule() {
@@ -46,7 +46,7 @@ func (k *Kernel) Schedule() {
 make schedule
 
 # 或直接运行
-go run cli.go schedule:run
+go run ./cmd/cli schedule:run
 ```
 
 **重要**：

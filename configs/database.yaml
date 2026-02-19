@@ -1,0 +1,102 @@
+# ============================================
+# 饭盒售货机数据库配置文件
+# ============================================
+# 支持多种数据库连接配置，仿照 Laravel 的数据库配置结构
+
+default: sqlite
+
+connections:
+  # PostgreSQL 配置（主数据库）
+  pgsql:
+    driver: postgres
+    host: ${DB_HOST:localhost}
+    port: ${DB_PORT:5432}
+    database: ${DB_DATABASE:lunchbox_vending}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
+    charset: utf8
+    prefix: ""
+    schema: ${DB_SCHEMA:public}
+    sslmode: ${DB_SSLMODE:disable}
+    timezone: ${DB_TIMEZONE:Asia/Shanghai}
+    options:
+      "sslmode": "disable"
+      "TimeZone": "Asia/Shanghai"
+
+  # MySQL 配置（备用）
+  mysql:
+    driver: mysql
+    host: ${DB_HOST:localhost}
+    port: ${DB_PORT:3306}
+    database: ${DB_DATABASE:lunchbox_vending}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    charset: utf8mb4
+    collation: utf8mb4_unicode_ci
+    prefix: ""
+    strict: true
+    timezone: ${DB_TIMEZONE:Asia/Shanghai}
+    options:
+      "charset": utf8mb4
+      "parseTime": "true"
+      "loc": "Asia/Shanghai"
+
+  # SQLite 配置（开发/测试环境）
+  sqlite:
+    driver: sqlite
+    database: ${DB_DATABASE:./database/lunchbox_vending.sqlite}
+    prefix: ""
+    options:
+      "journal_mode": "WAL"
+      "synchronous": "NORMAL"
+      "cache_size": 1000
+
+# 数据库连接池配置
+pool:
+  # 最大打开连接数
+  max_open_conns: 100
+  # 最大空闲连接数
+  max_idle_conns: 10
+  # 连接最大生存时间（秒）
+  conn_max_lifetime: 3600
+  # 连接最大空闲时间（秒）
+  conn_max_idle_time: 600
+
+# 读写分离配置（可选）
+read:
+  hosts:
+    - ${DB_READ_HOST_1:${DB_HOST:localhost}}
+    - ${DB_READ_HOST_2:}
+  port: ${DB_READ_PORT:${DB_PORT:3306}}
+  username: ${DB_READ_USERNAME:${DB_USERNAME:root}}
+  password: ${DB_READ_PASSWORD:${DB_PASSWORD:}}
+
+write:
+  host: ${DB_WRITE_HOST:${DB_HOST:localhost}}
+  port: ${DB_WRITE_PORT:${DB_PORT:3306}}
+  username: ${DB_WRITE_USERNAME:${DB_USERNAME:root}}
+  password: ${DB_WRITE_PASSWORD:${DB_PASSWORD:}}
+
+# 数据库迁移配置
+migrations:
+  table: migrations
+  path: ./database/migrations
+
+# 数据库填充配置
+seeders:
+  path: ./database/seeders
+
+# Redis 配置（如果需要）
+redis:
+  client: phpredis  # 使用 predis 或 phpredis
+  options:
+    cluster: redis
+    prefix: ${REDIS_PREFIX:fiber_starter_}
+  default:
+    url: ${REDIS_URL:}
+    host: ${REDIS_HOST:127.0.0.1}
+    username: ${REDIS_USERNAME:}
+    password: ${REDIS_PASSWORD:}
+    port: ${REDIS_PORT:6379}
+    database: ${REDIS_DB:0}
+

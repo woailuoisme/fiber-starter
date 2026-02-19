@@ -4,7 +4,7 @@ tmp_dir = "tmp"
 
 [build]
   # 要监视的命令
-  cmd = "go build -o ./tmp/main ./main.go"
+  cmd = "go build -o ./tmp/main ./cmd/server"
   # 构建的二进制文件路径
   bin = "tmp/main"
   # 要监视的文件扩展名

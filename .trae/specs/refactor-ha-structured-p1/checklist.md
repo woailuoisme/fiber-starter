@@ -1,0 +1,8 @@
+- [x] request_id 在 access log、错误日志中使用同一字段名 `request_id`
+- [x] 请求未携带 `X-Request-ID` 时会生成并回写响应头
+- [x] 请求携带 `X-Request-ID` 时会沿用并贯穿整条日志链路
+- [x] 业务层未新增对 `config.GlobalConfig` 与 `database.DB` 的直接引用
+- [x] migrate/seed 等 CLI 不依赖关键全局单例即可运行（或具备清晰过渡适配）
+- [x] 新增 `queue:work` 命令可独立启动 asynq worker
+- [x] `queue:work` 在 SIGINT/SIGTERM 下可优雅退出并释放资源
+- [x] `go test ./...` 通过

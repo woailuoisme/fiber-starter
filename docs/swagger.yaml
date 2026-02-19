@@ -1,5 +1,26 @@
-basePath: /api/v1
 definitions:
+  controllers.ChangePasswordRequest:
+    properties:
+      current_password:
+        type: string
+      new_password:
+        minLength: 6
+        type: string
+    required:
+    - current_password
+    - new_password
+    type: object
+  controllers.ConfirmResetPasswordRequest:
+    properties:
+      password:
+        minLength: 6
+        type: string
+      token:
+        type: string
+    required:
+    - password
+    - token
+    type: object
   controllers.LoginRequest:
     properties:
       email:
@@ -26,7 +47,7 @@ definitions:
         example: user@example.com
         type: string
       name:
-        example: 张三
+        example: Alice
         maxLength: 100
         minLength: 2
         type: string
@@ -39,13 +60,44 @@ definitions:
     - name
     - password
     type: object
+  controllers.ResetPasswordRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  controllers.SetExpireRequest:
+    properties:
+      key:
+        type: string
+      ttl:
+        description: Expiration in seconds.
+        type: integer
+    required:
+    - key
+    - ttl
+    type: object
+  controllers.SetKeyRequest:
+    properties:
+      key:
+        type: string
+      ttl:
+        description: Expiration in seconds. 0 uses the default TTL.
+        type: integer
+      value:
+        type: string
+    required:
+    - key
+    - value
+    type: object
   controllers.UpdateProfileRequest:
     properties:
       avatar:
         example: https://example.com/avatar.jpg
         type: string
       name:
-        example: 张三
+        example: Alice
         maxLength: 100
         minLength: 2
         type: string
@@ -53,67 +105,230 @@ definitions:
         example: "+8613800138000"
         type: string
     type: object
-  helpers.APIResponse:
+  resources.APIResponse:
     properties:
+      code:
+        type: integer
       data: {}
+      debugger:
+        $ref: '#/definitions/resources.Debugger'
       errors: {}
       message:
         type: string
       success:
         type: boolean
     type: object
-host: localhost:3000
+  resources.Debugger:
+    properties:
+      exception:
+        type: string
+      file:
+        type: string
+      line:
+        type: integer
+      memory_usage:
+        type: string
+      query_count:
+        type: integer
+      request_time:
+        description: milliseconds
+        type: number
+      trace:
+        items:
+          type: string
+        type: array
+    type: object
 info:
-  contact:
-    email: support@swagger.io
-    name: API Support
-    url: http://www.swagger.io/support
-  description: 这是一个基于 Fiber 框架的 Go 项目启动模板 API 文档
-  license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
-  termsOfService: http://swagger.io/terms/
-  title: Fiber Starter API
-  version: "1.0"
+  contact: {}
 paths:
   /api/me:
     get:
       consumes:
       - application/json
-      description: 获取当前登录用户的详细信息
+      description: Get the current authenticated user's details.
       produces:
       - application/json
       responses:
         "200":
-          description: 获取成功
+          description: OK
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "401":
-          description: 未授权
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "404":
-          description: 用户不存在
+          description: User not found
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
       security:
       - ApiKeyAuth: []
-      summary: 获取当前用户信息
+      summary: Get current user
       tags:
-      - 用户资料
+      - Profile
+  /api/storage/delete/{key}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a value by key.
+      parameters:
+      - description: Storage key
+        in: path
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+      summary: Delete key
+      tags:
+      - storage
+  /api/storage/exists/{key}:
+    get:
+      consumes:
+      - application/json
+      description: Check whether a key exists.
+      parameters:
+      - description: Storage key
+        in: path
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+      summary: Check key existence
+      tags:
+      - storage
+  /api/storage/expire:
+    post:
+      consumes:
+      - application/json
+      description: Set expiration time for an existing key.
+      parameters:
+      - description: Set expiration payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.SetExpireRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+      summary: Set key expiration
+      tags:
+      - storage
+  /api/storage/get/{key}:
+    get:
+      consumes:
+      - application/json
+      description: Get a value by key.
+      parameters:
+      - description: Storage key
+        in: path
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+      summary: Get key
+      tags:
+      - storage
+  /api/storage/reset:
+    post:
+      consumes:
+      - application/json
+      description: Delete all stored data.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+      summary: Reset storage
+      tags:
+      - storage
+  /api/storage/set:
+    post:
+      consumes:
+      - application/json
+      description: Store a key-value pair.
+      parameters:
+      - description: Set key payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.SetKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+      summary: Set key
+      tags:
+      - storage
   /api/users:
     get:
       consumes:
       - application/json
-      description: 分页获取用户列表，需要管理员权限
+      description: Get a paginated list of users (admin only).
       parameters:
       - default: 1
-        description: 页码
+        description: Page number
         in: query
         name: page
         type: integer
       - default: 10
-        description: 每页数量
+        description: Items per page
         in: query
         name: limit
         type: integer
@@ -121,29 +336,29 @@ paths:
       - application/json
       responses:
         "200":
-          description: 获取成功
+          description: OK
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "401":
-          description: 未授权
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "500":
-          description: 服务器错误
+          description: Internal server error
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
       security:
       - ApiKeyAuth: []
-      summary: 获取用户列表
+      summary: List users
       tags:
-      - 用户管理
+      - Users
   /api/users/{id}:
     delete:
       consumes:
       - application/json
-      description: 删除指定用户，需要管理员权限
+      description: Delete a user by ID (admin only).
       parameters:
-      - description: 用户ID
+      - description: User ID
         in: path
         name: id
         required: true
@@ -152,32 +367,32 @@ paths:
       - application/json
       responses:
         "200":
-          description: 删除成功
+          description: OK
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "400":
-          description: 无效的用户ID
+          description: Invalid user ID
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "401":
-          description: 未授权
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "404":
-          description: 用户不存在
+          description: User not found
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
       security:
       - ApiKeyAuth: []
-      summary: 删除用户
+      summary: Delete user
       tags:
-      - 用户管理
+      - Users
     get:
       consumes:
       - application/json
-      description: 根据用户ID获取用户详细信息，需要管理员权限
+      description: Get a user by ID (admin only).
       parameters:
-      - description: 用户ID
+      - description: User ID
         in: path
         name: id
         required: true
@@ -186,37 +401,37 @@ paths:
       - application/json
       responses:
         "200":
-          description: 获取成功
+          description: OK
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "400":
-          description: 无效的用户ID
+          description: Invalid user ID
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "401":
-          description: 未授权
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "404":
-          description: 用户不存在
+          description: User not found
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
       security:
       - ApiKeyAuth: []
-      summary: 获取单个用户
+      summary: Get user
       tags:
-      - 用户管理
+      - Users
     put:
       consumes:
       - application/json
-      description: 更新指定用户的信息，需要管理员权限
+      description: Update a user by ID (admin only).
       parameters:
-      - description: 用户ID
+      - description: User ID
         in: path
         name: id
         required: true
         type: integer
-      - description: 更新用户信息请求
+      - description: Update user payload
         in: body
         name: user
         required: true
@@ -226,44 +441,44 @@ paths:
       - application/json
       responses:
         "200":
-          description: 更新成功
+          description: OK
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "400":
-          description: 请求参数错误
+          description: Bad request
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "401":
-          description: 未授权
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "404":
-          description: 用户不存在
+          description: User not found
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
       security:
       - ApiKeyAuth: []
-      summary: 更新用户信息
+      summary: Update user
       tags:
-      - 用户管理
+      - Users
   /api/users/search:
     get:
       consumes:
       - application/json
-      description: 根据关键词搜索用户，需要管理员权限
+      description: Search users by keyword (admin only).
       parameters:
-      - description: 搜索关键词
+      - description: Search keyword
         in: query
         name: q
         required: true
         type: string
       - default: 1
-        description: 页码
+        description: Page number
         in: query
         name: page
         type: integer
       - default: 10
-        description: 每页数量
+        description: Items per page
         in: query
         name: limit
         type: integer
@@ -271,33 +486,91 @@ paths:
       - application/json
       responses:
         "200":
-          description: 搜索成功
+          description: OK
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "400":
-          description: 请求参数错误
+          description: Bad request
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "401":
-          description: 未授权
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "500":
-          description: 服务器错误
+          description: Internal server error
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
       security:
       - ApiKeyAuth: []
-      summary: 搜索用户
+      summary: Search users
       tags:
-      - 用户管理
+      - Users
+  /api/v1/auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Change the current user's password.
+      parameters:
+      - description: Change password payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Change password
+      tags:
+      - Auth
+  /api/v1/auth/confirm-reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Set a new password using a reset token.
+      parameters:
+      - description: Confirm reset password payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.ConfirmResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+      summary: Confirm reset password
+      tags:
+      - Auth
   /api/v1/auth/login:
     post:
       consumes:
       - application/json
-      description: 用户身份验证
+      description: Authenticate a user.
       parameters:
-      - description: 登录信息
+      - description: Login payload
         in: body
         name: request
         required: true
@@ -307,27 +580,73 @@ paths:
       - application/json
       responses:
         "200":
-          description: 登录成功
+          description: OK
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "400":
-          description: 请求参数错误
+          description: Bad request
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "401":
-          description: 认证失败
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
-      summary: 用户登录
+            $ref: '#/definitions/resources.APIResponse'
+      summary: Login
       tags:
-      - 认证
+      - Auth
+  /api/v1/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Log out the current user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Logout
+      tags:
+      - Auth
+  /api/v1/auth/profile:
+    get:
+      consumes:
+      - application/json
+      description: Get the current user's profile.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get profile
+      tags:
+      - Auth
   /api/v1/auth/refresh:
     post:
       consumes:
       - application/json
-      description: 使用刷新令牌获取新的访问令牌
+      description: Exchange a refresh token for a new access token.
       parameters:
-      - description: 刷新令牌信息
+      - description: Refresh token payload
         in: body
         name: request
         required: true
@@ -337,27 +656,27 @@ paths:
       - application/json
       responses:
         "200":
-          description: 刷新成功
+          description: OK
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "400":
-          description: 请求参数错误
+          description: Bad request
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "401":
-          description: 认证失败
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
-      summary: 刷新令牌
+            $ref: '#/definitions/resources.APIResponse'
+      summary: Refresh token
       tags:
-      - 认证
+      - Auth
   /api/v1/auth/register:
     post:
       consumes:
       - application/json
-      description: 创建新用户账户
+      description: Create a new user account.
       parameters:
-      - description: 注册信息
+      - description: Register payload
         in: body
         name: request
         required: true
@@ -367,27 +686,53 @@ paths:
       - application/json
       responses:
         "201":
-          description: 注册成功
+          description: Created
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "400":
-          description: 请求参数错误
+          description: Bad request
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "409":
-          description: 邮箱已被注册
+          description: Email already registered
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
-      summary: 用户注册
+            $ref: '#/definitions/resources.APIResponse'
+      summary: Register
       tags:
-      - 认证
+      - Auth
+  /api/v1/auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Send a password reset email.
+      parameters:
+      - description: Reset password payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/resources.APIResponse'
+      summary: Reset password
+      tags:
+      - Auth
   /api/v1/users/profile:
     put:
       consumes:
       - application/json
-      description: 更新当前登录用户的个人信息
+      description: Update the current user's profile.
       parameters:
-      - description: 更新个人资料请求
+      - description: Update profile payload
         in: body
         name: user
         required: true
@@ -397,26 +742,20 @@ paths:
       - application/json
       responses:
         "200":
-          description: 更新成功
+          description: OK
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "400":
-          description: 请求参数错误
+          description: Bad request
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
         "401":
-          description: 未授权
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/helpers.APIResponse'
+            $ref: '#/definitions/resources.APIResponse'
       security:
       - ApiKeyAuth: []
-      summary: 更新个人资料
+      summary: Update profile
       tags:
-      - 用户管理
-securityDefinitions:
-  BearerAuth:
-    description: Type "Bearer" followed by a space and JWT token.
-    in: header
-    name: Authorization
-    type: apiKey
+      - Users
 swagger: "2.0"

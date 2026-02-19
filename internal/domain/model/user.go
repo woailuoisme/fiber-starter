@@ -1,0 +1,76 @@
+// Package models 定义应用程序的数据模型
+package models
+
+import (
+	"time"
+)
+
+// User 用户模型
+type User struct {
+	ID              int64      `db:"id" json:"id"`
+	Name            string     `db:"name" json:"name"`
+	Email           string     `db:"email" json:"email"`
+	Password        string     `db:"password" json:"-"`
+	Avatar          *string    `db:"avatar" json:"avatar,omitempty"`
+	Phone           *string    `db:"phone" json:"phone,omitempty"`
+	Status          UserStatus `db:"status" json:"status"`
+	EmailVerifiedAt *time.Time `db:"email_verified_at" json:"email_verified_at,omitempty"`
+	CreatedAt       time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt       time.Time  `db:"updated_at" json:"updated_at"`
+	DeletedAt       *time.Time `db:"deleted_at" json:"-"`
+}
+
+// UserStatus 用户状态枚举
+type UserStatus string
+
+const (
+	// UserStatusActive active user status
+	UserStatusActive UserStatus = "active"
+	// UserStatusInactive inactive user status
+	UserStatusInactive UserStatus = "inactive"
+	// UserStatusBanned banned user status
+	UserStatusBanned UserStatus = "banned"
+)
+
+// IsEmailVerified 检查邮箱是否已验证
+func (u *User) IsEmailVerified() bool {
+	return u.EmailVerifiedAt != nil
+}
+
+// IsActive 检查用户是否处于活跃状态
+func (u *User) IsActive() bool {
+	return u.Status == UserStatusActive
+}
+
+// ToSafeUser 转换为安全的用户信息（不包含敏感信息）
+func (u *User) ToSafeUser() SafeUser {
+	return SafeUser{
+		ID:              u.ID,
+		Name:            u.Name,
+		Email:           u.Email,
+		Avatar:          u.Avatar,
+		Phone:           u.Phone,
+		Status:          u.Status,
+		EmailVerifiedAt: u.EmailVerifiedAt,
+		CreatedAt:       u.CreatedAt,
+		UpdatedAt:       u.UpdatedAt,
+	}
+}
+
+// ToSafeResponse 转换为安全的用户响应（用于API输出，与ToSafeUser功能相同）
+func (u *User) ToSafeResponse() SafeUser {
+	return u.ToSafeUser()
+}
+
+// SafeUser 安全的用户信息（用于API响应）
+type SafeUser struct {
+	ID              int64      `json:"id"`
+	Name            string     `json:"name"`
+	Email           string     `json:"email"`
+	Avatar          *string    `json:"avatar,omitempty"`
+	Phone           *string    `json:"phone,omitempty"`
+	Status          UserStatus `json:"status"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+}

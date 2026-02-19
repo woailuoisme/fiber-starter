@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# Go 代码格式化脚本 - 类似 Laravel Pint
-echo "🔧 开始格式化 Go 代码..."
+# Go formatting script (similar to Laravel Pint)
+echo "Starting Go formatting..."
 
-# 1. 使用 go fmt 格式化代码
-echo "📝 使用 go fmt 格式化代码..."
+# 1. Format with go fmt
+echo "Running go fmt..."
 go fmt ./...
 
-# 2. 使用 goimports 整理导入语句（如果安装了）
+# 2. Organize imports with goimports (if installed)
 if command -v goimports >/dev/null 2>&1 || [ -f "$HOME/go/bin/goimports" ] || [ -f "$GOPATH/bin/goimports" ]; then
-    echo "📦 整理导入语句..."
+    echo "Organizing imports..."
     if command -v goimports >/dev/null 2>&1; then
         goimports -w .
     elif [ -f "$HOME/go/bin/goimports" ]; then
@@ -19,15 +19,14 @@ if command -v goimports >/dev/null 2>&1 || [ -f "$HOME/go/bin/goimports" ] || [ 
     fi
 fi
 
-# 3. 使用 go vet 检查代码
-echo "🔍 运行代码静态检查..."
+# 3. Run go vet
+echo "Running go vet..."
 go vet ./...
 
-# 4. 使用 golangci-lint（如果安装了且版本兼容）
+# 4. Run golangci-lint (if installed and compatible)
 if command -v golangci-lint >/dev/null 2>&1; then
-    echo "⚡ 运行代码质量检查..."
-    # 只使用基本的检查器避免版本问题
-    golangci-lint run --disable-all -E gofmt,govet --fast || echo "⚠️  golangci-lint 检查跳过（版本兼容性问题）"
+    echo "Running golangci-lint..."
+    golangci-lint run --disable-all -E gofmt,govet --fast || echo "golangci-lint skipped (compatibility issue)"
 fi
 
-echo "✅ 代码格式化完成！"
+echo "Formatting completed."

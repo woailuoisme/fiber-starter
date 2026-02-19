@@ -32,7 +32,7 @@ log_error() {
 # 检查命令是否存在
 check_command() {
     if ! command -v $1 &> /dev/null; then
-        log_error "$1 未安装"
+        log_error "$1 is not installed"
         return 1
     fi
     return 0
@@ -40,48 +40,48 @@ check_command() {
 
 # 检查项目状态
 check_project() {
-    log_info "检查项目状态..."
+    log_info "Checking project status..."
     
     # 检查 Go 版本
     if check_command go; then
-        log_success "Go 版本: $(go version)"
+        log_success "Go version: $(go version)"
     else
-        log_error "请先安装 Go"
+        log_error "Go is required. Please install Go first."
         exit 1
     fi
     
     # 检查必要文件
     if [ ! -f "go.mod" ]; then
-        log_error "go.mod 文件不存在"
+        log_error "go.mod not found"
         exit 1
     fi
     
-    if [ ! -f "main.go" ]; then
-        log_error "main.go 文件不存在"
+	if [ ! -f "cmd/server/main.go" ]; then
+		log_error "cmd/server/main.go not found"
         exit 1
     fi
     
     # 检查配置文件
     if [ ! -f ".env" ]; then
-        log_warning ".env 文件不存在，正在创建..."
+        log_warning ".env not found. Creating..."
         cp .env.example .env
-        log_success "已创建 .env 文件"
+        log_success ".env created"
     fi
     
-    log_success "项目状态检查完成"
+    log_success "Project status check completed"
 }
 
 # 安装依赖
 install_deps() {
-    log_info "安装项目依赖..."
+    log_info "Installing project dependencies..."
     go mod download
     go mod tidy
-    log_success "依赖安装完成"
+    log_success "Dependencies installed"
 }
 
 # 安装开发工具
 install_tools() {
-    log_info "安装开发工具..."
+    log_info "Installing development tools..."
     
     tools=(
         "github.com/cosmtrek/air"
@@ -93,161 +93,161 @@ install_tools() {
     )
     
     for tool in "${tools[@]}"; do
-        log_info "安装 $tool..."
+        log_info "Installing $tool..."
         go install $tool@latest
     done
     
-    log_success "开发工具安装完成"
+    log_success "Development tools installed"
 }
 
 # 启动开发服务器
 start_dev() {
-    log_info "启动开发服务器..."
+    log_info "Starting development server..."
     
     if check_command air; then
         air
     else
-        log_warning "air 未安装，使用 go run 启动..."
-        go run main.go
+		log_warning "air is not installed. Falling back to go run..."
+		go run ./cmd/server
     fi
 }
 
 # 运行测试
 run_tests() {
-    log_info "运行测试..."
+    log_info "Running tests..."
     
     # 单元测试
-    log_info "运行单元测试..."
+    log_info "Running unit tests..."
     go test -v ./...
     
     # 竞态检测
-    log_info "运行竞态检测..."
+    log_info "Running race detector..."
     go test -race -v ./...
     
     # 覆盖率
-    log_info "生成覆盖率报告..."
+    log_info "Generating coverage report..."
     mkdir -p coverage
     go test -coverprofile=coverage/coverage.out ./...
     go tool cover -html=coverage/coverage.out -o coverage/coverage.html
     
-    log_success "测试完成，覆盖率报告: coverage/coverage.html"
+    log_success "Tests completed. Coverage report: coverage/coverage.html"
 }
 
 # 代码质量检查
 quality_check() {
-    log_info "运行代码质量检查..."
+    log_info "Running code quality checks..."
     
     # 格式化
-    log_info "格式化代码..."
+    log_info "Formatting code..."
     go fmt ./...
     
     # 静态检查
-    log_info "运行 go vet..."
+    log_info "Running go vet..."
     go vet ./...
     
     # golangci-lint
     if check_command golangci-lint; then
-        log_info "运行 golangci-lint..."
+        log_info "Running golangci-lint..."
         golangci-lint run
     else
-        log_warning "golangci-lint 未安装"
+        log_warning "golangci-lint is not installed"
     fi
     
     # 安全扫描
     if check_command gosec; then
-        log_info "运行安全扫描..."
+        log_info "Running security scan..."
         gosec ./...
     else
-        log_warning "gosec 未安装"
+        log_warning "gosec is not installed"
     fi
     
-    log_success "代码质量检查完成"
+    log_success "Code quality checks completed"
 }
 
 # 构建项目
 build_project() {
-    log_info "构建项目..."
+    log_info "Building project..."
     
     # 创建构建目录
     mkdir -p build
     
     # 构建当前平台
-    go build -o build/fiber-starter -v main.go
+	go build -o build/fiber-starter -v ./cmd/server
     
     # 构建多平台（可选）
     if [ "$1" = "--all" ]; then
-        log_info "构建多平台版本..."
+        log_info "Building multi-platform binaries..."
         
         # Linux AMD64
-        GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o build/fiber-starter-linux-amd64 main.go
+		GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o build/fiber-starter-linux-amd64 ./cmd/server
         
         # macOS AMD64
-        GOOS=darwin GOARCH=amd64 go build -ldflags="-w -s" -o build/fiber-starter-darwin-amd64 main.go
+		GOOS=darwin GOARCH=amd64 go build -ldflags="-w -s" -o build/fiber-starter-darwin-amd64 ./cmd/server
         
         # macOS ARM64
-        GOOS=darwin GOARCH=arm64 go build -o build/fiber-starter-darwin-arm64 main.go
+		GOOS=darwin GOARCH=arm64 go build -o build/fiber-starter-darwin-arm64 ./cmd/server
         
         # Windows AMD64
-        GOOS=windows GOARCH=amd64 go build -ldflags="-w -s" -o build/fiber-starter-windows-amd64.exe main.go
+		GOOS=windows GOARCH=amd64 go build -ldflags="-w -s" -o build/fiber-starter-windows-amd64.exe ./cmd/server
     fi
     
-    log_success "构建完成"
+    log_success "Build completed"
 }
 
 # 数据库操作
 db_migrate() {
-    log_info "运行数据库迁移..."
+    log_info "Running database migrations..."
     if [ -f "database/migrations/migrate.go" ]; then
         go run database/migrations/migrate.go up
-        log_success "数据库迁移完成"
+        log_success "Database migrations completed"
     else
-        log_error "迁移文件不存在"
+        log_error "Migration file not found"
     fi
 }
 
 db_seed() {
-    log_info "运行数据库种子..."
+    log_info "Running database seeders..."
     if [ -f "database/seeders/seed.go" ]; then
         go run database/seeders/seed.go
-        log_success "数据库种子完成"
+        log_success "Database seeding completed"
     else
-        log_error "种子文件不存在"
+        log_error "Seeder file not found"
     fi
 }
 
 db_reset() {
-    log_info "重置数据库..."
+    log_info "Resetting database..."
     db_migrate_down
     db_migrate
     db_seed
-    log_success "数据库重置完成"
+    log_success "Database reset completed"
 }
 
 # 生成代码
 generate_code() {
-    log_info "生成代码..."
+    log_info "Generating code..."
     
     # 生成 Go 代码
     go generate ./...
     
     # 生成 Mock 文件
     if check_command mockgen; then
-        log_info "生成 Mock 文件..."
+        log_info "Generating mocks..."
         mockgen -source=app/services/*.go -destination=tests/mocks/services_mock.go
     fi
     
     # 生成 API 文档
     if check_command swag; then
-        log_info "生成 API 文档..."
-        swag init -g main.go -o docs
+        log_info "Generating API docs..."
+		swag init -g ./cmd/server/main.go -o docs
     fi
     
-    log_success "代码生成完成"
+    log_success "Code generation completed"
 }
 
 # 清理项目
 clean_project() {
-    log_info "清理项目..."
+    log_info "Cleaning project..."
     
     # 清理构建文件
     rm -rf build/
@@ -261,35 +261,35 @@ clean_project() {
     find . -name "*.tmp" -delete
     find . -name "*.log" -delete
     
-    log_success "项目清理完成"
+    log_success "Project cleanup completed"
 }
 
 # 显示帮助信息
 show_help() {
-    echo "Fiber Starter 开发脚本"
+    echo "Fiber Starter development script"
     echo ""
-    echo "使用方法: $0 [command]"
+    echo "Usage: $0 [command]"
     echo ""
-    echo "可用命令:"
-    echo "  check           检查项目状态"
-    echo "  deps            安装项目依赖"
-    echo "  tools           安装开发工具"
-    echo "  dev             启动开发服务器"
-    echo "  test            运行测试"
-    echo "  quality         代码质量检查"
-    echo "  build [options] 构建项目 (使用 --all 构建多平台版本)"
-    echo "  migrate         运行数据库迁移"
-    echo "  seed            运行数据库种子"
-    echo "  reset           重置数据库"
-    echo "  generate        生成代码"
-    echo "  clean           清理项目"
-    echo "  help            显示帮助信息"
+    echo "Available commands:"
+    echo "  check           Check project status"
+    echo "  deps            Install dependencies"
+    echo "  tools           Install development tools"
+    echo "  dev             Start development server"
+    echo "  test            Run tests"
+    echo "  quality         Run code quality checks"
+    echo "  build [options] Build project (--all for multi-platform)"
+    echo "  migrate         Run database migrations"
+    echo "  seed            Run database seeders"
+    echo "  reset           Reset database"
+    echo "  generate        Generate code"
+    echo "  clean           Clean project"
+    echo "  help            Show help"
     echo ""
-    echo "示例:"
-    echo "  $0 check        # 检查项目状态"
-    echo "  $0 dev          # 启动开发服务器"
-    echo "  $0 test         # 运行测试"
-    echo "  $0 build --all  # 构建多平台版本"
+    echo "Examples:"
+    echo "  $0 check"
+    echo "  $0 dev"
+    echo "  $0 test"
+    echo "  $0 build --all"
 }
 
 # 主函数
@@ -336,7 +336,7 @@ main() {
             show_help
             ;;
         *)
-            log_error "未知命令: $1"
+            log_error "Unknown command: $1"
             show_help
             exit 1
             ;;

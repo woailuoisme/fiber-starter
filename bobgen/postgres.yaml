@@ -1,0 +1,37 @@
+type_system: "database/sql"
+tags: ["db", "json"]
+no_tests: true
+no_back_referencing: true
+struct_tag_casing: "snake"
+
+plugins_preset: "default"
+plugins:
+  dbinfo:
+    disabled: false
+    pkgname: "dbinfo"
+    destination: "internal/db/gen/postgres/dbinfo"
+  enums:
+    disabled: false
+    pkgname: "enums"
+    destination: "internal/db/gen/postgres/enums"
+  models:
+    disabled: false
+    pkgname: "models"
+    destination: "internal/db/gen/postgres/models"
+  dberrors:
+    disabled: false
+    pkgname: "dberrors"
+    destination: "internal/db/gen/postgres/dberrors"
+  factory:
+    disabled: true
+    pkgname: "factory"
+    destination: "internal/db/gen/postgres/factory"
+  queries:
+    disabled: true
+    pkgname: "queries"
+    destination: "internal/db/gen/postgres/queries"
+
+psql:
+  driver: "github.com/jackc/pgx/v5"
+  schemas: ["public"]
+  shared_schema: "public"

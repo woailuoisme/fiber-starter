@@ -55,6 +55,11 @@
 
 ```
 .
+├── cmd/                      # Main applications
+│   ├── server/               # HTTP 服务入口
+│   │   └── main.go
+│   └── cli/                  # CLI 工具入口
+│       └── main.go
 ├── app/                      # 应用核心代码
 │   ├── apierrors/            # 统一错误定义 (避免与标准库 errors 冲突)
 │   ├── helpers/              # 全局辅助函数
@@ -68,9 +73,11 @@
 │   ├── services/             # 业务逻辑服务 (S3, Queue, Search 等)
 │   └── logger/               # 日志配置
 ├── bootstrap/                # 启动引导逻辑
-├── cmd/                      # 命令行入口定义
 ├── command/                  # CLI 命令实现 (Migrate, Seed, Route 等)
-├── config/                   # 配置文件 (Yaml + Go struct)
+├── config/                   # 配置加载与结构体（Go）
+├── configs/                  # 配置文件（YAML）
+│   ├── app.yaml
+│   └── database.yaml
 ├── database/                 # 数据库相关
 │   ├── migrations/           # 数据库迁移文件
 │   └── seeders/              # 数据填充器
@@ -84,9 +91,8 @@
 ├── .gitignore                # Git 忽略规则
 ├── Dockerfile                # Docker 构建文件
 ├── Makefile                  # 开发与构建命令
-├── cli.go                    # CLI 工具入口
 ├── go.mod                    # Go 依赖定义
-└── main.go                   # HTTP 服务入口
+└── go.sum
 ```
 
 ## 快速开始
@@ -138,6 +144,9 @@
 - `make migrate-rollback`: 回滚上一次迁移
 - `make seed`: 填充数据库种子数据
 - `make seed-random`: 生成随机测试数据
+
+### 队列与任务
+- `go run ./cmd/cli queue:work`: 以独立进程运行 Asynq worker（用于生产/容器化部署）
 
 ### 代码质量
 - `make lint`: 运行代码检查 (golangci-lint)

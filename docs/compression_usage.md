@@ -16,8 +16,8 @@
 
 ```go
 import (
-    "fiber-starter/app/services"
-    "fiber-starter/config"
+    "fiber-starter/internal/config"
+    "fiber-starter/internal/services"
 )
 
 // 创建存储服务

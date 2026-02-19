@@ -1,97 +1,106 @@
 package tests
 
 import (
+	"path/filepath"
 	"testing"
 
-	"fiber-starter/config"
-	"fiber-starter/database"
+	"fiber-starter/internal/config"
+	database "fiber-starter/internal/db"
 )
 
-// TestDatabaseConnection 测试数据库连接
-func TestDatabaseConnection(t *testing.T) {
-	// 加载配置
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		t.Skipf("跳过测试：无法加载配置 - %v", err)
-		return
-	}
+func newTestConfigSQLite(t *testing.T) *config.Config {
+	t.Helper()
 
-	// 创建数据库连接
+	dbPath := filepath.Join(t.TempDir(), "test.sqlite")
+	return &config.Config{
+		Database: config.DatabaseConfig{
+			Default: "sqlite",
+			Connections: map[string]config.DBConnection{
+				"sqlite": {
+					Driver:   "sqlite",
+					Database: dbPath,
+				},
+			},
+			Pool: config.DBPoolConfig{
+				MaxOpenConns:    10,
+				MaxIdleConns:    2,
+				ConnMaxLifetime: 60,
+				ConnMaxIdleTime: 30,
+			},
+		},
+	}
+}
+
+// TestDatabaseConnection Test database connection
+func TestDatabaseConnection(t *testing.T) {
+	cfg := newTestConfigSQLite(t)
+
+	// Create database connection
 	conn, err := database.NewConnection(cfg)
 	if err != nil {
-		t.Skipf("跳过测试：无法连接数据库 - %v", err)
+		t.Skipf("Skip test: cannot connect to database - %v", err)
 		return
 	}
 	defer func() {
 		_ = conn.Close()
 	}()
 
-	// 测试连接是否成功
+	// Test if connection is successful
 	db, err := conn.GetDB()
 	if err != nil {
-		t.Fatalf("获取数据库连接失败: %v", err)
+		t.Fatalf("Failed to get database connection: %v", err)
 	}
 	if db == nil {
-		t.Fatal("数据库连接为空")
+		t.Fatal("Database connection is nil")
 	}
 
-	t.Log("数据库连接成功")
+	t.Log("Database connection successful")
 }
 
-// TestDatabaseHealthCheck 测试数据库健康检查
+// TestDatabaseHealthCheck Test database health check
 func TestDatabaseHealthCheck(t *testing.T) {
-	// 加载配置
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		t.Skipf("跳过测试：无法加载配置 - %v", err)
-		return
-	}
+	cfg := newTestConfigSQLite(t)
 
-	// 创建数据库连接
+	// Create database connection
 	conn, err := database.NewConnection(cfg)
 	if err != nil {
-		t.Skipf("跳过测试：无法连接数据库 - %v", err)
+		t.Skipf("Skip test: cannot connect to database - %v", err)
 		return
 	}
 	defer func() {
 		_ = conn.Close()
 	}()
 
-	// 执行健康检查
+	// Perform health check
 	err = conn.HealthCheck()
 	if err != nil {
-		t.Fatalf("数据库健康检查失败: %v", err)
+		t.Fatalf("Database health check failed: %v", err)
 	}
 
-	t.Log("数据库健康检查通过")
+	t.Log("Database health check passed")
 }
 
-// TestDatabaseConnectionStats 测试获取数据库连接池统计信息
+// TestDatabaseConnectionStats Test getting database connection pool stats
 func TestDatabaseConnectionStats(t *testing.T) {
-	// 加载配置
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		t.Skipf("跳过测试：无法加载配置 - %v", err)
-		return
-	}
+	cfg := newTestConfigSQLite(t)
 
-	// 创建数据库连接
+	// Create database connection
 	conn, err := database.NewConnection(cfg)
 	if err != nil {
-		t.Skipf("跳过测试：无法连接数据库 - %v", err)
+		t.Skipf("Skip test: cannot connect to database - %v", err)
 		return
 	}
 	defer func() {
 		_ = conn.Close()
 	}()
 
-	// 获取连接池统计信息
+	// Get connection pool stats
 	stats, err := conn.GetStats()
 	if err != nil {
-		t.Fatalf("获取连接池统计信息失败: %v", err)
+		t.Fatalf("Failed to get connection pool stats: %v", err)
 	}
 
-	// 验证统计信息包含必要的字段
+	// Verify stats contain required fields
 	requiredFields := []string{
 		"max_open_connections",
 		"open_connections",
@@ -103,105 +112,87 @@ func TestDatabaseConnectionStats(t *testing.T) {
 
 	for _, field := range requiredFields {
 		if _, exists := stats[field]; !exists {
-			t.Errorf("统计信息缺少字段: %s", field)
+			t.Errorf("Stats missing field: %s", field)
 		}
 	}
 
-	t.Logf("连接池统计信息: %+v", stats)
+	t.Logf("Connection pool stats: %+v", stats)
 }
 
-// TestDatabaseConnectionPool 测试数据库连接池配置
+// TestDatabaseConnectionPool Test database connection pool config
 func TestDatabaseConnectionPool(t *testing.T) {
-	// 加载配置
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		t.Skipf("跳过测试：无法加载配置 - %v", err)
-		return
-	}
+	cfg := newTestConfigSQLite(t)
 
-	// 创建数据库连接
+	// Create database connection
 	conn, err := database.NewConnection(cfg)
 	if err != nil {
-		t.Skipf("跳过测试：无法连接数据库 - %v", err)
+		t.Skipf("Skip test: cannot connect to database - %v", err)
 		return
 	}
 	defer func() {
 		_ = conn.Close()
 	}()
 
-	// 获取底层 sql.DB
+	// Get underlying sql.DB
 	db, err := conn.GetDB()
 	if err != nil {
-		t.Fatalf("获取数据库连接失败: %v", err)
+		t.Fatalf("Failed to get database connection: %v", err)
 	}
 
-	sqlDB, err := db.DB()
-	if err != nil {
-		t.Fatalf("获取底层sql.DB失败: %v", err)
-	}
-
-	// 验证连接池配置
-	stats := sqlDB.Stats()
+	// Verify connection pool config
+	stats := db.Stats()
 
 	if stats.MaxOpenConnections != cfg.Database.Pool.MaxOpenConns {
-		t.Errorf("最大打开连接数配置不匹配: 期望 %d, 实际 %d",
+		t.Errorf("Max open connections config mismatch: expected %d, got %d",
 			cfg.Database.Pool.MaxOpenConns, stats.MaxOpenConnections)
 	}
 
-	t.Logf("连接池配置验证通过 - MaxOpenConns: %d, MaxIdleConns: %d",
+	t.Logf("Connection pool config verified - MaxOpenConns: %d, MaxIdleConns: %d",
 		cfg.Database.Pool.MaxOpenConns, cfg.Database.Pool.MaxIdleConns)
 }
 
-// TestGlobalHealthCheck 测试全局健康检查函数
+// TestGlobalHealthCheck Test global health check function
 func TestGlobalHealthCheck(t *testing.T) {
-	// 加载配置
-	cfg, err := config.LoadConfig()
+	cfg := newTestConfigSQLite(t)
+
+	// Create database connection and set global instance
+	conn, err := database.NewConnection(cfg)
 	if err != nil {
-		t.Skipf("跳过测试：无法加载配置 - %v", err)
+		t.Skipf("Skip test: cannot connect to database - %v", err)
 		return
 	}
+	_, _ = conn.GetDB()
 
-	// 创建数据库连接并设置全局实例
-	_, err = database.NewConnection(cfg)
-	if err != nil {
-		t.Skipf("跳过测试：无法连接数据库 - %v", err)
-		return
-	}
-
-	// 测试全局健康检查函数
+	// Test global health check function
 	err = database.HealthCheck()
 	if err != nil {
-		t.Fatalf("全局健康检查失败: %v", err)
+		t.Fatalf("Global health check failed: %v", err)
 	}
 
-	t.Log("全局健康检查通过")
+	t.Log("Global health check passed")
 }
 
-// TestGetConnectionStats 测试全局获取连接统计信息函数
+// TestGetConnectionStats Test global get connection stats function
 func TestGetConnectionStats(t *testing.T) {
-	// 加载配置
-	cfg, err := config.LoadConfig()
+	cfg := newTestConfigSQLite(t)
+
+	// Create database connection and set global instance
+	conn, err := database.NewConnection(cfg)
 	if err != nil {
-		t.Skipf("跳过测试：无法加载配置 - %v", err)
+		t.Skipf("Skip test: cannot connect to database - %v", err)
 		return
 	}
+	_, _ = conn.GetDB()
 
-	// 创建数据库连接并设置全局实例
-	_, err = database.NewConnection(cfg)
-	if err != nil {
-		t.Skipf("跳过测试：无法连接数据库 - %v", err)
-		return
-	}
-
-	// 测试全局获取连接统计信息函数
+	// Test global get connection stats function
 	stats, err := database.GetConnectionStats()
 	if err != nil {
-		t.Fatalf("获取连接统计信息失败: %v", err)
+		t.Fatalf("Failed to get connection stats: %v", err)
 	}
 
 	if len(stats) == 0 {
-		t.Fatal("连接统计信息为空")
+		t.Fatal("Connection stats is empty")
 	}
 
-	t.Logf("全局连接统计信息: %+v", stats)
+	t.Logf("Global connection stats: %+v", stats)
 }
