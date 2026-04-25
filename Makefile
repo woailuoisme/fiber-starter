@@ -32,7 +32,7 @@ define run_golangci_lint
 endef
 
 define build_binary
-	@$(1) $(GO) build $(2) -o $(BUILD_DIR)/$(3) $(4)
+	@GOFLAGS=-mod=mod $(1) $(GO) build $(2) -o $(BUILD_DIR)/$(3) $(4)
 	@echo "$(5): $(BUILD_DIR)/$(3)"
 endef
 
@@ -72,7 +72,7 @@ build-cli: build-dir ## 构建 CLI 工具
 	$(call build_binary,,,$(CLI_BINARY_NAME),$(CLI_MAIN),Build success)
 
 build-prod: build-dir ## 构建生产版本 (压缩体积)
-	$(call build_binary,GOFLAGS=-mod=mod CGO_ENABLED=0 GOOS=linux GOARCH=amd64,-ldflags="-w -s",$(SERVER_BINARY_NAME),$(SERVER_MAIN),Production build success)
+	$(call build_binary,CGO_ENABLED=0 GOOS=linux GOARCH=amd64,-ldflags="-w -s",$(SERVER_BINARY_NAME),$(SERVER_MAIN),Production build success)
 
 config: ## 显示当前构建配置
 	@printf "BUILD_DIR=%s\nCOVERAGE_DIR=%s\nSERVER_BINARY_NAME=%s\nCLI_BINARY_NAME=%s\nAPP_LOG_DIR=%s\nDEPLOY_DIR=%s\n" \
