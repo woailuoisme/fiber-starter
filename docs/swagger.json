@@ -6,7 +6,12 @@
     "paths": {
         "/api/me": {
             "get": {
-                "description": "Get the current authenticated user's details.",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "获取当前认证用户的详细信息。",
                 "consumes": [
                     "application/json"
                 ],
@@ -14,258 +19,24 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Profile"
+                    "资料"
                 ],
-                "summary": "Get current user",
+                "summary": "获取当前登录用户信息",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "未授权",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "User not found",
-                        "schema": {
-                            "$ref": "#/definitions/resources.APIResponse"
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/storage/delete/{key}": {
-            "delete": {
-                "description": "Delete a value by key.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "storage"
-                ],
-                "summary": "Delete key",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Storage key",
-                        "name": "key",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/resources.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/resources.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/storage/exists/{key}": {
-            "get": {
-                "description": "Check whether a key exists.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "storage"
-                ],
-                "summary": "Check key existence",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Storage key",
-                        "name": "key",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/resources.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/resources.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/storage/expire": {
-            "post": {
-                "description": "Set expiration time for an existing key.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "storage"
-                ],
-                "summary": "Set key expiration",
-                "parameters": [
-                    {
-                        "description": "Set expiration payload",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/controllers.SetExpireRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/resources.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/resources.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/storage/get/{key}": {
-            "get": {
-                "description": "Get a value by key.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "storage"
-                ],
-                "summary": "Get key",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Storage key",
-                        "name": "key",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/resources.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/resources.APIResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/resources.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/storage/reset": {
-            "post": {
-                "description": "Delete all stored data.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "storage"
-                ],
-                "summary": "Reset storage",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/resources.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/resources.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/storage/set": {
-            "post": {
-                "description": "Store a key-value pair.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "storage"
-                ],
-                "summary": "Set key",
-                "parameters": [
-                    {
-                        "description": "Set key payload",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/controllers.SetKeyRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/resources.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
+                        "description": "用户不存在",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
@@ -275,7 +46,12 @@
         },
         "/api/users": {
             "get": {
-                "description": "Get a paginated list of users (admin only).",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "获取分页用户列表（仅管理员可用）。",
                 "consumes": [
                     "application/json"
                 ],
@@ -283,55 +59,55 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Users"
+                    "用户"
                 ],
-                "summary": "List users",
+                "summary": "获取用户列表",
                 "parameters": [
                     {
                         "type": "integer",
                         "default": 1,
-                        "description": "Page number",
+                        "description": "页码",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "default": 10,
-                        "description": "Items per page",
+                        "description": "每页数量",
                         "name": "limit",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "未授权",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "服务器错误",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                },
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ]
+                }
             }
         },
         "/api/users/search": {
             "get": {
-                "description": "Search users by keyword (admin only).",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "根据关键词搜索用户（仅管理员可用）。",
                 "consumes": [
                     "application/json"
                 ],
@@ -339,13 +115,13 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Users"
+                    "用户"
                 ],
-                "summary": "Search users",
+                "summary": "搜索用户",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Search keyword",
+                        "description": "搜索关键词",
                         "name": "q",
                         "in": "query",
                         "required": true
@@ -353,54 +129,54 @@
                     {
                         "type": "integer",
                         "default": 1,
-                        "description": "Page number",
+                        "description": "页码",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "default": 10,
-                        "description": "Items per page",
+                        "description": "每页数量",
                         "name": "limit",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request",
+                        "description": "请求错误",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "未授权",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "服务器错误",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                },
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ]
+                }
             }
         },
         "/api/users/{id}": {
             "get": {
-                "description": "Get a user by ID (admin only).",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "根据 ID 获取用户详情（仅管理员可用）。",
                 "consumes": [
                     "application/json"
                 ],
@@ -408,13 +184,13 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Users"
+                    "用户"
                 ],
-                "summary": "Get user",
+                "summary": "获取单个用户",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "User ID",
+                        "description": "用户 ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -422,38 +198,38 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid user ID",
+                        "description": "用户 ID 无效",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "未授权",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "User not found",
+                        "description": "用户不存在",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                },
+                }
+            },
+            "put": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
-                ]
-            },
-            "put": {
-                "description": "Update a user by ID (admin only).",
+                ],
+                "description": "根据 ID 更新用户信息（仅管理员可用）。",
                 "consumes": [
                     "application/json"
                 ],
@@ -461,19 +237,19 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Users"
+                    "用户"
                 ],
-                "summary": "Update user",
+                "summary": "更新用户信息",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "User ID",
+                        "description": "用户 ID",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Update user payload",
+                        "description": "更新用户参数",
                         "name": "user",
                         "in": "body",
                         "required": true,
@@ -484,38 +260,38 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request",
+                        "description": "请求错误",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "未授权",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "User not found",
+                        "description": "用户不存在",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                },
+                }
+            },
+            "delete": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
-                ]
-            },
-            "delete": {
-                "description": "Delete a user by ID (admin only).",
+                ],
+                "description": "根据 ID 删除用户（仅管理员可用）。",
                 "consumes": [
                     "application/json"
                 ],
@@ -523,13 +299,13 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Users"
+                    "用户"
                 ],
-                "summary": "Delete user",
+                "summary": "删除用户",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "User ID",
+                        "description": "用户 ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -537,40 +313,40 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid user ID",
+                        "description": "用户 ID 无效",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "未授权",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "User not found",
+                        "description": "用户不存在",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                },
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ]
+                }
             }
         },
         "/api/v1/auth/change-password": {
             "post": {
-                "description": "Change the current user's password.",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "修改当前登录用户的密码。",
                 "consumes": [
                     "application/json"
                 ],
@@ -578,12 +354,12 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "认证"
                 ],
-                "summary": "Change password",
+                "summary": "修改密码",
                 "parameters": [
                     {
-                        "description": "Change password payload",
+                        "description": "修改密码参数",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -594,34 +370,29 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request",
+                        "description": "请求错误",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "未授权",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                },
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ]
+                }
             }
         },
         "/api/v1/auth/confirm-reset-password": {
             "post": {
-                "description": "Set a new password using a reset token.",
+                "description": "使用重置令牌设置新密码。",
                 "consumes": [
                     "application/json"
                 ],
@@ -629,12 +400,12 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "认证"
                 ],
-                "summary": "Confirm reset password",
+                "summary": "确认重置密码",
                 "parameters": [
                     {
-                        "description": "Confirm reset password payload",
+                        "description": "确认重置密码参数",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -645,13 +416,13 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request",
+                        "description": "请求错误",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
@@ -661,7 +432,7 @@
         },
         "/api/v1/auth/login": {
             "post": {
-                "description": "Authenticate a user.",
+                "description": "验证用户身份并返回令牌。",
                 "consumes": [
                     "application/json"
                 ],
@@ -669,12 +440,12 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "认证"
                 ],
-                "summary": "Login",
+                "summary": "用户登录",
                 "parameters": [
                     {
-                        "description": "Login payload",
+                        "description": "登录参数",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -685,19 +456,19 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request",
+                        "description": "请求错误",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "未授权",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
@@ -707,7 +478,12 @@
         },
         "/api/v1/auth/logout": {
             "post": {
-                "description": "Log out the current user.",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "退出当前登录用户。",
                 "consumes": [
                     "application/json"
                 ],
@@ -715,39 +491,39 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "认证"
                 ],
-                "summary": "Logout",
+                "summary": "用户登出",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "未授权",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "服务器错误",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                },
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ]
+                }
             }
         },
         "/api/v1/auth/profile": {
             "get": {
-                "description": "Get the current user's profile.",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "获取当前登录用户的资料。",
                 "consumes": [
                     "application/json"
                 ],
@@ -755,33 +531,28 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "认证"
                 ],
-                "summary": "Get profile",
+                "summary": "获取当前用户资料",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "未授权",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                },
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ]
+                }
             }
         },
         "/api/v1/auth/refresh": {
             "post": {
-                "description": "Exchange a refresh token for a new access token.",
+                "description": "使用刷新令牌换取新的访问令牌。",
                 "consumes": [
                     "application/json"
                 ],
@@ -789,12 +560,12 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "认证"
                 ],
-                "summary": "Refresh token",
+                "summary": "刷新令牌",
                 "parameters": [
                     {
-                        "description": "Refresh token payload",
+                        "description": "刷新令牌参数",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -805,19 +576,19 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request",
+                        "description": "请求错误",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "未授权",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
@@ -827,7 +598,7 @@
         },
         "/api/v1/auth/register": {
             "post": {
-                "description": "Create a new user account.",
+                "description": "创建一个新的用户账号。",
                 "consumes": [
                     "application/json"
                 ],
@@ -835,12 +606,12 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "认证"
                 ],
-                "summary": "Register",
+                "summary": "用户注册",
                 "parameters": [
                     {
-                        "description": "Register payload",
+                        "description": "注册参数",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -851,19 +622,19 @@
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created",
+                        "description": "创建成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request",
+                        "description": "请求错误",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "409": {
-                        "description": "Email already registered",
+                        "description": "邮箱已被注册",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
@@ -873,7 +644,7 @@
         },
         "/api/v1/auth/reset-password": {
             "post": {
-                "description": "Send a password reset email.",
+                "description": "发送密码重置邮件。",
                 "consumes": [
                     "application/json"
                 ],
@@ -881,12 +652,12 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "认证"
                 ],
-                "summary": "Reset password",
+                "summary": "重置密码",
                 "parameters": [
                     {
-                        "description": "Reset password payload",
+                        "description": "重置密码参数",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -897,13 +668,13 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request",
+                        "description": "请求错误",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
@@ -913,7 +684,12 @@
         },
         "/api/v1/users/profile": {
             "put": {
-                "description": "Update the current user's profile.",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "更新当前登录用户的个人资料。",
                 "consumes": [
                     "application/json"
                 ],
@@ -921,12 +697,12 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Users"
+                    "用户"
                 ],
-                "summary": "Update profile",
+                "summary": "更新个人资料",
                 "parameters": [
                     {
-                        "description": "Update profile payload",
+                        "description": "更新个人资料参数",
                         "name": "user",
                         "in": "body",
                         "required": true,
@@ -937,29 +713,24 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request",
+                        "description": "请求错误",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "未授权",
                         "schema": {
                             "$ref": "#/definitions/resources.APIResponse"
                         }
                     }
-                },
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ]
+                }
             }
         }
     },
@@ -1057,41 +828,6 @@
             ],
             "properties": {
                 "email": {
-                    "type": "string"
-                }
-            }
-        },
-        "controllers.SetExpireRequest": {
-            "type": "object",
-            "required": [
-                "key",
-                "ttl"
-            ],
-            "properties": {
-                "key": {
-                    "type": "string"
-                },
-                "ttl": {
-                    "description": "Expiration in seconds.",
-                    "type": "integer"
-                }
-            }
-        },
-        "controllers.SetKeyRequest": {
-            "type": "object",
-            "required": [
-                "key",
-                "value"
-            ],
-            "properties": {
-                "key": {
-                    "type": "string"
-                },
-                "ttl": {
-                    "description": "Expiration in seconds. 0 uses the default TTL.",
-                    "type": "integer"
-                },
-                "value": {
                     "type": "string"
                 }
             }

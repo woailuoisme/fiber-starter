@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"fiber-starter/internal/config"
-	database "fiber-starter/internal/db"
+	"fiber-starter/config"
+	database "fiber-starter/database"
 )
 
 func newTestConfigSQLite(t *testing.T) *config.Config {

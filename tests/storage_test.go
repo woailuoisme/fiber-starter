@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"fiber-starter/internal/config"
-	"fiber-starter/internal/services"
+	Services "fiber-starter/app/Services"
+	"fiber-starter/config"
 )
 
 // TestStorageService Test storage service functionality
@@ -37,7 +37,7 @@ func testStorageDriver(t *testing.T, driver string) {
 }
 
 // createTestStorageService Create test storage service
-func createTestStorageService(t *testing.T, driver string) (*services.StorageService, error) {
+func createTestStorageService(t *testing.T, driver string) (*Services.StorageService, error) {
 	t.Helper()
 
 	storageCfg := &config.StorageConfig{
@@ -52,7 +52,7 @@ func createTestStorageService(t *testing.T, driver string) (*services.StorageSer
 		DB:       0,
 	}
 
-	return services.NewStorageService(storageCfg, redisCfg)
+	return Services.NewStorageService(storageCfg, redisCfg)
 }
 
 func envOr(key, def string) string {
@@ -64,7 +64,7 @@ func envOr(key, def string) string {
 }
 
 // performStorageOperations Perform storage operation tests
-func performStorageOperations(t *testing.T, storageService *services.StorageService, testKey string, testValue []byte) {
+func performStorageOperations(t *testing.T, storageService *Services.StorageService, testKey string, testValue []byte) {
 	// Set value
 	err := storageService.Set(testKey, testValue, time.Minute)
 	if err != nil {
@@ -134,7 +134,7 @@ func TestStorageServiceExpire(t *testing.T) {
 	}
 
 	// Create storage service
-	storageService, err := services.NewStorageService(storageCfg, redisCfg)
+	storageService, err := Services.NewStorageService(storageCfg, redisCfg)
 	if err != nil {
 		t.Fatalf("Failed to create storage service: %v", err)
 	}

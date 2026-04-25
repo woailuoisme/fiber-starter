@@ -1,0 +1,6 @@
+BUILD_DIR=build
+COVERAGE_DIR=coverage
+SERVER_BINARY_NAME=fiber-starter
+CLI_BINARY_NAME=fiber-starter-cli
+APP_LOG_DIR=storage/logs
+DEPLOY_DIR=deploy

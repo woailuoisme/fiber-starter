@@ -10,8 +10,8 @@ import (
 	"sync"
 	"testing"
 
-	"fiber-starter/internal/platform/helpers"
-	"fiber-starter/internal/transport/http/middleware"
+	middleware "fiber-starter/app/Http/Middleware"
+	helpers "fiber-starter/app/Support"
 
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"

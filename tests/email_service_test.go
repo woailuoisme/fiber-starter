@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"fiber-starter/internal/config"
-	"fiber-starter/internal/services"
+	Services "fiber-starter/app/Services"
+	"fiber-starter/config"
 )
 
 func TestEmailService_RequiresResendAPIKey(t *testing.T) {
@@ -13,7 +13,7 @@ func TestEmailService_RequiresResendAPIKey(t *testing.T) {
 	cfg.Mail.FromAddress = "noreply@example.com"
 	cfg.Mail.FromName = "Fiber Starter"
 
-	email := services.NewEmailService(cfg)
+	email := Services.NewEmailService(cfg)
 	err := email.SendEmail("user@example.com", "Subject", "Body", false)
 	if err == nil {
 		t.Fatal("SendEmail expected error when RESEND_API_KEY is not configured")

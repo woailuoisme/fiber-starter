@@ -1,9 +1,42 @@
 # Variables
-BINARY_NAME=fiber-starter
-BUILD_DIR=build
-COVERAGE_DIR=coverage
+-include .buildconfig
+export PATH := /opt/homebrew/bin:/usr/local/bin:$(PATH)
+GO ?= go
+GOFMT ?= gofmt
+GOLANGCI_LINT ?= golangci-lint
+SWAG ?= swag
+ATLAS ?= atlas
+BUILD_DIR ?= build
+COVERAGE_DIR ?= coverage
+LINT_CACHE_HOME ?= /tmp/fiber-starter-cache
+LINT_GOCACHE ?= /tmp/fiber-starter-gocache
+SERVER_BINARY_NAME ?= fiber-starter
+CLI_BINARY_NAME ?= fiber-starter-cli
+APP_LOG_DIR ?= storage/logs
+DEPLOY_DIR ?= deploy
+SERVER_MAIN ?= ./cmd/server
+CLI_MAIN ?= ./cmd/cli
+SWAG_MAIN ?= ./cmd/server/main.go
+SERVER_RUN = $(GO) run $(SERVER_MAIN)
+CLI_RUN = $(GO) run $(CLI_MAIN)
 
-.PHONY: all help build build-cli build-prod run dev test coverage lint fmt vet clean \
+.DEFAULT_GOAL := help
+
+define run_golangci_lint
+	@LINT_BIN="$$(command -v $(GOLANGCI_LINT) 2>/dev/null || true)"; \
+	if [ -z "$$LINT_BIN" ] && [ -x /opt/homebrew/bin/$(GOLANGCI_LINT) ]; then LINT_BIN=/opt/homebrew/bin/$(GOLANGCI_LINT); fi; \
+	if [ -z "$$LINT_BIN" ] && [ -x /usr/local/bin/$(GOLANGCI_LINT) ]; then LINT_BIN=/usr/local/bin/$(GOLANGCI_LINT); fi; \
+	if [ -z "$$LINT_BIN" ]; then echo "$(GOLANGCI_LINT) is not installed"; exit 1; fi; \
+	mkdir -p $(LINT_GOCACHE) $(LINT_CACHE_HOME); \
+	HOME=/tmp XDG_CACHE_HOME=$(LINT_CACHE_HOME) GOCACHE=$(LINT_GOCACHE) GOFLAGS=-mod=vendor "$$LINT_BIN" $(1)
+endef
+
+define build_binary
+	@$(1) $(GO) build $(2) -o $(BUILD_DIR)/$(3) $(4)
+	@echo "$(5): $(BUILD_DIR)/$(3)"
+endef
+
+.PHONY: all help build build-cli build-prod build-dir coverage-dir config run dev test coverage lint lint-strict fmt vet clean \
         migrate migrate-rollback seed seed-random routes jwt schedule \
 	        docs install-tools deps init sync \
 	        atlas-status atlas-history atlas-repair atlas-reset \
@@ -19,27 +52,31 @@ help: ## 显示帮助信息
 # --- Development ---
 
 dev: ## 启动开发服务器 (自动检测 air)
-	@command -v air >/dev/null 2>&1 && air || go run ./cmd/server
+	@command -v air >/dev/null 2>&1 && air || $(SERVER_RUN)
 
 run: ## 直接运行应用
-	@go run ./cmd/server
+	@$(SERVER_RUN)
 
 # --- Build ---
 
-build: ## 构建应用
+build-dir:
 	@mkdir -p $(BUILD_DIR)
-	@go build -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/server
-	@echo "Build success: $(BUILD_DIR)/$(BINARY_NAME)"
 
-build-cli: ## 构建 CLI 工具
-	@mkdir -p $(BUILD_DIR)
-	@go build -o $(BUILD_DIR)/$(BINARY_NAME)-cli ./cmd/cli
-	@echo "Build success: $(BUILD_DIR)/$(BINARY_NAME)-cli"
+coverage-dir:
+	@mkdir -p $(COVERAGE_DIR)
 
-build-prod: ## 构建生产版本 (压缩体积)
-	@mkdir -p $(BUILD_DIR)
-	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/server
-	@echo "Production build success: $(BUILD_DIR)/$(BINARY_NAME)"
+build: build-dir ## 构建应用
+	$(call build_binary,,,$(SERVER_BINARY_NAME),$(SERVER_MAIN),Build success)
+
+build-cli: build-dir ## 构建 CLI 工具
+	$(call build_binary,,,$(CLI_BINARY_NAME),$(CLI_MAIN),Build success)
+
+build-prod: build-dir ## 构建生产版本 (压缩体积)
+	$(call build_binary,GOFLAGS=-mod=mod CGO_ENABLED=0 GOOS=linux GOARCH=amd64,-ldflags="-w -s",$(SERVER_BINARY_NAME),$(SERVER_MAIN),Production build success)
+
+config: ## 显示当前构建配置
+	@printf "BUILD_DIR=%s\nCOVERAGE_DIR=%s\nSERVER_BINARY_NAME=%s\nCLI_BINARY_NAME=%s\nAPP_LOG_DIR=%s\nDEPLOY_DIR=%s\n" \
+		"$(BUILD_DIR)" "$(COVERAGE_DIR)" "$(SERVER_BINARY_NAME)" "$(CLI_BINARY_NAME)" "$(APP_LOG_DIR)" "$(DEPLOY_DIR)"
 
 clean: ## 清理构建文件
 	@rm -rf $(BUILD_DIR) $(COVERAGE_DIR)
@@ -47,59 +84,58 @@ clean: ## 清理构建文件
 # --- Test & Quality ---
 
 test: ## 运行测试
-	@go test -v ./...
+	@$(GO) test -v ./...
 
-coverage: ## 生成测试覆盖率报告
-	@mkdir -p $(COVERAGE_DIR)
-	@go test -coverprofile=$(COVERAGE_DIR)/coverage.out ./...
-	@go tool cover -html=$(COVERAGE_DIR)/coverage.out -o $(COVERAGE_DIR)/coverage.html
+coverage: coverage-dir ## 生成测试覆盖率报告
+	@$(GO) test -coverprofile=$(COVERAGE_DIR)/coverage.out ./...
+	@$(GO) tool cover -html=$(COVERAGE_DIR)/coverage.out -o $(COVERAGE_DIR)/coverage.html
 	@echo "Coverage report: $(COVERAGE_DIR)/coverage.html"
 
 lint: ## 运行代码检查 (golangci-lint)
-	@golangci-lint run
+	$(call run_golangci_lint,run)
 
 lint-quick: ## 运行代码检查 (只显示常见问题)
-	@golangci-lint run | grep -E "nilerr|noctx|staticcheck|gocognit|gocyclo|funlen|errcheck" || true
+	$(call run_golangci_lint,run | grep -E "nilerr|noctx|staticcheck|gocognit|gocyclo|funlen|errcheck" || true)
 
-lint-strict: ## 运行代码检查 (golangci-lint)
-	@golangci-lint run
+lint-strict: lint ## 运行代码检查 (golangci-lint)
 
 lint-fix: ## 运行代码检查并自动修复
-	@golangci-lint run --fix
+	$(call run_golangci_lint,run --fix)
 
 fmt: ## 格式化代码
-	@go fmt ./...
+	@files="$$(find . -name '*.go' -not -path './vendor/*' -not -path './build/*' -not -path './coverage/*')"; \
+	if [ -n "$$files" ]; then $(GOFMT) -w $$files; fi
 
 vet: ## 静态检查
-	@go vet ./...
+	@$(GO) vet ./...
 
 check: fmt vet lint test ## 运行所有检查
 
 # --- Database & CLI ---
 
 migrate: ## 运行数据库迁移
-	@go run ./cmd/cli migrate run
+	@$(CLI_RUN) migrate run
 
 migrate-rollback: ## 回滚数据库迁移
-	@go run ./cmd/cli migrate rollback
+	@$(CLI_RUN) migrate rollback
 
 seed: ## 运行数据库填充
-	@go run ./cmd/cli seed run
+	@$(CLI_RUN) seed run
 
 seed-random: ## 生成随机测试数据 (默认 10 条)
-	@go run ./cmd/cli seed run:random 10
+	@$(CLI_RUN) seed run:random 10
 
 routes: ## 显示所有路由
-	@go run ./cmd/cli routes
+	@$(CLI_RUN) routes
 
 jwt: ## 生成新的 JWT 密钥
-	@go run ./cmd/cli jwt:generate
+	@$(CLI_RUN) jwt:generate
 
 schedule: ## 运行定时任务调度器
-	@go run ./cmd/cli schedule:run
+	@$(CLI_RUN) schedule:run
 
 cli: ## 打开命令行工具
-	@go run ./cmd/cli --help
+	@$(CLI_RUN) --help
 
 # --- Tools & Setup ---
 
@@ -113,49 +149,49 @@ sync: ## 同步并整理依赖
 	@echo "Done. Please check GoLand settings for Vendoring."
 
 deps: ## 下载并整理依赖
-	@go mod download && go mod tidy
+	@$(GO) mod download && $(GO) mod tidy
 
 install-tools: ## 安装开发工具
-	@go install github.com/air-verse/air@latest
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	@go install github.com/swaggo/swag/cmd/swag@latest
+	@$(GO) install github.com/air-verse/air@latest
+	@$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@$(GO) install github.com/swaggo/swag/cmd/swag@latest
 
 atlas-diff-postgres: ## 生成 PostgreSQL 迁移（NAME=xxx）
-	@atlas migrate diff $(NAME) --env postgres
+	@$(ATLAS) migrate diff $(NAME) --env postgres
 
 atlas-apply-postgres: ## 应用 PostgreSQL 迁移（依赖 DATABASE_URL）
-	@atlas migrate apply --env postgres
+	@$(ATLAS) migrate apply --env postgres
 
 atlas-diff-sqlite: ## 生成 SQLite 迁移（NAME=xxx）
-	@atlas migrate diff $(NAME) --env sqlite
+	@$(ATLAS) migrate diff $(NAME) --env sqlite
 
 atlas-apply-sqlite: ## 应用 SQLite 迁移
-	@atlas migrate apply --env sqlite
+	@$(ATLAS) migrate apply --env sqlite
 
 atlas-status: ## 显示迁移状态（默认 postgres，ENV=sqlite 可切换）
-	@atlas migrate status --env $(or $(ENV),postgres)
+	@$(ATLAS) migrate status --env $(or $(ENV),postgres)
 
 atlas-history: ## 显示迁移历史（默认 postgres，ENV=sqlite 可切换）
-	@atlas migrate history --env $(or $(ENV),postgres)
+	@$(ATLAS) migrate history --env $(or $(ENV),postgres)
 
 atlas-repair: ## 修复迁移表（默认 postgres，ENV=sqlite 可切换）
-	@atlas migrate repair --env $(or $(ENV),postgres)
+	@$(ATLAS) migrate repair --env $(or $(ENV),postgres)
 
 atlas-reset: ## 重置数据库并重新应用所有迁移（默认 postgres，ENV=sqlite 可切换）
-	@atlas migrate reset --env $(or $(ENV),postgres)
+	@$(ATLAS) migrate reset --env $(or $(ENV),postgres)
 
 atlas-diff: ## 生成迁移（默认 postgres，NAME=xxx，ENV=sqlite 可切换）
-	@atlas migrate diff $(NAME) --env $(or $(ENV),postgres)
+	@$(ATLAS) migrate diff $(NAME) --env $(or $(ENV),postgres)
 
 atlas-apply: ## 应用迁移（默认 postgres，ENV=sqlite 可切换）
-	@atlas migrate apply --env $(or $(ENV),postgres)
+	@$(ATLAS) migrate apply --env $(or $(ENV),postgres)
 
 atlas-lint: ## 检查数据库 schema（默认 postgres，ENV=sqlite 可切换）
-	@atlas schema lint --env $(or $(ENV),postgres)
+	@$(ATLAS) schema lint --env $(or $(ENV),postgres)
 
 atlas-inspect: ## 检查当前数据库 schema（默认 postgres，ENV=sqlite 可切换）
-	@atlas schema inspect --env $(or $(ENV),postgres)
+	@$(ATLAS) schema inspect --env $(or $(ENV),postgres)
 
 docs: ## 生成 OpenAPI/Swagger 规范（由 Scalar 展示）
-	@swag init -g ./cmd/server/main.go -o docs
+	@$(SWAG) init -g $(SWAG_MAIN) -o docs
 	@rm -f docs/docs.go

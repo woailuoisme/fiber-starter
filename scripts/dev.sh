@@ -5,6 +5,17 @@
 
 set -e
 
+if [ -f ".buildconfig" ]; then
+    set -a
+    . ./.buildconfig
+    set +a
+fi
+
+BUILD_DIR=${BUILD_DIR:-build}
+COVERAGE_DIR=${COVERAGE_DIR:-coverage}
+SERVER_BINARY_NAME=${SERVER_BINARY_NAME:-fiber-starter}
+CLI_BINARY_NAME=${CLI_BINARY_NAME:-fiber-starter-cli}
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -126,11 +137,11 @@ run_tests() {
     
     # 覆盖率
     log_info "Generating coverage report..."
-    mkdir -p coverage
-    go test -coverprofile=coverage/coverage.out ./...
-    go tool cover -html=coverage/coverage.out -o coverage/coverage.html
+    mkdir -p "$COVERAGE_DIR"
+    go test -coverprofile="$COVERAGE_DIR/coverage.out" ./...
+    go tool cover -html="$COVERAGE_DIR/coverage.out" -o "$COVERAGE_DIR/coverage.html"
     
-    log_success "Tests completed. Coverage report: coverage/coverage.html"
+    log_success "Tests completed. Coverage report: $COVERAGE_DIR/coverage.html"
 }
 
 # 代码质量检查
@@ -169,26 +180,26 @@ build_project() {
     log_info "Building project..."
     
     # 创建构建目录
-    mkdir -p build
+    mkdir -p "$BUILD_DIR"
     
     # 构建当前平台
-	go build -o build/fiber-starter -v ./cmd/server
+	go build -o "$BUILD_DIR/$SERVER_BINARY_NAME" -v ./cmd/server
     
     # 构建多平台（可选）
     if [ "$1" = "--all" ]; then
         log_info "Building multi-platform binaries..."
         
         # Linux AMD64
-		GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o build/fiber-starter-linux-amd64 ./cmd/server
+		GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o "$BUILD_DIR/$SERVER_BINARY_NAME-linux-amd64" ./cmd/server
         
         # macOS AMD64
-		GOOS=darwin GOARCH=amd64 go build -ldflags="-w -s" -o build/fiber-starter-darwin-amd64 ./cmd/server
+		GOOS=darwin GOARCH=amd64 go build -ldflags="-w -s" -o "$BUILD_DIR/$SERVER_BINARY_NAME-darwin-amd64" ./cmd/server
         
         # macOS ARM64
-		GOOS=darwin GOARCH=arm64 go build -o build/fiber-starter-darwin-arm64 ./cmd/server
+		GOOS=darwin GOARCH=arm64 go build -o "$BUILD_DIR/$SERVER_BINARY_NAME-darwin-arm64" ./cmd/server
         
         # Windows AMD64
-		GOOS=windows GOARCH=amd64 go build -ldflags="-w -s" -o build/fiber-starter-windows-amd64.exe ./cmd/server
+		GOOS=windows GOARCH=amd64 go build -ldflags="-w -s" -o "$BUILD_DIR/$SERVER_BINARY_NAME-windows-amd64.exe" ./cmd/server
     fi
     
     log_success "Build completed"
@@ -197,22 +208,14 @@ build_project() {
 # 数据库操作
 db_migrate() {
     log_info "Running database migrations..."
-    if [ -f "database/migrations/migrate.go" ]; then
-        go run database/migrations/migrate.go up
-        log_success "Database migrations completed"
-    else
-        log_error "Migration file not found"
-    fi
+    go run ./cmd/cli migrate run
+    log_success "Database migrations completed"
 }
 
 db_seed() {
     log_info "Running database seeders..."
-    if [ -f "database/seeders/seed.go" ]; then
-        go run database/seeders/seed.go
-        log_success "Database seeding completed"
-    else
-        log_error "Seeder file not found"
-    fi
+    go run ./cmd/cli seed run
+    log_success "Database seeding completed"
 }
 
 db_reset() {
@@ -233,7 +236,7 @@ generate_code() {
     # 生成 Mock 文件
     if check_command mockgen; then
         log_info "Generating mocks..."
-        mockgen -source=app/services/*.go -destination=tests/mocks/services_mock.go
+        mockgen -source=app/Http/Services/*.go -destination=tests/mocks/services_mock.go
     fi
     
     # 生成 API 文档
@@ -251,9 +254,9 @@ clean_project() {
     log_info "Cleaning project..."
     
     # 清理构建文件
-    rm -rf build/
-    rm -rf coverage/
-    rm -f fiber-starter*
+    rm -rf "$BUILD_DIR/"
+    rm -rf "$COVERAGE_DIR/"
+    rm -f "$SERVER_BINARY_NAME"*
     
     # 清理日志
     rm -f storage/logs/*.log

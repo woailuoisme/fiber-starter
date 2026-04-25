@@ -5,6 +5,15 @@
 
 set -e
 
+if [ -f ".buildconfig" ]; then
+    set -a
+    . ./.buildconfig
+    set +a
+fi
+
+BUILD_DIR=${BUILD_DIR:-build}
+CLI_BINARY_NAME=${CLI_BINARY_NAME:-fiber-starter-cli}
+
 # 加载环境变量
 if [ -f .env ]; then
     export $(cat .env | grep -v '^#' | xargs)
@@ -96,8 +105,8 @@ reset_database() {
 # 运行迁移
 migrate() {
     info "Running database migrations..."
-	if [ -f "./build/fiber-starter-cli" ]; then
-		./build/fiber-starter-cli migrate run
+	if [ -f "$BUILD_DIR/$CLI_BINARY_NAME" ]; then
+		"./$BUILD_DIR/$CLI_BINARY_NAME" migrate run
 		return
 	fi
 	go run ./cmd/cli migrate run
@@ -108,8 +117,8 @@ migrate() {
 # 回滚迁移
 migrate_rollback() {
     info "Rolling back database migrations..."
-	if [ -f "./build/fiber-starter-cli" ]; then
-		./build/fiber-starter-cli migrate rollback
+	if [ -f "$BUILD_DIR/$CLI_BINARY_NAME" ]; then
+		"./$BUILD_DIR/$CLI_BINARY_NAME" migrate rollback
 		return
 	fi
 	go run ./cmd/cli migrate rollback

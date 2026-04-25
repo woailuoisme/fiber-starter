@@ -9,7 +9,7 @@ env "postgres" {
   }
 
   migration {
-    dir = "file://database/migrations/atlas/postgres"
+    dir = "file://database/migrations/postgres"
   }
 
   url = var.pg_url
@@ -23,7 +23,7 @@ env "sqlite" {
   }
 
   migration {
-    dir = "file://database/migrations/atlas/sqlite"
+    dir = "file://database/migrations/sqlite"
   }
 
   url = "sqlite://database/lunchbox_vending.sqlite?_fk=1"

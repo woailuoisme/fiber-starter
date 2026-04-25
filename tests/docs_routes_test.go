@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"fiber-starter/internal/transport/http/routers"
+	"fiber-starter/routes"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -16,7 +16,7 @@ func TestDocsRoutes_ExposeScalarAndOpenAPISpec(t *testing.T) {
 	app.Get("/", func(c fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
-	routers.SetupRoutes(app, func(c fiber.Ctx) error {
+	routes.SetupRoutes(app, func(c fiber.Ctx) error {
 		return c.Next()
 	}, nil, nil, nil)
 

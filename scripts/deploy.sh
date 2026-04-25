@@ -5,6 +5,18 @@
 
 set -e
 
+if [ -f ".buildconfig" ]; then
+    set -a
+    . ./.buildconfig
+    set +a
+fi
+
+BUILD_DIR=${BUILD_DIR:-build}
+SERVER_BINARY_NAME=${SERVER_BINARY_NAME:-fiber-starter}
+CLI_BINARY_NAME=${CLI_BINARY_NAME:-fiber-starter-cli}
+DEPLOY_DIR=${DEPLOY_DIR:-deploy}
+APP_LOG_DIR=${APP_LOG_DIR:-storage/logs}
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -86,13 +98,13 @@ build_app() {
     
     case $ENVIRONMENT in
         "development")
-			go build -ldflags="$LDFLAGS" -o build/fiber-starter ./cmd/server
+			go build -ldflags="$LDFLAGS" -o "$BUILD_DIR/$SERVER_BINARY_NAME" ./cmd/server
             ;;
         "staging")
-			GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o build/fiber-starter-linux-amd64 ./cmd/server
+			GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o "$BUILD_DIR/$SERVER_BINARY_NAME-linux-amd64" ./cmd/server
             ;;
         "production")
-			GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o build/fiber-starter-linux-amd64 ./cmd/server
+			GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o "$BUILD_DIR/$SERVER_BINARY_NAME-linux-amd64" ./cmd/server
             ;;
     esac
     
@@ -119,15 +131,15 @@ deploy_development() {
     log_info "Deploying to development..."
     
     # 停止现有服务
-    if pgrep -f "fiber-starter" > /dev/null; then
+    if pgrep -f "$SERVER_BINARY_NAME" > /dev/null; then
         log_info "Stopping existing service..."
-        pkill -f "fiber-starter"
+        pkill -f "$SERVER_BINARY_NAME"
         sleep 2
     fi
     
     # 启动新服务
     log_info "Starting development service..."
-    nohup ./build/fiber-starter > storage/logs/app.log 2>&1 &
+    nohup ./"$BUILD_DIR/$SERVER_BINARY_NAME" > "$APP_LOG_DIR/app.log" 2>&1 &
     
     log_success "Development deployment completed"
 }
@@ -142,39 +154,54 @@ deploy_staging() {
     log_info "Simulating staging deployment..."
     
     # 创建部署包
-    mkdir -p deploy/staging
-    cp build/fiber-starter-linux-amd64 deploy/staging/fiber-starter
-    cp -r config deploy/staging/
-    cp -r database deploy/staging/
-    cp .env.example deploy/staging/.env
+    mkdir -p "$DEPLOY_DIR/staging"
+    cp "$BUILD_DIR/$SERVER_BINARY_NAME-linux-amd64" "$DEPLOY_DIR/staging/$SERVER_BINARY_NAME"
+    cp -r config "$DEPLOY_DIR/staging/"
+    cp -r database "$DEPLOY_DIR/staging/"
+    cp .env.example "$DEPLOY_DIR/staging/.env"
+    cp .buildconfig "$DEPLOY_DIR/staging/.buildconfig"
     
     # 创建部署脚本
-    cat > deploy/staging/deploy.sh << 'EOF'
+    cat > "$DEPLOY_DIR/staging/deploy.sh" << 'EOF'
 #!/bin/bash
 # 预发布环境部署脚本
 
+set -e
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+if [ -f "$SCRIPT_DIR/.buildconfig" ]; then
+    set -a
+    . "$SCRIPT_DIR/.buildconfig"
+    set +a
+fi
+
+cd "$SCRIPT_DIR"
+
+BUILD_DIR=${BUILD_DIR:-build}
+SERVER_BINARY_NAME=${SERVER_BINARY_NAME:-fiber-starter}
+
 # 停止现有服务
-sudo systemctl stop fiber-starter || true
+sudo systemctl stop "$SERVER_BINARY_NAME" || true
 
 # 备份现有版本
-sudo cp /opt/fiber-starter/fiber-starter /opt/fiber-starter/fiber-starter.backup.$(date +%Y%m%d_%H%M%S) || true
+sudo cp "/opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME" "/opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME.backup.$(date +%Y%m%d_%H%M%S)" || true
 
 # 复制新版本
-sudo cp fiber-starter /opt/fiber-starter/
-sudo cp -r config /opt/fiber-starter/
-sudo cp .env /opt/fiber-starter/
+sudo cp "$SERVER_BINARY_NAME" "/opt/$SERVER_BINARY_NAME/"
+sudo cp -r config "/opt/$SERVER_BINARY_NAME/"
+sudo cp .env "/opt/$SERVER_BINARY_NAME/"
 
 # 设置权限
-sudo chmod +x /opt/fiber-starter/fiber-starter
+sudo chmod +x "/opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME"
 
 # 启动服务
-sudo systemctl start fiber-starter
+sudo systemctl start "$SERVER_BINARY_NAME"
 
 # 检查服务状态
-sudo systemctl status fiber-starter
+sudo systemctl status "$SERVER_BINARY_NAME"
 EOF
     
-    chmod +x deploy/staging/deploy.sh
+    chmod +x "$DEPLOY_DIR/staging/deploy.sh"
     
     log_success "Staging deployment package is ready"
 }
@@ -187,18 +214,31 @@ deploy_production() {
     log_warning "Production deployment requires manual confirmation"
     
     # 创建部署包
-    mkdir -p deploy/production
-    cp build/fiber-starter-linux-amd64 deploy/production/fiber-starter
-    cp -r config deploy/production/
-    cp -r database deploy/production/
-    cp .env.example deploy/production/.env
+    mkdir -p "$DEPLOY_DIR/production"
+    cp "$BUILD_DIR/$SERVER_BINARY_NAME-linux-amd64" "$DEPLOY_DIR/production/$SERVER_BINARY_NAME"
+    cp -r config "$DEPLOY_DIR/production/"
+    cp -r database "$DEPLOY_DIR/production/"
+    cp .env.example "$DEPLOY_DIR/production/.env"
+    cp .buildconfig "$DEPLOY_DIR/production/.buildconfig"
     
     # 创建部署脚本
-    cat > deploy/production/deploy.sh << 'EOF'
+    cat > "$DEPLOY_DIR/production/deploy.sh" << 'EOF'
 #!/bin/bash
 # 生产环境部署脚本
 
 set -e
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+if [ -f "$SCRIPT_DIR/.buildconfig" ]; then
+    set -a
+    . "$SCRIPT_DIR/.buildconfig"
+    set +a
+fi
+
+cd "$SCRIPT_DIR"
+
+BUILD_DIR=${BUILD_DIR:-build}
+SERVER_BINARY_NAME=${SERVER_BINARY_NAME:-fiber-starter}
 
 # 颜色定义
 RED='\033[0;31m'
@@ -225,41 +265,41 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # 备份现有版本
-if [ -f "/opt/fiber-starter/fiber-starter" ]; then
+if [ -f "/opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME" ]; then
     log_info "Backing up current version..."
-    cp /opt/fiber-starter/fiber-starter /opt/fiber-starter/fiber-starter.backup.$(date +%Y%m%d_%H%M%S)
+    cp "/opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME" "/opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME.backup.$(date +%Y%m%d_%H%M%S)"
 fi
 
 # 停止服务
 log_info "Stopping service..."
-systemctl stop fiber-starter || true
+systemctl stop "$SERVER_BINARY_NAME" || true
 
 # 复制新版本
 log_info "Deploying new version..."
-cp fiber-starter /opt/fiber-starter/
-cp -r config /opt/fiber-starter/
-cp .env /opt/fiber-starter/.env.template
+cp "$SERVER_BINARY_NAME" "/opt/$SERVER_BINARY_NAME/"
+cp -r config "/opt/$SERVER_BINARY_NAME/"
+cp .env "/opt/$SERVER_BINARY_NAME/.env.template"
 
 # 设置权限
-chmod +x /opt/fiber-starter/fiber-starter
-chown -R fiber-starter:fiber-starter /opt/fiber-starter/
+chmod +x "/opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME"
+chown -R "$SERVER_BINARY_NAME:$SERVER_BINARY_NAME" "/opt/$SERVER_BINARY_NAME/"
 
 # 运行数据库迁移
 log_info "Running database migrations..."
-cd /opt/fiber-starter
-sudo -u fiber-starter ./fiber-starter migrate
+cd "/opt/$SERVER_BINARY_NAME"
+sudo -u "$SERVER_BINARY_NAME" "./$SERVER_BINARY_NAME" migrate
 
 # 启动服务
 log_info "Starting service..."
-systemctl start fiber-starter
+systemctl start "$SERVER_BINARY_NAME"
 
 # 检查服务状态
 sleep 5
-if systemctl is-active --quiet fiber-starter; then
+if systemctl is-active --quiet "$SERVER_BINARY_NAME"; then
     log_info "Service started successfully"
 else
     log_error "Service failed to start"
-    systemctl status fiber-starter
+    systemctl status "$SERVER_BINARY_NAME"
     exit 1
 fi
 
@@ -289,8 +329,8 @@ rollback() {
     case $ENVIRONMENT in
         "development")
             # 开发环境回滚逻辑
-            if [ -f "build/fiber-starter.backup" ]; then
-                cp build/fiber-starter.backup build/fiber-starter
+    if [ -f "$BUILD_DIR/$SERVER_BINARY_NAME.backup" ]; then
+                cp "$BUILD_DIR/$SERVER_BINARY_NAME.backup" "$BUILD_DIR/$SERVER_BINARY_NAME"
                 log_success "Development rollback completed"
             else
                 log_error "Backup file not found"
@@ -298,7 +338,7 @@ rollback() {
             ;;
         "staging"|"production")
             log_info "Please perform rollback manually"
-            log_info "Backup files: /opt/fiber-starter/fiber-starter.backup.*"
+            log_info "Backup files: /opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME.backup.*"
             ;;
     esac
 }

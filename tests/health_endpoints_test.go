@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	database "fiber-starter/internal/db"
-	"fiber-starter/internal/transport/http/controllers"
+	controllers "fiber-starter/app/Http/Controllers"
+	database "fiber-starter/database"
 
 	"github.com/gofiber/fiber/v3"
 )

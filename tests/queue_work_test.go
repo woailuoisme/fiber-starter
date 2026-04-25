@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	command "fiber-starter/internal/cli"
+	command "fiber-starter/app/Console/Commands"
 )
 
 func TestQueueWorkCommandRegistered(t *testing.T) {

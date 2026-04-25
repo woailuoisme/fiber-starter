@@ -1,0 +1,166 @@
+package command
+
+import (
+	"fmt"
+	"slices"
+	"sort"
+	"strings"
+
+	"fiber-starter/app/Providers"
+	helpers "fiber-starter/app/Support"
+	"fiber-starter/config"
+	"fiber-starter/routes"
+
+	"github.com/fatih/color"
+	"github.com/gofiber/fiber/v3"
+	"github.com/spf13/cobra"
+)
+
+var routesCmd = &cobra.Command{
+	Use:   "routes",
+	Short: "Display all registered routes",
+	Long:  `List all registered route endpoints in the application, including HTTP methods and paths`,
+	Run: func(_ *cobra.Command, _ []string) {
+		showRoutes()
+	},
+}
+
+func showRoutes() {
+	app, err := setupRouteApp()
+	if err != nil {
+		return
+	}
+
+	printRouteTable(app.GetRoutes())
+}
+
+func setupRouteApp() (*fiber.App, error) {
+	container := providers.NewContainer()
+	if err := container.RegisterProviders(); err != nil {
+		_, _ = color.New(color.FgRed).Printf("Failed to register dependencies: %v\n", err)
+		return nil, err
+	}
+
+	if err := container.Invoke(func(_ *config.Config) {}); err != nil {
+		_, _ = color.New(color.FgRed).Printf("Failed to load config: %v\n", err)
+		return nil, err
+	}
+
+	if err := helpers.Init(); err != nil {
+		_, _ = color.New(color.FgRed).Printf("Failed to initialize logger: %v\n", err)
+		return nil, err
+	}
+
+	app := fiber.New(fiber.Config{})
+	if err := routes.SetupApplicationRoutes(app, container); err != nil {
+		_, _ = color.New(color.FgRed).Printf("Failed to setup routes: %v\n", err)
+		return nil, err
+	}
+
+	return app, nil
+}
+
+type RouteInfo struct {
+	Methods []string
+	Path    string
+	Handler string
+}
+
+func printRouteTable(allRoutes []fiber.Route) {
+	routes := processRoutes(allRoutes)
+	displayRoutes(routes)
+}
+
+func processRoutes(allRoutes []fiber.Route) []*RouteInfo {
+	routeMap := make(map[string]*RouteInfo)
+	for _, route := range allRoutes {
+		key := route.Path
+		if routeMap[key] == nil {
+			routeMap[key] = &RouteInfo{
+				Path:    route.Path,
+				Handler: route.Name,
+			}
+		}
+		routeMap[key].Methods = append(routeMap[key].Methods, route.Method)
+	}
+
+	routes := make([]*RouteInfo, 0, len(routeMap))
+	for _, route := range routeMap {
+		methodSet := make(map[string]bool)
+		for _, m := range route.Methods {
+			methodSet[m] = true
+		}
+
+		route.Methods = []string{}
+		for _, m := range []string{"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"} {
+			if methodSet[m] {
+				route.Methods = append(route.Methods, m)
+			}
+		}
+		routes = append(routes, route)
+	}
+
+	sort.Slice(routes, func(i, j int) bool {
+		return routes[i].Path < routes[j].Path
+	})
+
+	return routes
+}
+
+func displayRoutes(routes []*RouteInfo) {
+	fmt.Println()
+	for _, route := range routes {
+		printSingleRoute(route)
+	}
+
+	fmt.Println()
+	_, _ = color.New(color.FgGreen).Printf("  Showing [%d] routes\n", len(routes))
+	fmt.Println()
+}
+
+func printSingleRoute(route *RouteInfo) {
+	methods := strings.Join(route.Methods, "|")
+
+	var methodColor *color.Color
+	if slices.Contains(route.Methods, "GET") {
+		methodColor = color.New(color.FgGreen)
+	} else if slices.Contains(route.Methods, "POST") {
+		methodColor = color.New(color.FgYellow)
+	} else if slices.Contains(route.Methods, "PUT") || slices.Contains(route.Methods, "PATCH") {
+		methodColor = color.New(color.FgBlue)
+	} else if slices.Contains(route.Methods, "DELETE") {
+		methodColor = color.New(color.FgRed)
+	} else {
+		methodColor = color.New(color.FgWhite)
+	}
+
+	methodStr := fmt.Sprintf("%-12s", methods)
+	pathStr := route.Path
+
+	totalWidth := 80
+	usedWidth := len(methods) + 2 + len(pathStr) + 1
+	handler := route.Handler
+	if handler != "" {
+		usedWidth += len(handler) + 3
+	}
+
+	dots := 3
+	if totalWidth > usedWidth {
+		dots = totalWidth - usedWidth
+	}
+
+	_, _ = methodColor.Print(methodStr)
+	fmt.Print("  ")
+	_, _ = color.New(color.FgCyan).Print(pathStr)
+	fmt.Print(" ")
+	_, _ = color.New(color.FgWhite, color.Faint).Print(strings.Repeat(".", dots))
+	if handler != "" {
+		fmt.Print(" ")
+		_, _ = color.New(color.FgWhite).Print(handler)
+	}
+	fmt.Println()
+}
+
+func init() {
+	rootCmd.AddCommand(routesCmd)
+}
