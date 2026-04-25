@@ -1,5 +1,5 @@
 # https://golangci-lint.run/
-# 2024-2025 Recommended Configuration for Go Projects
+# Configuration for golangci-lint v2.
 
 version: "2"
 
@@ -10,93 +10,66 @@ run:
   allow-parallel-runners: true
 
 output:
-  sort-results: true
+  sort-order:
+    - file
+    - linter
 
 linters:
-  disable-all: true
+  default: none
   enable:
-    # --- 核心静态分析 ---
-    - govet         # Go 官方静态分析
-    - staticcheck   # 包含 gosimple, stylecheck, unused
-    - errcheck      # 检查未处理的错误
-    - ineffassign   # 检查无效的赋值
+    # Core correctness checks. Keep this list intentionally small so lint
+    # catches real defects without turning style preferences into blockers.
+    - govet
+    - staticcheck
+    - errcheck
+    - ineffassign
+    - unused
 
-    # --- 代码风格与最佳实践 ---
-    - revive        # Golint 替代品
-    - misspell      # 拼写检查
-    - unconvert     # 检查不必要的类型转换
-    - unparam       # 检查未使用的函数参数
-    - goconst       # 检查重复的字符串常量
-    - prealloc      # 切片预分配建议
-    - makezero      # 检查切片初始化长度
-    - nilerr        # 检查 nil 错误返回
+    # Low-noise quality checks
+    - misspell
+    - makezero
+    - nilerr
 
-    # --- 安全 ---
-    - gosec         # 安全检查
+    # Security
+    - gosec
 
-linters-settings:
-  govet:
-    enable:
-      - shadow
+  settings:
+    gosec:
+      excludes:
+        - G104 # unchecked errors are handled by errcheck
 
-  revive:
-    ignore-generated-header: true
-    severity: warning
+  exclusions:
     rules:
-      - name: atomic
-      - name: blank-imports
-      - name: context-as-argument
-      - name: context-keys-type
-      - name: dot-imports
-      - name: error-return
-      - name: error-strings
-      - name: error-naming
-      - name: if-return
-      - name: increment-decrement
-      - name: var-naming
-      - name: var-declaration
-      - name: range
-      - name: receiver-naming
-      - name: time-naming
-      - name: unexported-return
-      - name: indent-error-flow
-      - name: errorf
-      - name: empty-block
-      - name: superfluous-else
-      - name: unused-parameter
-      - name: unreachable-code
-      - name: redefines-builtin-id
-      # 显式禁用干扰性规则
-      - name: exported
-        disabled: true
-      - name: package-comments
-        disabled: true
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
 
-  lll:
-    line-length: 120
-    tab-width: 4
+      - path: docs/docs.go
+        linters:
+          - all
 
-  gosec:
-    excludes:
-      - G104 # 忽略未检查的错误 (由 errcheck 处理)
+      # Fixed internal paths, controlled CLI arguments, and env-var name maps.
+      # Keep these scoped so gosec still reports the same rules elsewhere.
+      - path: internal/cli/jwt\.go
+        text: "G703:"
+        linters:
+          - gosec
+
+      - path: internal/cli/migrate\.go
+        text: "G204:"
+        linters:
+          - gosec
+
+      - path: internal/config/config\.go
+        text: "G(101|703|706):"
+        linters:
+          - gosec
+
+      - path: (main\.go|cmd/.*)
+        linters:
+          - gochecknoinits
 
 issues:
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
-
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gosec
-        - lll
-        - goconst
-
-    - path: docs/docs.go
-      linters:
-        - all
-
-    - path: (main\.go|cmd/.*)
-      linters:
-        - gochecknoinits

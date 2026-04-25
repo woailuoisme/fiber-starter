@@ -1,13 +1,16 @@
 package services
 
 import (
-	"crypto/tls"
+	"context"
+	"errors"
 	"fmt"
+	"net/mail"
+	"strings"
 
 	"fiber-starter/internal/config"
 	"fiber-starter/internal/platform/helpers"
 
-	"github.com/wneessen/go-mail"
+	"github.com/resend/resend-go/v3"
 	"go.uber.org/zap"
 )
 
@@ -33,65 +36,26 @@ func NewEmailService(cfg *config.Config) EmailService {
 
 // SendEmail 发送邮件
 func (s *emailService) SendEmail(to, subject, body string, isHTML bool) error {
-	m := mail.NewMsg()
-
-	// Set sender
-	if err := m.FromFormat(s.config.Mail.FromName, s.config.Mail.FromAddress); err != nil {
-		helpers.LogError("Failed to set sender", zap.Error(err), zap.String("to", to))
-		return fmt.Errorf("failed to set sender: %w", err)
+	if strings.TrimSpace(s.config.Mail.APIKey) == "" {
+		return errors.New("resend api key is not configured")
 	}
 
-	// Set recipient
-	if err := m.To(to); err != nil {
-		helpers.LogError("Failed to set recipient", zap.Error(err), zap.String("to", to))
-		return fmt.Errorf("failed to set recipient: %w", err)
+	params := &resend.SendEmailRequest{
+		From:    formatSender(s.config.Mail.FromName, s.config.Mail.FromAddress),
+		To:      []string{to},
+		Subject: subject,
 	}
-
-	// Set subject
-	m.Subject(subject)
-
-	// Set email content
-	contentType := mail.TypeTextPlain
 	if isHTML {
-		contentType = mail.TypeTextHTML
+		params.Html = body
+	} else {
+		params.Text = body
 	}
-	m.SetBodyString(contentType, body)
-
-	// Configure client options
-	options := []mail.Option{
-		mail.WithPort(s.config.Mail.Port),
-		mail.WithSMTPAuth(mail.SMTPAuthPlain),
-		mail.WithUsername(s.config.Mail.Username),
-		mail.WithPassword(s.config.Mail.Password),
+	if strings.TrimSpace(s.config.Mail.ReplyTo) != "" {
+		params.ReplyTo = s.config.Mail.ReplyTo
 	}
 
-	// Configure TLS
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: s.config.Mail.TLSInsecure, //nolint:gosec // Configuration driven TLS skip verify
-	}
-	options = append(options, mail.WithTLSConfig(tlsConfig))
-
-	// Set based on encryption type
-	switch s.config.Mail.Encryption {
-	case "ssl":
-		// SSL usually means implicit TLS (port 465)
-		options = append(options, mail.WithSSL())
-	case "tls":
-		// TLS usually means STARTTLS (port 587)
-		options = append(options, mail.WithTLSPolicy(mail.TLSMandatory))
-	default:
-		options = append(options, mail.WithTLSPolicy(mail.NoTLS))
-	}
-
-	// Create SMTP client
-	c, err := mail.NewClient(s.config.Mail.Host, options...)
-	if err != nil {
-		helpers.LogError("Failed to create email client", zap.Error(err), zap.String("to", to))
-		return fmt.Errorf("failed to create email client: %w", err)
-	}
-
-	// Send email
-	if err := c.DialAndSend(m); err != nil {
+	client := resend.NewClient(s.config.Mail.APIKey)
+	if _, err := client.Emails.SendWithContext(context.Background(), params); err != nil {
 		helpers.LogError("Failed to send email", zap.Error(err), zap.String("to", to), zap.String("subject", subject))
 		return fmt.Errorf("failed to send email: %w", err)
 	}
@@ -123,7 +87,7 @@ func (s *emailService) SendPasswordResetEmail(to, resetToken string) error {
 		<p>If you did not request a password reset, please ignore this email.</p>
 		<p>This link will expire in 24 hours.</p>
 		<p>Team Name</p>
-	`, fmt.Sprintf("http://%s:%s", s.config.App.Host, s.config.App.Port), resetToken)
+	`, s.config.App.URL, resetToken)
 
 	return s.SendEmail(to, subject, body, true)
 }
@@ -138,7 +102,14 @@ func (s *emailService) SendVerificationEmail(to, verificationToken string) error
 		<p>If you did not register an account, please ignore this email.</p>
 		<p>This link will expire in 1 hour.</p>
 		<p>Team Name</p>
-	`, fmt.Sprintf("http://%s:%s", s.config.App.Host, s.config.App.Port), verificationToken)
+	`, s.config.App.URL, verificationToken)
 
 	return s.SendEmail(to, subject, body, true)
+}
+
+func formatSender(name, address string) string {
+	if strings.TrimSpace(name) == "" {
+		return address
+	}
+	return (&mail.Address{Name: name, Address: address}).String()
 }

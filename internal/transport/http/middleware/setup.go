@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/contrib/v3/monitor"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/favicon"
@@ -20,7 +19,7 @@ import (
 func SetupMiddleware(app *fiber.App) {
 	setupCoreMiddleware(app)
 	setupSecurityMiddleware(app)
-	setupMonitoringMiddleware(app)
+	setupTimeoutMiddleware(app)
 	app.Use(ErrorHandler)
 }
 
@@ -74,8 +73,8 @@ func setupSecurityMiddleware(app *fiber.App) {
 	app.Use(helmet.New())
 }
 
-// setupMonitoringMiddleware 配置监控和性能中间件
-func setupMonitoringMiddleware(app *fiber.App) {
+// setupTimeoutMiddleware 配置请求超时中间件
+func setupTimeoutMiddleware(app *fiber.App) {
 	// 超时中间件 - 设置请求超时
 	app.Use(timeout.New(func(c fiber.Ctx) error {
 		return c.Next()
@@ -84,19 +83,12 @@ func setupMonitoringMiddleware(app *fiber.App) {
 		Next: func(c fiber.Ctx) bool {
 			return c.Path() == "/health" ||
 				c.Path() == "/ready" ||
-				c.Path() == "/monitor" ||
-				strings.HasPrefix(c.Path(), "/swagger/")
+				c.Path() == "/docs" ||
+				c.Path() == "/openapi.json"
 		},
 		OnTimeout: func(c fiber.Ctx) error {
 			return HandleError(c, fiber.ErrRequestTimeout)
 		},
-	}))
-
-	// Monitoring middleware - provides system monitoring endpoints
-	app.Get("/monitor", monitor.New(monitor.Config{
-		Title:   "Fiber Starter Monitor",
-		Refresh: 1 * time.Second,
-		APIOnly: true,
 	}))
 }
 

@@ -2,10 +2,11 @@
 package routers
 
 import (
-	_ "fiber-starter/docs" // swagger docs
+	"os"
+	"path/filepath"
+
 	"fiber-starter/internal/transport/http/controllers"
 
-	fiberSwagger "github.com/gofiber/contrib/v3/swaggo"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -23,7 +24,8 @@ func SetupRoutes(
 		return c.JSON(fiber.Map{
 			"message": "Welcome to Fiber Starter API",
 			"version": "1.0.0",
-			"docs":    "/swagger/index.html",
+			"docs":    "/docs",
+			"openapi": "/openapi.json",
 			"health":  "/health",
 			"ready":   "/ready",
 			"api":     "/api/v1",
@@ -36,12 +38,14 @@ func SetupRoutes(
 		return c.Status(404).JSON(fiber.Map{
 			"error":    "Vite dev server is not available. This is an API-only backend.",
 			"message":  "Use the API endpoints to interact with the service.",
-			"api_docs": "/swagger/index.html",
+			"api_docs": "/docs",
 		})
 	})
 
-	// Swagger 文档路由
-	app.Get("/swagger/*", fiberSwagger.HandlerDefault)
+	app.Get("/openapi.json", func(c fiber.Ctx) error {
+		return c.SendFile(openAPISpecPath())
+	})
+	app.Get("/docs", scalarDocs)
 
 	// 健康检查
 	app.Get("/health", healthController.Health)
@@ -70,4 +74,42 @@ func SetupRoutes(
 
 	// 存储路由
 	SetupStorageRoutes(api, storageController)
+}
+
+func openAPISpecPath() string {
+	path := filepath.Join("docs", "swagger.json")
+	if _, err := os.Stat(path); err == nil {
+		return path
+	}
+
+	parentPath := filepath.Join("..", "docs", "swagger.json")
+	if _, err := os.Stat(parentPath); err == nil {
+		return parentPath
+	}
+
+	return path
+}
+
+func scalarDocs(c fiber.Ctx) error {
+	c.Set(fiber.HeaderContentType, fiber.MIMETextHTMLCharsetUTF8)
+	return c.SendString(`<!doctype html>
+<html>
+  <head>
+    <title>Fiber Starter API Reference</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>body{margin:0}</style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+    <script>
+      Scalar.createApiReference('#app', {
+        url: '/openapi.json',
+        layout: 'modern',
+        theme: 'default'
+      })
+    </script>
+  </body>
+</html>`)
 }

@@ -114,3 +114,7 @@ storage/framework/views/*
 .kiro
 .idea
 .vscode
+.agents
+.claude
+.gemini
+.trae

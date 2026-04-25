@@ -56,12 +56,8 @@ cache:
 mail:
   from_name: "Lunchbox Vending"
   from_address: "noreply@lunchbox.com"
-  host: "smtp.gmail.com"
-  port: 587
-  username: ""
-  password: ""
-  encryption: "tls"
-  tls_insecure: false
+  reply_to: ""
+  api_key: ""
 
 # 队列配置
 queue:
@@ -143,4 +139,3 @@ security:
   rate_limit:
     max: 60               # 每个时间窗口的最大请求数
     window: 60            # 时间窗口（秒）
-

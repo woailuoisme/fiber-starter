@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "skills": {
+    "go-gorm-model": {
+      "source": "cristiano-pacheco/ai-tools",
+      "sourceType": "github",
+      "computedHash": "f757a3a5954de74e80d55cd35040df83ee55fb84f9b857987bc4dbd588925b3e"
+    },
+    "golang-patterns": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "67c25e95cec3f3166c2efefd5f4502863a1246c6f742b8cbcd2e2864d2a8182a"
+    }
+  }
+}

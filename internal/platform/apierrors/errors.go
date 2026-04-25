@@ -85,8 +85,7 @@ func (e *AppError) Unwrap() error {
 
 // Is 支持errors.Is
 func (e *AppError) Is(target error) bool {
-	var t *AppError
-	if errors.As(target, &t) {
+	if t, ok := errors.AsType[*AppError](target); ok {
 		return e.Code == t.Code
 	}
 	return false
@@ -267,8 +266,7 @@ func IsAppError(err error) bool {
 
 // GetAppError 获取应用程序错误
 func GetAppError(err error) (*AppError, bool) {
-	var appErr *AppError
-	if errors.As(err, &appErr) {
+	if appErr, ok := errors.AsType[*AppError](err); ok {
 		return appErr, true
 	}
 	return nil, false

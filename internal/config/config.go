@@ -16,12 +16,8 @@ import (
 type MailConfig struct {
 	FromName    string `mapstructure:"from_name"`
 	FromAddress string `mapstructure:"from_address"`
-	Host        string `mapstructure:"host"`
-	Port        int    `mapstructure:"port"`
-	Username    string `mapstructure:"username"`
-	Password    string `mapstructure:"password"`
-	Encryption  string `mapstructure:"encryption"`
-	TLSInsecure bool   `mapstructure:"tls_insecure"`
+	ReplyTo     string `mapstructure:"reply_to"`
+	APIKey      string `mapstructure:"api_key"`
 }
 
 // StorageConfig 存储配置
@@ -380,8 +376,7 @@ func LoadDatabaseConfig() (*DatabaseConfig, error) {
 
 	// Read database configuration file
 	if err := viper.ReadInConfig(); err != nil {
-		var configFileNotFoundError viper.ConfigFileNotFoundError
-		if errors.As(err, &configFileNotFoundError) {
+		if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); ok {
 			log.Printf("Database configuration file not found, using default configuration and environment variables")
 		} else {
 			return nil, err
@@ -535,8 +530,7 @@ func LoadConfig() (*Config, error) {
 
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {
-		var configFileNotFoundError viper.ConfigFileNotFoundError
-		if errors.As(err, &configFileNotFoundError) {
+		if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); ok {
 			log.Printf("Configuration file not found, using default configuration and environment variables")
 		} else {
 			return nil, err
@@ -580,12 +574,8 @@ var defaultConfigValues = map[string]interface{}{
 	// 邮件配置
 	"mail.from_name":    "Fiber Starter",
 	"mail.from_address": "noreply@example.com",
-	"mail.host":         "smtp.example.com",
-	"mail.port":         587,
-	"mail.username":     "",
-	"mail.password":     "",
-	"mail.encryption":   "tls",
-	"mail.tls_insecure": false,
+	"mail.reply_to":     "",
+	"mail.api_key":      "",
 
 	// JWT配置
 	"jwt.secret":          "your-secret-key-change-in-production",
@@ -704,12 +694,8 @@ var envVarMappings = map[string]string{
 	// Mail配置
 	"MAIL_FROM_NAME":    "mail.from_name",
 	"MAIL_FROM_ADDRESS": "mail.from_address",
-	"MAIL_HOST":         "mail.host",
-	"MAIL_PORT":         "mail.port",
-	"MAIL_USERNAME":     "mail.username",
-	"MAIL_PASSWORD":     "mail.password",
-	"MAIL_ENCRYPTION":   "mail.encryption",
-	"MAIL_TLS_INSECURE": "mail.tls_insecure",
+	"MAIL_REPLY_TO":     "mail.reply_to",
+	"RESEND_API_KEY":    "mail.api_key",
 
 	// Queue配置
 	"QUEUE_CONCURRENCY": "queue.concurrency",

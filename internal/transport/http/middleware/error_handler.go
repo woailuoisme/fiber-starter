@@ -33,53 +33,43 @@ func ErrorHandler(c fiber.Ctx) error {
 func HandleError(c fiber.Ctx, err error) error {
 	logError(c, err)
 
-	apiErr := &exceptions.APIException{}
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := errors.AsType[*exceptions.APIException](err); ok {
 		return handleAPIException(c, apiErr)
 	}
 
-	valErr := &exceptions.ValidationException{}
-	if errors.As(err, &valErr) {
+	if valErr, ok := errors.AsType[*exceptions.ValidationException](err); ok {
 		return handleAPIException(c, valErr.APIException)
 	}
 
-	authErr := &exceptions.AuthenticationException{}
-	if errors.As(err, &authErr) {
+	if authErr, ok := errors.AsType[*exceptions.AuthenticationException](err); ok {
 		return handleAPIException(c, authErr.APIException)
 	}
 
-	authzErr := &exceptions.AuthorizationException{}
-	if errors.As(err, &authzErr) {
+	if authzErr, ok := errors.AsType[*exceptions.AuthorizationException](err); ok {
 		return handleAPIException(c, authzErr.APIException)
 	}
 
-	notFoundErr := &exceptions.NotFoundException{}
-	if errors.As(err, &notFoundErr) {
+	if notFoundErr, ok := errors.AsType[*exceptions.NotFoundException](err); ok {
 		return handleAPIException(c, notFoundErr.APIException)
 	}
 
-	badReqErr := &exceptions.BadRequestException{}
-	if errors.As(err, &badReqErr) {
+	if badReqErr, ok := errors.AsType[*exceptions.BadRequestException](err); ok {
 		return handleAPIException(c, badReqErr.APIException)
 	}
 
-	conflictErr := &exceptions.ConflictException{}
-	if errors.As(err, &conflictErr) {
+	if conflictErr, ok := errors.AsType[*exceptions.ConflictException](err); ok {
 		return handleAPIException(c, conflictErr.APIException)
 	}
 
-	serverErr := &exceptions.ServerException{}
-	if errors.As(err, &serverErr) {
+	if serverErr, ok := errors.AsType[*exceptions.ServerException](err); ok {
 		return handleAPIException(c, serverErr.APIException)
 	}
 
-	var validationErrors validator.ValidationErrors
-	if errors.As(err, &validationErrors) {
+	if validationErrors, ok := errors.AsType[validator.ValidationErrors](err); ok {
 		return handleValidationError(c, validationErrors)
 	}
 
-	fiberErr := &fiber.Error{}
-	if errors.As(err, &fiberErr) {
+	if fiberErr, ok := errors.AsType[*fiber.Error](err); ok {
 		return handleFiberError(c, fiberErr)
 	}
 
@@ -197,8 +187,7 @@ func logError(c fiber.Ctx, err error) {
 	}
 
 	// 根据错误类型选择日志级别
-	apiErr := &exceptions.APIException{}
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := errors.AsType[*exceptions.APIException](err); ok {
 		fields = append(fields, zap.Int("code", apiErr.Code))
 		if apiErr.Code >= 500 {
 			helpers.Logger.Error("http_error", fields...)
@@ -208,8 +197,7 @@ func logError(c fiber.Ctx, err error) {
 		return
 	}
 
-	fiberErr := &fiber.Error{}
-	if errors.As(err, &fiberErr) {
+	if fiberErr, ok := errors.AsType[*fiber.Error](err); ok {
 		fields = append(fields, zap.Int("code", fiberErr.Code))
 		if fiberErr.Code >= 500 {
 			helpers.Logger.Error("http_error", fields...)

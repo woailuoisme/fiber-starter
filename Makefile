@@ -5,11 +5,10 @@ COVERAGE_DIR=coverage
 
 .PHONY: all help build build-cli build-prod run dev test coverage lint fmt vet clean \
         migrate migrate-rollback seed seed-random routes jwt schedule \
-        docs install-tools deps init sync \
-        atlas-status atlas-history atlas-repair atlas-reset \
-        atlas-diff atlas-apply atlas-diff-postgres atlas-apply-postgres \
-        atlas-diff-sqlite atlas-apply-sqlite atlas-lint atlas-inspect \
-        bobgen-install bobgen bobgen-postgres bobgen-sqlite
+	        docs install-tools deps init sync \
+	        atlas-status atlas-history atlas-repair atlas-reset \
+	        atlas-diff atlas-apply atlas-diff-postgres atlas-apply-postgres \
+	        atlas-diff-sqlite atlas-apply-sqlite atlas-lint atlas-inspect
 
 # Default target
 all: help
@@ -157,22 +156,6 @@ atlas-lint: ## 检查数据库 schema（默认 postgres，ENV=sqlite 可切换�
 atlas-inspect: ## 检查当前数据库 schema（默认 postgres，ENV=sqlite 可切换）
 	@atlas schema inspect --env $(or $(ENV),postgres)
 
-bobgen-install: ## 安装 bobgen 工具
-	@GOFLAGS=-mod=mod go install github.com/stephenafamo/bob/gen/bobgen-psql@latest
-	@GOFLAGS=-mod=mod go install github.com/stephenafamo/bob/gen/bobgen-sqlite@latest
-
-bobgen-postgres: ## 生成 PostgreSQL 模型（依赖 PSQL_DSN 或 DATABASE_URL）
-	@PSQL_DSN="$${PSQL_DSN:-$${DATABASE_URL}}" bobgen-psql -c ./bobgen/postgres.yaml
-
-bobgen-sqlite: ## 生成 SQLite 模型（依赖 SQLITE_DSN，默认 ./database/lunchbox_vending.sqlite）
-	@SQLITE_DSN="$${SQLITE_DSN:-./database/lunchbox_vending.sqlite}" bobgen-sqlite -c ./bobgen/sqlite.yaml
-
-bobgen: ## 生成模型（默认 postgres，ENV=sqlite 可切换）
-	@if [ "$(or $(ENV),postgres)" = "sqlite" ]; then \
-		$(MAKE) bobgen-sqlite; \
-	else \
-		$(MAKE) bobgen-postgres; \
-	fi
-
-docs: ## 生成 Swagger 文档
+docs: ## 生成 OpenAPI/Swagger 规范（由 Scalar 展示）
 	@swag init -g ./cmd/server/main.go -o docs
+	@rm -f docs/docs.go

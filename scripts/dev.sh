@@ -240,6 +240,7 @@ generate_code() {
     if check_command swag; then
         log_info "Generating API docs..."
 		swag init -g ./cmd/server/main.go -o docs
+		rm -f docs/docs.go
     fi
     
     log_success "Code generation completed"

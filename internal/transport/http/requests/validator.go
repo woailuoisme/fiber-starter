@@ -92,8 +92,7 @@ func ValidateStruct(s interface{}) error {
 	if err != nil {
 		// 格式化验证错误
 		// Requirements: 10.6
-		var validationErrors validator.ValidationErrors
-		if errors.As(err, &validationErrors) {
+		if validationErrors, ok := errors.AsType[validator.ValidationErrors](err); ok {
 			errors := resources.FormatValidationErrors(validationErrors)
 			return exceptions.NewValidationExceptionWithErrors("Validation failed", errors)
 		}

@@ -2,6 +2,7 @@
 package bootstrap
 
 import (
+	"encoding/json"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,10 +17,6 @@ import (
 	"fiber-starter/internal/transport/http/middleware"
 	"fiber-starter/internal/transport/http/routers"
 
-	// 引入 swagger 文档
-	_ "fiber-starter/docs"
-
-	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"
 )

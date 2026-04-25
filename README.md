@@ -18,7 +18,7 @@
 - **异步任务队列**：基于 Asynq (Redis) 的强大后台任务处理系统。
 - **对象存储**：支持 AWS S3、MinIO、R2 等多种对象存储后端。
 - **命令行工具**：内置强大的 CLI 工具（基于 Cobra），支持数据库迁移、数据填充、任务调度等。
-- **Swagger 文档**：自动生成 OpenAPI/Swagger 文档。
+- **Scalar 文档**：自动生成 OpenAPI/Swagger 规范，并通过 Scalar 展示 API 文档。
 - **优雅的错误处理**：统一的 `apierrors` 包和错误响应格式。
 
 ## 技术栈
@@ -47,7 +47,7 @@
 - **Zap**: 高性能日志库
 - **Validator**: 数据验证
 - **Carbon**: 时间处理
-- **Swag**: API 文档生成
+- **Swag + Scalar**: API 规范生成与文档展示
 
 ## 架构设计
 
@@ -81,7 +81,7 @@
 ├── database/                 # 数据库相关
 │   ├── migrations/           # 数据库迁移文件
 │   └── seeders/              # 数据填充器
-├── docs/                     # Swagger 文档
+├── docs/                     # OpenAPI/Swagger 生成文件
 ├── public/                   # 静态资源
 ├── storage/                  # 运行时存储
 │   ├── logs/                 # 日志文件
@@ -155,7 +155,7 @@
 - `make coverage`: 生成测试覆盖率报告
 
 ### 文档
-- `make docs`: 生成 Swagger API 文档
+- `make docs`: 生成 OpenAPI/Swagger 规范文件（运行后通过 `/docs` 查看 Scalar 文档）
 
 ## 部署
 

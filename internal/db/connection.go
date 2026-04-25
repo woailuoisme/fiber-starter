@@ -18,6 +18,9 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
+	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 const (
@@ -35,6 +38,7 @@ var DB *sql.DB
 // Connection 数据库连接结构体
 type Connection struct {
 	db     *sql.DB
+	gormDB *gorm.DB
 	config *config.Config
 	mu     sync.RWMutex
 }
@@ -128,6 +132,50 @@ func (c *Connection) Dialect() (string, error) {
 	}
 }
 
+// GetGormDB 获取 GORM 实例（懒加载，复用 GetDB 的连接池）。
+func (c *Connection) GetGormDB() (*gorm.DB, error) {
+	c.mu.RLock()
+	if c.gormDB != nil {
+		db := c.gormDB
+		c.mu.RUnlock()
+		return db, nil
+	}
+	c.mu.RUnlock()
+
+	sqlDB, err := c.GetDB()
+	if err != nil {
+		return nil, err
+	}
+
+	dialect, err := c.Dialect()
+	if err != nil {
+		return nil, err
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.gormDB != nil {
+		return c.gormDB, nil
+	}
+
+	var gormDB *gorm.DB
+	switch dialect {
+	case dialectPostgres:
+		gormDB, err = gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
+	case dialectSQLite:
+		gormDB, err = gorm.Open(sqlite.Dialector{Conn: sqlDB}, &gorm.Config{})
+	default:
+		err = fmt.Errorf("unsupported database dialect: %s", dialect)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize gorm: %w", err)
+	}
+
+	c.gormDB = gormDB
+	return gormDB, nil
+}
+
 // Close 关闭数据库连接
 func (c *Connection) Close() error {
 	c.mu.Lock()
@@ -143,6 +191,7 @@ func (c *Connection) Close() error {
 	}
 
 	c.db = nil
+	c.gormDB = nil
 	helpers.Info("Database connection closed")
 	return nil
 }

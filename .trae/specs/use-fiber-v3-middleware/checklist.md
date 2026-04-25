@@ -1,7 +1,0 @@
-- [x] setup.go 使用 Fiber v3 官方 requestid middleware（不再挂载自定义 RequestID）
-- [x] 响应头 `X-Request-ID` 在无入参时生成、有入参时透传
-- [x] setup.go 使用 Fiber v3 官方 logger middleware 替换内联 access log
-- [x] 访问日志包含 method/path/status/latency/request_id
-- [x] favicon middleware 挂载在 logger 之前，requestid 挂载在 logger 之前
-- [x] 常用 middleware（favicon/recover/cors/helmet/limiter/compress/etag/timeout/requestid/logger）均启用且无重复
-- [x] `go test ./...` 通过

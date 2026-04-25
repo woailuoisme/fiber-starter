@@ -226,8 +226,7 @@ func IsDebugMode() bool {
 func FormatValidationErrors(err error) map[string][]string {
 	errMap := make(map[string][]string)
 
-	var validationErrors validator.ValidationErrors
-	if errors.As(err, &validationErrors) {
+	if validationErrors, ok := errors.AsType[validator.ValidationErrors](err); ok {
 		for _, e := range validationErrors {
 			field := strings.ToLower(e.Field())
 			tag := e.Tag()
