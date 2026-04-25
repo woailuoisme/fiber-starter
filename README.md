@@ -196,8 +196,17 @@
 docker build -t fiber-starter .
 
 # 运行容器
-docker run -d -p 3000:3000 --env-file .env fiber-starter
+docker run -d -p 8080:8080 \
+  -e APP_ENV=production \
+  -e APP_PORT=8080 \
+  -e APP_HOST=0.0.0.0 \
+  fiber-starter
+
+# 使用 Docker Compose
+docker compose up -d --build
 ```
+
+GitHub Actions 会把镜像推送到 GitHub Container Registry，镜像名默认是 `ghcr.io/<owner>/<repo>`。
 
 ## 许可证
 

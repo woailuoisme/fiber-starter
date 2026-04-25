@@ -1,35 +1,39 @@
-# 构建阶段
-FROM golang:1.26.0-alpine AS builder
+# syntax=docker/dockerfile:1.7
 
-WORKDIR /app
+FROM golang:1.26.2-alpine AS builder
 
-# 复制依赖并下载
+WORKDIR /src
+
+RUN apk add --no-cache git ca-certificates
+
 COPY go.mod go.sum ./
-RUN --mount=type=cache,target=/go/pkg/mod go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    GOFLAGS=-mod=mod go mod download
 
-# 复制源码并构建
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -trimpath -o main .
+    GOFLAGS=-mod=mod CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -trimpath -ldflags="-s -w" -o /out/fiber-starter ./cmd/server
 
-# 运行阶段
 FROM alpine:3.23
 
-# 安装依赖并创建用户
-RUN apk --no-cache add ca-certificates tzdata && \
-    adduser -D -g '' appuser
+RUN apk --no-cache add ca-certificates tzdata \
+    && adduser -D -g '' appuser
 
 WORKDIR /app
 
-# 复制文件
-COPY --from=builder /app/main .
-COPY --from=builder /app/.env* ./
+COPY --from=builder /out/fiber-starter /app/fiber-starter
 
-# 配置环境
 ENV APP_ENV=production \
+    APP_PORT=8080 \
+    APP_HOST=0.0.0.0 \
     TZ=Asia/Shanghai
 
-USER appuser
 EXPOSE 8080
 
-CMD ["./main"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:8080/health >/dev/null || exit 1
+
+USER appuser
+
+CMD ["/app/fiber-starter"]

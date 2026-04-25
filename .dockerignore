@@ -1,25 +1,32 @@
-# Git
 .git
-.gitignore
+.github
+.agents
+.claude
+.gemini
+.trae
+.kiro
 
-# IDE
-.idea
-.vscode
-.DS_Store
+build
+coverage
+dist
+tmp
+logs
+storage/logs
+storage/framework/cache
+storage/framework/sessions
+storage/framework/views
+vendor
 
-# 临时文件
-tmp/
-*.log
-
-# 测试文件
-*_test.go
-tests/
-
-# 文档
-*.md
-docs/
-
-# 其他
 .env
-storage/
-public/uploads/
+.env.*
+!/.env.example
+
+*.log
+*.out
+*.test
+*.db
+*.sqlite
+*.sqlite3
+
+.DS_Store
+Thumbs.db
