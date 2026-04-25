@@ -2,8 +2,6 @@ package command
 
 import (
 	"os"
-	"os/signal"
-	"syscall"
 
 	"fiber-starter/internal/app/providers"
 	"fiber-starter/internal/config"
@@ -64,9 +62,7 @@ func runQueueWorker() {
 
 	helpers.Logger.Info("queue_worker_started")
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
+	quit := waitForInterrupt()
 	select {
 	case err := <-errCh:
 		if err != nil {

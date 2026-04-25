@@ -16,7 +16,7 @@
 - **多数据库支持**：通过 GORM 支持 MySQL、PostgreSQL、SQLite。
 - **全文搜索引擎**：集成 Meilisearch 提供高性能搜索服务。
 - **异步任务队列**：基于 Asynq (Redis) 的强大后台任务处理系统。
-- **对象存储**：支持 AWS S3、MinIO、R2 等多种对象存储后端。
+- **对象存储**：支持 AWS S3、Garage、R2 等多种对象存储后端。
 - **命令行工具**：内置强大的 CLI 工具（基于 Cobra），支持数据库迁移、数据填充、任务调度等。
 - **Scalar 文档**：自动生成 OpenAPI/Swagger 规范，并通过 Scalar 展示 API 文档。
 - **优雅的错误处理**：统一的 `apierrors` 包和错误响应格式。
@@ -38,7 +38,7 @@
 
 ### 搜索与存储
 - **Meilisearch**: 全文搜索引擎
-- **AWS S3 / MinIO**: 对象存储
+- **AWS S3 / Garage**: 对象存储
 
 ### 队列与任务
 - **Asynq**: 分布式任务队列

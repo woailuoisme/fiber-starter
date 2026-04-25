@@ -3,7 +3,7 @@ package controllers
 
 import (
 	models "fiber-starter/internal/domain/model"
-	apierrors "fiber-starter/internal/platform/apierrors"
+	"fiber-starter/internal/platform/apierrors"
 	"fiber-starter/internal/platform/helpers"
 	"fiber-starter/internal/services"
 	"fiber-starter/internal/transport/http/middleware"
@@ -98,7 +98,7 @@ func (c *AuthController) Register(ctx fiber.Ctx) error {
 	}
 
 	return helpers.HandleCreated(ctx, "Registered successfully", fiber.Map{
-		"user":          loginUser.ToSafeResponse(),
+		"user":          loginUser.ToSafeUser(),
 		"access_token":  accessToken,
 		"refresh_token": refreshToken,
 	})
@@ -322,6 +322,6 @@ func (c *AuthController) GetProfile(ctx fiber.Ctx) error {
 	}
 
 	return helpers.HandleSuccess(ctx, "Profile fetched successfully", fiber.Map{
-		"user": user.ToSafeResponse(),
+		"user": user.ToSafeUser(),
 	})
 }

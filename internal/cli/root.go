@@ -1,9 +1,6 @@
 package command
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 )
 
@@ -19,11 +16,7 @@ This command-line tool provides various useful features including key generation
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		_, err := fmt.Fprintf(os.Stderr, "Error executing command: '%s'", err)
-		if err != nil {
-			return
-		}
-		os.Exit(1)
+		exitWithError("Error executing command: %v", err)
 	}
 }
 

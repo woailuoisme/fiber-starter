@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	database "fiber-starter/internal/db"
 	models "fiber-starter/internal/domain/model"
@@ -40,21 +39,21 @@ func NewUserService(db *database.Connection) UserService {
 
 // GetUserByID Get user by ID
 func (s *userService) GetUserByID(id int64) (*models.User, error) {
-	db, err := s.db.GetGormDB()
+	var user models.User
+	err := withGormDB(s.db, func(db *gorm.DB) error {
+		var err error
+		user, err = getUserByID(context.Background(), db, id)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("user not found")
+			}
+			helpers.LogError("Failed to query user", zap.Error(err), zap.Int64("id", id))
+			return fmt.Errorf("failed to query user: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
-	}
-
-	var user models.User
-	err = db.WithContext(context.Background()).
-		Where("id = ? AND deleted_at IS NULL", id).
-		First(&user).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("user not found")
-		}
-		helpers.LogError("Failed to query user", zap.Error(err), zap.Int64("id", id))
-		return nil, fmt.Errorf("failed to query user: %w", err)
 	}
 
 	return &user, nil
@@ -62,21 +61,21 @@ func (s *userService) GetUserByID(id int64) (*models.User, error) {
 
 // GetUserByEmail Get user by email
 func (s *userService) GetUserByEmail(email string) (*models.User, error) {
-	db, err := s.db.GetGormDB()
+	var user models.User
+	err := withGormDB(s.db, func(db *gorm.DB) error {
+		var err error
+		user, err = getUserByEmail(context.Background(), db, email)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("user not found")
+			}
+			helpers.LogError("Failed to query user", zap.Error(err), zap.String("email", email))
+			return fmt.Errorf("failed to query user: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
-	}
-
-	var user models.User
-	err = db.WithContext(context.Background()).
-		Where("email = ? AND deleted_at IS NULL", email).
-		First(&user).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("user not found")
-		}
-		helpers.LogError("Failed to query user", zap.Error(err), zap.String("email", email))
-		return nil, fmt.Errorf("failed to query user: %w", err)
 	}
 
 	return &user, nil
@@ -89,50 +88,44 @@ func (s *userService) GetUsers(page, limit int) ([]models.User, int64, error) {
 
 // UpdateUser Update user information
 func (s *userService) UpdateUser(id int64, updates map[string]interface{}) error {
-	db, err := s.db.GetGormDB()
-	if err != nil {
-		return err
-	}
-
 	filtered := userAllowedUpdates(updates)
 	if len(filtered) == 0 {
 		return nil
 	}
-	filtered["updated_at"] = time.Now().UTC()
+	filtered["updated_at"] = utcNow()
 
-	err = db.WithContext(context.Background()).
-		Model(&models.User{}).
-		Where("id = ? AND deleted_at IS NULL", id).
-		Updates(filtered).Error
-	if err != nil {
-		helpers.LogError("Failed to update user", zap.Error(err), zap.Int64("id", id))
-		return fmt.Errorf("failed to update user: %w", err)
-	}
+	return withGormDB(s.db, func(db *gorm.DB) error {
+		err := db.WithContext(context.Background()).
+			Model(&models.User{}).
+			Where("id = ? AND deleted_at IS NULL", id).
+			Updates(filtered).Error
+		if err != nil {
+			helpers.LogError("Failed to update user", zap.Error(err), zap.Int64("id", id))
+			return fmt.Errorf("failed to update user: %w", err)
+		}
 
-	return nil
+		return nil
+	})
 }
 
 // DeleteUser Delete user (soft delete)
 func (s *userService) DeleteUser(id int64) error {
-	db, err := s.db.GetGormDB()
-	if err != nil {
-		return err
-	}
+	now := utcNow()
+	return withGormDB(s.db, func(db *gorm.DB) error {
+		err := db.WithContext(context.Background()).
+			Model(&models.User{}).
+			Where("id = ? AND deleted_at IS NULL", id).
+			Updates(map[string]interface{}{
+				"deleted_at": now,
+				"updated_at": now,
+			}).Error
+		if err != nil {
+			helpers.LogError("Failed to delete user", zap.Error(err), zap.Int64("id", id))
+			return fmt.Errorf("failed to delete user: %w", err)
+		}
 
-	now := time.Now().UTC()
-	err = db.WithContext(context.Background()).
-		Model(&models.User{}).
-		Where("id = ? AND deleted_at IS NULL", id).
-		Updates(map[string]interface{}{
-			"deleted_at": now,
-			"updated_at": now,
-		}).Error
-	if err != nil {
-		helpers.LogError("Failed to delete user", zap.Error(err), zap.Int64("id", id))
-		return fmt.Errorf("failed to delete user: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 // UpdateProfile Update user profile
@@ -161,37 +154,33 @@ func (s *userService) SearchUsers(query string, page, limit int) ([]models.User,
 }
 
 func (s *userService) listUsers(search string, page, limit int) ([]models.User, int64, error) {
-	db, err := s.db.GetGormDB()
-	if err != nil {
-		return nil, 0, err
-	}
-
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 {
-		limit = 10
-	}
-	offset := (page - 1) * limit
-
-	query := db.WithContext(context.Background()).
-		Model(&models.User{}).
-		Where("deleted_at IS NULL")
-	if search != "" {
-		like := "%" + search + "%"
-		query = query.Where("name LIKE ? OR email LIKE ?", like, like)
-	}
-
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		helpers.LogError("Failed to get user count", zap.Error(err), zap.String("query", search))
-		return nil, 0, fmt.Errorf("failed to get user count: %w", err)
-	}
+	_, limit, offset := normalizePagination(page, limit)
 
 	var users []models.User
-	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
-		helpers.LogError("Failed to get user list", zap.Error(err), zap.String("query", search))
-		return nil, 0, fmt.Errorf("failed to get user list: %w", err)
+	var total int64
+	err := withGormDB(s.db, func(db *gorm.DB) error {
+		query := db.WithContext(context.Background()).
+			Model(&models.User{}).
+			Where("deleted_at IS NULL")
+		if search != "" {
+			like := "%" + search + "%"
+			query = query.Where("name LIKE ? OR email LIKE ?", like, like)
+		}
+
+		if err := query.Count(&total).Error; err != nil {
+			helpers.LogError("Failed to get user count", zap.Error(err), zap.String("query", search))
+			return fmt.Errorf("failed to get user count: %w", err)
+		}
+
+		if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
+			helpers.LogError("Failed to get user list", zap.Error(err), zap.String("query", search))
+			return fmt.Errorf("failed to get user list: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, 0, err
 	}
 
 	return users, total, nil

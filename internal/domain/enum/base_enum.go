@@ -2,6 +2,7 @@ package enums
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -121,10 +122,8 @@ func FindByLegacyValue[T comparable](value string, legacyMap map[string]T) (T, b
 		return role, true
 	}
 
-	// 尝试不区分大小写匹配
-	lowerValue := strings.ToLower(value)
 	for legacy, role := range legacyMap {
-		if strings.EqualFold(legacy, lowerValue) {
+		if strings.EqualFold(legacy, value) {
 			return role, true
 		}
 	}
@@ -134,19 +133,27 @@ func FindByLegacyValue[T comparable](value string, legacyMap map[string]T) (T, b
 
 // SortByPriority 按优先级排序枚举信息
 func SortByPriority[T comparable](infos []EnumInfo[T]) []EnumInfo[T] {
-	sorted := make([]EnumInfo[T], len(infos))
-	copy(sorted, infos)
-
-	// 简单的冒泡排序
-	for i := 0; i < len(sorted)-1; i++ {
-		for j := i + 1; j < len(sorted); j++ {
-			if sorted[i].Priority > sorted[j].Priority {
-				sorted[i], sorted[j] = sorted[j], sorted[i]
-			}
+	sorted := slices.Clone(infos)
+	slices.SortFunc(sorted, func(a, b EnumInfo[T]) int {
+		switch {
+		case a.Priority < b.Priority:
+			return -1
+		case a.Priority > b.Priority:
+			return 1
+		default:
+			return 0
 		}
-	}
-
+	})
 	return sorted
+}
+
+// GetValuesFromInfos 从枚举信息中提取所有枚举值
+func GetValuesFromInfos[T comparable](infos []EnumInfo[T]) []T {
+	values := make([]T, len(infos))
+	for i, info := range infos {
+		values[i] = info.Value
+	}
+	return values
 }
 
 // GetValuesFromMap 从映射表获取所有枚举值

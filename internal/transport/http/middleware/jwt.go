@@ -25,22 +25,44 @@ type JWTClaims struct {
 // BearerSchema Bearer 认证前缀
 const BearerSchema = "Bearer"
 
+func parseBearerToken(authHeader string) (token string, present bool, validFormat bool) {
+	if authHeader == "" {
+		return "", false, false
+	}
+
+	present = true
+	scheme, token, ok := strings.Cut(authHeader, " ")
+	if !ok || scheme != BearerSchema || token == "" {
+		return "", present, false
+	}
+
+	return token, present, true
+}
+
+func setUserContext(c fiber.Ctx, claims *JWTClaims) {
+	user := &models.User{
+		ID:    claims.UserID,
+		Email: claims.Email,
+		Name:  claims.Name,
+	}
+
+	c.Locals("user", user)
+	c.Locals("user_id", claims.UserID)
+	c.Locals("user_email", claims.Email)
+	c.Locals("user_name", claims.Name)
+	c.Locals("user_claims", claims)
+}
+
 // JWTAuth JWT authentication middleware
 func JWTAuth(cfg *config.Config) fiber.Handler {
 	return func(c fiber.Ctx) error {
-		// Get token from request header
-		authHeader := c.Get("Authorization")
-		if authHeader == "" {
+		tokenString, present, validFormat := parseBearerToken(c.Get("Authorization"))
+		if !present {
 			return exceptions.NewAuthenticationException("Missing Authorization header")
 		}
-
-		// Check Bearer prefix
-		tokenParts := strings.Split(authHeader, " ")
-		if len(tokenParts) != 2 || tokenParts[0] != BearerSchema {
+		if !validFormat {
 			return exceptions.NewAuthenticationException("Invalid Authorization format")
 		}
-
-		tokenString := tokenParts[1]
 
 		// Parse and verify token
 		token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(_ *jwt.Token) (interface{}, error) {
@@ -53,18 +75,7 @@ func JWTAuth(cfg *config.Config) fiber.Handler {
 
 		// Verify token validity
 		if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
-			// Create user model
-			user := &models.User{
-				ID:    claims.UserID,
-				Email: claims.Email,
-				Name:  claims.Name,
-			}
-			// Store user info in context
-			c.Locals("user", user)
-			c.Locals("user_id", claims.UserID)
-			c.Locals("user_email", claims.Email)
-			c.Locals("user_name", claims.Name)
-			c.Locals("user_claims", claims)
+			setUserContext(c, claims)
 			return c.Next()
 		}
 
@@ -75,17 +86,10 @@ func JWTAuth(cfg *config.Config) fiber.Handler {
 // OptionalJWTAuth 可选JWT认证中间件（不强制要求认证）
 func OptionalJWTAuth(cfg *config.Config) fiber.Handler {
 	return func(c fiber.Ctx) error {
-		authHeader := c.Get("Authorization")
-		if authHeader == "" {
+		tokenString, present, validFormat := parseBearerToken(c.Get("Authorization"))
+		if !present || !validFormat {
 			return c.Next()
 		}
-
-		tokenParts := strings.Split(authHeader, " ")
-		if len(tokenParts) != 2 || tokenParts[0] != BearerSchema {
-			return c.Next()
-		}
-
-		tokenString := tokenParts[1]
 
 		token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(_ *jwt.Token) (interface{}, error) {
 			return []byte(cfg.JWT.Secret), nil
@@ -93,10 +97,7 @@ func OptionalJWTAuth(cfg *config.Config) fiber.Handler {
 
 		if err == nil {
 			if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
-				c.Locals("user_id", claims.UserID)
-				c.Locals("user_email", claims.Email)
-				c.Locals("user_name", claims.Name)
-				c.Locals("user_claims", claims)
+				setUserContext(c, claims)
 			}
 		}
 
@@ -218,17 +219,9 @@ func IsAuthenticated(c fiber.Ctx) bool {
 
 // GetTokenFromContext 从上下文获取JWT令牌
 func GetTokenFromContext(c fiber.Ctx) string {
-	// 从请求头获取token
-	authHeader := c.Get("Authorization")
-	if authHeader == "" {
+	tokenString, _, validFormat := parseBearerToken(c.Get("Authorization"))
+	if !validFormat {
 		return ""
 	}
-
-	// 检查Bearer前缀
-	tokenParts := strings.Split(authHeader, " ")
-	if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
-		return ""
-	}
-
-	return tokenParts[1]
+	return tokenString
 }

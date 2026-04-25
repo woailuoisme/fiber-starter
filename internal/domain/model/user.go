@@ -3,6 +3,8 @@ package models
 
 import (
 	"time"
+
+	enums "fiber-starter/internal/domain/enum"
 )
 
 // User 用户模型
@@ -26,15 +28,19 @@ func (User) TableName() string {
 }
 
 // UserStatus 用户状态枚举
-type UserStatus string
+type UserStatus = enums.UserStatus
 
 const (
 	// UserStatusActive active user status
-	UserStatusActive UserStatus = "active"
+	UserStatusActive = enums.UserStatusActive
 	// UserStatusInactive inactive user status
-	UserStatusInactive UserStatus = "inactive"
+	UserStatusInactive = enums.UserStatusInactive
+	// UserStatusPending pending user status
+	UserStatusPending = enums.UserStatusPending
+	// UserStatusSuspended suspended user status
+	UserStatusSuspended = enums.UserStatusSuspended
 	// UserStatusBanned banned user status
-	UserStatusBanned UserStatus = "banned"
+	UserStatusBanned = enums.UserStatusBanned
 )
 
 // IsEmailVerified 检查邮箱是否已验证
@@ -60,11 +66,6 @@ func (u *User) ToSafeUser() SafeUser {
 		CreatedAt:       u.CreatedAt,
 		UpdatedAt:       u.UpdatedAt,
 	}
-}
-
-// ToSafeResponse 转换为安全的用户响应（用于API输出，与ToSafeUser功能相同）
-func (u *User) ToSafeResponse() SafeUser {
-	return u.ToSafeUser()
 }
 
 // SafeUser 安全的用户信息（用于API响应）

@@ -81,10 +81,7 @@ func setupTimeoutMiddleware(app *fiber.App) {
 	}, timeout.Config{
 		Timeout: 30 * time.Second,
 		Next: func(c fiber.Ctx) bool {
-			return c.Path() == "/health" ||
-				c.Path() == "/ready" ||
-				c.Path() == "/docs" ||
-				c.Path() == "/openapi.json"
+			return isTimeoutExemptPath(c.Path())
 		},
 		OnTimeout: func(c fiber.Ctx) error {
 			return HandleError(c, fiber.ErrRequestTimeout)
@@ -102,39 +99,38 @@ func SetupAuthMiddleware(_ *fiber.App) {
 func SetupTimeoutRedirect(app *fiber.App) {
 	// 自定义重定向中间件
 	app.Use(func(c fiber.Ctx) error {
-		// 检查是否需要重定向的条件
-		shouldRedirect := false
-		redirectURL := ""
-
-		// 示例：根据用户代理重定向到移动版
-		userAgent := c.Get("User-Agent")
-		if len(userAgent) > 0 && c.Path() == "/" {
-			// 检查是否为移动设备
-			if isMobile(userAgent) && !fiber.Query[bool](c, "desktop", false) {
-				shouldRedirect = true
-				redirectURL = "/mobile"
-			}
-		}
-
-		// 示例：根据路径重定向
-		if c.Path() == "/old-path" {
-			shouldRedirect = true
-			redirectURL = "/new-path"
-		}
-
-		// 示例：维护模式重定向
-		if isMaintenanceMode() && c.Path() != "/maintenance" {
-			shouldRedirect = true
-			redirectURL = "/maintenance"
-		}
-
-		// 执行重定向
-		if shouldRedirect {
+		if redirectURL := resolveRedirectURL(c); redirectURL != "" {
 			return c.Redirect().Status(fiber.StatusMovedPermanently).To(redirectURL)
 		}
 
 		return c.Next()
 	})
+}
+
+func isTimeoutExemptPath(path string) bool {
+	switch path {
+	case "/health", "/ready", "/docs", "/openapi.json":
+		return true
+	default:
+		return false
+	}
+}
+
+func resolveRedirectURL(c fiber.Ctx) string {
+	if isMaintenanceMode() && c.Path() != "/maintenance" {
+		return "/maintenance"
+	}
+
+	if c.Path() == "/old-path" {
+		return "/new-path"
+	}
+
+	userAgent := c.Get("User-Agent")
+	if userAgent != "" && c.Path() == "/" && isMobile(userAgent) && !fiber.Query[bool](c, "desktop", false) {
+		return "/mobile"
+	}
+
+	return ""
 }
 
 // isMobile 检查是否为移动设备

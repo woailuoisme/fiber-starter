@@ -25,4 +25,4 @@ CLI 入口为 `cmd/cli/main.go`，常用：
 ## 测试约束
 
 - 单测默认不依赖外部服务。
-- 需要外部依赖（Redis/MinIO/Postgres 等）的测试必须通过显式环境变量开启。
+- 需要外部依赖（Redis/Garage/Postgres 等）的测试必须通过显式环境变量开启。

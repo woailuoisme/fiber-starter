@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -71,11 +72,10 @@ func setupRouteApp() (*fiber.App, error) {
 		cache helpers.CacheService,
 		authController *controllers.AuthController,
 		userController *controllers.UserController,
-		storageController *controllers.StorageController,
 		healthController *controllers.HealthController,
 	) {
 		jwtProtected := middleware.JWTProtected(cfg, cache)
-		routers.SetupRoutes(app, jwtProtected, authController, userController, storageController, healthController)
+		routers.SetupRoutes(app, jwtProtected, authController, userController, healthController)
 	})
 
 	if err != nil {
@@ -159,13 +159,13 @@ func printSingleRoute(route *RouteInfo) {
 
 	// 方法颜色
 	var methodColor *color.Color
-	if contains(route.Methods, "GET") {
+	if slices.Contains(route.Methods, "GET") {
 		methodColor = color.New(color.FgGreen)
-	} else if contains(route.Methods, "POST") {
+	} else if slices.Contains(route.Methods, "POST") {
 		methodColor = color.New(color.FgYellow)
-	} else if contains(route.Methods, "PUT") || contains(route.Methods, "PATCH") {
+	} else if slices.Contains(route.Methods, "PUT") || slices.Contains(route.Methods, "PATCH") {
 		methodColor = color.New(color.FgBlue)
-	} else if contains(route.Methods, "DELETE") {
+	} else if slices.Contains(route.Methods, "DELETE") {
 		methodColor = color.New(color.FgRed)
 	} else {
 		methodColor = color.New(color.FgWhite)
@@ -201,23 +201,9 @@ func printSingleRoute(route *RouteInfo) {
 	fmt.Println()
 }
 
-// contains 检查字符串切片是否包含指定字符串
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
-
 // repeatStr 重复字符串
 func repeatStr(s string, count int) string {
-	result := ""
-	for i := 0; i < count; i++ {
-		result += s
-	}
-	return result
+	return strings.Repeat(s, count)
 }
 
 func init() {

@@ -6,7 +6,7 @@
 
 ### 1. 定义任务
 
-在 `internal/scheduler/tasks.go` 中定义你的任务函数：
+在 `internal/scheduler/kernel.go` 同包内定义你的任务函数，或者直接在使用处传入匿名函数：
 
 ```go
 package schedule

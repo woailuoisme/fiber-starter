@@ -40,11 +40,7 @@ func (s *emailService) SendEmail(to, subject, body string, isHTML bool) error {
 		return errors.New("resend api key is not configured")
 	}
 
-	params := &resend.SendEmailRequest{
-		From:    formatSender(s.config.Mail.FromName, s.config.Mail.FromAddress),
-		To:      []string{to},
-		Subject: subject,
-	}
+	params := newEmailRequest(s.config.Mail.FromName, s.config.Mail.FromAddress, to, subject)
 	if isHTML {
 		params.Html = body
 	} else {
@@ -65,46 +61,37 @@ func (s *emailService) SendEmail(to, subject, body string, isHTML bool) error {
 
 // SendWelcomeEmail Send welcome email
 func (s *emailService) SendWelcomeEmail(to, name string) error {
-	subject := "Welcome to our platform"
-	body := fmt.Sprintf(`
+	return s.sendTemplateEmail(to, "Welcome to our platform", fmt.Sprintf(`
 		<h2>Welcome, %s!</h2>
 		<p>Thank you for registering on our platform. We are excited to have you join us!</p>
 		<p>If you have any questions, please feel free to contact our customer service team.</p>
 		<p>Enjoy using our platform!</p>
 		<p>Team Name</p>
-	`, name)
-
-	return s.SendEmail(to, subject, body, true)
+	`, name))
 }
 
 // SendPasswordResetEmail Send password reset email
 func (s *emailService) SendPasswordResetEmail(to, resetToken string) error {
-	subject := "Password Reset Request"
-	body := fmt.Sprintf(`
+	return s.sendTemplateEmail(to, "Password Reset Request", fmt.Sprintf(`
 		<h2>Password Reset Request</h2>
 		<p>You have requested to reset your password. Please click the link below to reset your password:</p>
 		<p><a href="%s/reset-password?token=%s">Reset Password</a></p>
 		<p>If you did not request a password reset, please ignore this email.</p>
 		<p>This link will expire in 24 hours.</p>
 		<p>Team Name</p>
-	`, s.config.App.URL, resetToken)
-
-	return s.SendEmail(to, subject, body, true)
+	`, s.config.App.URL, resetToken))
 }
 
 // SendVerificationEmail Send email verification email
 func (s *emailService) SendVerificationEmail(to, verificationToken string) error {
-	subject := "Email Verification"
-	body := fmt.Sprintf(`
+	return s.sendTemplateEmail(to, "Email Verification", fmt.Sprintf(`
 		<h2>Email Verification</h2>
 		<p>Please click the link below to verify your email address:</p>
 		<p><a href="%s/verify-email?token=%s">Verify Email</a></p>
 		<p>If you did not register an account, please ignore this email.</p>
 		<p>This link will expire in 1 hour.</p>
 		<p>Team Name</p>
-	`, s.config.App.URL, verificationToken)
-
-	return s.SendEmail(to, subject, body, true)
+	`, s.config.App.URL, verificationToken))
 }
 
 func formatSender(name, address string) string {
@@ -112,4 +99,16 @@ func formatSender(name, address string) string {
 		return address
 	}
 	return (&mail.Address{Name: name, Address: address}).String()
+}
+
+func newEmailRequest(fromName, fromAddress, to, subject string) *resend.SendEmailRequest {
+	return &resend.SendEmailRequest{
+		From:    formatSender(fromName, fromAddress),
+		To:      []string{to},
+		Subject: subject,
+	}
+}
+
+func (s *emailService) sendTemplateEmail(to, subject, body string) error {
+	return s.SendEmail(to, subject, body, true)
 }

@@ -16,7 +16,6 @@ func SetupRoutes(
 	jwtProtected fiber.Handler,
 	authController *controllers.AuthController,
 	userController *controllers.UserController,
-	storageController *controllers.StorageController,
 	healthController *controllers.HealthController,
 ) {
 	// 根路径处理
@@ -71,9 +70,6 @@ func SetupRoutes(
 	users.Put("/:id", jwtProtected, userController.UpdateUser)
 	users.Delete("/:id", jwtProtected, userController.DeleteUser)
 	users.Put("/profile", jwtProtected, userController.UpdateProfile)
-
-	// 存储路由
-	SetupStorageRoutes(api, storageController)
 }
 
 func openAPISpecPath() string {

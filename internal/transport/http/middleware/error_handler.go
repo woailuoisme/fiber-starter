@@ -33,36 +33,8 @@ func ErrorHandler(c fiber.Ctx) error {
 func HandleError(c fiber.Ctx, err error) error {
 	logError(c, err)
 
-	if apiErr, ok := errors.AsType[*exceptions.APIException](err); ok {
+	if apiErr := unwrapAPIException(err); apiErr != nil {
 		return handleAPIException(c, apiErr)
-	}
-
-	if valErr, ok := errors.AsType[*exceptions.ValidationException](err); ok {
-		return handleAPIException(c, valErr.APIException)
-	}
-
-	if authErr, ok := errors.AsType[*exceptions.AuthenticationException](err); ok {
-		return handleAPIException(c, authErr.APIException)
-	}
-
-	if authzErr, ok := errors.AsType[*exceptions.AuthorizationException](err); ok {
-		return handleAPIException(c, authzErr.APIException)
-	}
-
-	if notFoundErr, ok := errors.AsType[*exceptions.NotFoundException](err); ok {
-		return handleAPIException(c, notFoundErr.APIException)
-	}
-
-	if badReqErr, ok := errors.AsType[*exceptions.BadRequestException](err); ok {
-		return handleAPIException(c, badReqErr.APIException)
-	}
-
-	if conflictErr, ok := errors.AsType[*exceptions.ConflictException](err); ok {
-		return handleAPIException(c, conflictErr.APIException)
-	}
-
-	if serverErr, ok := errors.AsType[*exceptions.ServerException](err); ok {
-		return handleAPIException(c, serverErr.APIException)
 	}
 
 	if validationErrors, ok := errors.AsType[validator.ValidationErrors](err); ok {
@@ -76,79 +48,50 @@ func HandleError(c fiber.Ctx, err error) error {
 	return handleUnknownError(c, err)
 }
 
+func unwrapAPIException(err error) *exceptions.APIException {
+	if apiErr, ok := errors.AsType[*exceptions.APIException](err); ok {
+		return apiErr
+	}
+	if valErr, ok := errors.AsType[*exceptions.ValidationException](err); ok {
+		return valErr.APIException
+	}
+	if authErr, ok := errors.AsType[*exceptions.AuthenticationException](err); ok {
+		return authErr.APIException
+	}
+	if authzErr, ok := errors.AsType[*exceptions.AuthorizationException](err); ok {
+		return authzErr.APIException
+	}
+	if notFoundErr, ok := errors.AsType[*exceptions.NotFoundException](err); ok {
+		return notFoundErr.APIException
+	}
+	if badReqErr, ok := errors.AsType[*exceptions.BadRequestException](err); ok {
+		return badReqErr.APIException
+	}
+	if conflictErr, ok := errors.AsType[*exceptions.ConflictException](err); ok {
+		return conflictErr.APIException
+	}
+	if serverErr, ok := errors.AsType[*exceptions.ServerException](err); ok {
+		return serverErr.APIException
+	}
+
+	return nil
+}
+
 // handleAPIException 处理 API 异常
 // Requirements: 12.1, 11.13
 func handleAPIException(c fiber.Ctx, apiErr *exceptions.APIException) error {
-	// 获取调用栈信息
-	_, file, line, _ := runtime.Caller(2)
-
-	// 使用带调试信息的错误响应
-	return resources.ErrorWithDebugger(
-		c,
-		apiErr.Code,
-		apiErr.Message,
-		apiErr.Errors,
-		"APIException",
-		file,
-		line,
-	)
+	return writeDebuggerError(c, apiErr.Code, apiErr.Message, apiErr.Errors, "APIException", 2)
 }
 
-// handleValidationError 处理验证错误
-func handleValidationError(c fiber.Ctx, validationErrors validator.ValidationErrors) error {
-	errors := resources.FormatValidationErrors(validationErrors)
-	_, file, line, _ := runtime.Caller(1)
+func writeDebuggerError(c fiber.Ctx, code int, message string, details interface{}, exception string, callerSkip int) error {
+	_, file, line, _ := runtime.Caller(callerSkip)
 
-	return resources.ErrorWithDebugger(
-		c,
-		422,
-		"Validation failed",
-		errors,
-		"ValidationError",
-		file,
-		line,
-	)
+	return resources.ErrorWithDebugger(c, code, message, details, exception, file, line)
 }
 
 // handleFiberError 处理 Fiber 框架错误
 func handleFiberError(c fiber.Ctx, fiberErr *fiber.Error) error {
-	message := fiberErr.Message
-
-	// 根据状态码提供更友好的错误信息
-	switch fiberErr.Code {
-	case fiber.StatusBadRequest:
-		message = "Bad request"
-	case fiber.StatusUnauthorized:
-		message = "Unauthorized"
-	case fiber.StatusForbidden:
-		message = "Forbidden"
-	case fiber.StatusNotFound:
-		message = "Not found"
-	case fiber.StatusMethodNotAllowed:
-		message = "Method not allowed"
-	case fiber.StatusRequestTimeout:
-		message = "Request timeout"
-	case fiber.StatusTooManyRequests:
-		message = "Too many requests"
-	case fiber.StatusInternalServerError:
-		message = "Internal server error"
-	case fiber.StatusBadGateway:
-		message = "Bad gateway"
-	case fiber.StatusServiceUnavailable:
-		message = "Service unavailable"
-	}
-
-	_, file, line, _ := runtime.Caller(1)
-
-	return resources.ErrorWithDebugger(
-		c,
-		fiberErr.Code,
-		message,
-		nil,
-		"FiberError",
-		file,
-		line,
-	)
+	return writeDebuggerError(c, fiberErr.Code, fiberErrorMessage(fiberErr), nil, "FiberError", 1)
 }
 
 // handleUnknownError 处理未知错误
@@ -161,17 +104,39 @@ func handleUnknownError(c fiber.Ctx, err error) error {
 		message = fmt.Sprintf("Internal server error: %s", err.Error())
 	}
 
-	_, file, line, _ := runtime.Caller(1)
+	return writeDebuggerError(c, 500, message, nil, fmt.Sprintf("%T", err), 1)
+}
 
-	return resources.ErrorWithDebugger(
-		c,
-		500,
-		message,
-		nil,
-		fmt.Sprintf("%T", err),
-		file,
-		line,
-	)
+// handleValidationError 处理验证错误
+func handleValidationError(c fiber.Ctx, validationErrors validator.ValidationErrors) error {
+	return writeDebuggerError(c, 422, "Validation failed", resources.FormatValidationErrors(validationErrors), "ValidationError", 1)
+}
+
+func fiberErrorMessage(fiberErr *fiber.Error) string {
+	switch fiberErr.Code {
+	case fiber.StatusBadRequest:
+		return "Bad request"
+	case fiber.StatusUnauthorized:
+		return "Unauthorized"
+	case fiber.StatusForbidden:
+		return "Forbidden"
+	case fiber.StatusNotFound:
+		return "Not found"
+	case fiber.StatusMethodNotAllowed:
+		return "Method not allowed"
+	case fiber.StatusRequestTimeout:
+		return "Request timeout"
+	case fiber.StatusTooManyRequests:
+		return "Too many requests"
+	case fiber.StatusInternalServerError:
+		return "Internal server error"
+	case fiber.StatusBadGateway:
+		return "Bad gateway"
+	case fiber.StatusServiceUnavailable:
+		return "Service unavailable"
+	default:
+		return fiberErr.Message
+	}
 }
 
 // logError 记录错误日志
@@ -186,24 +151,13 @@ func logError(c fiber.Ctx, err error) {
 		zap.String("error", err.Error()),
 	}
 
-	// 根据错误类型选择日志级别
-	if apiErr, ok := errors.AsType[*exceptions.APIException](err); ok {
-		fields = append(fields, zap.Int("code", apiErr.Code))
-		if apiErr.Code >= 500 {
-			helpers.Logger.Error("http_error", fields...)
-		} else {
-			helpers.Logger.Warn("http_error", fields...)
-		}
+	if apiErr := unwrapAPIException(err); apiErr != nil {
+		logHTTPError(fields, apiErr.Code)
 		return
 	}
 
 	if fiberErr, ok := errors.AsType[*fiber.Error](err); ok {
-		fields = append(fields, zap.Int("code", fiberErr.Code))
-		if fiberErr.Code >= 500 {
-			helpers.Logger.Error("http_error", fields...)
-		} else {
-			helpers.Logger.Warn("http_error", fields...)
-		}
+		logHTTPError(fields, fiberErr.Code)
 		return
 	}
 
@@ -212,6 +166,16 @@ func logError(c fiber.Ctx, err error) {
 	}
 
 	helpers.Logger.Error("http_error", fields...)
+}
+
+func logHTTPError(fields []zap.Field, code int) {
+	fields = append(fields, zap.Int("code", code))
+	if code >= 500 {
+		helpers.Logger.Error("http_error", fields...)
+		return
+	}
+
+	helpers.Logger.Warn("http_error", fields...)
 }
 
 // isDevelopment 检查是否为开发环境

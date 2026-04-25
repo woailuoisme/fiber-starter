@@ -4,6 +4,8 @@ package schedule
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 
 	"fiber-starter/internal/config"
@@ -16,7 +18,6 @@ import (
 // scheduledTask represents a registered scheduled task
 type scheduledTask struct {
 	spec    string
-	task    *asynq.Task
 	entryID string
 }
 
@@ -24,84 +25,65 @@ type scheduledTask struct {
 type Kernel struct {
 	scheduler *asynq.Scheduler
 	client    *asynq.Client
-	config    *config.Config
 	tasks     []*scheduledTask
 	mu        sync.Mutex
 }
 
-// NewKernel Create scheduled task kernel
-func NewKernel() *Kernel {
+func loadConfig() *config.Config {
 	cfg := config.GlobalConfig
-	if cfg == nil {
-		var err error
-		cfg, err = config.LoadConfig()
-		if err != nil {
-			panic(fmt.Sprintf("Failed to load config: %v", err))
-		}
+	if cfg != nil {
+		return cfg
 	}
-	redisOpt := asynq.RedisClientOpt{
+
+	loaded, err := config.LoadConfig()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to load config: %v", err))
+	}
+
+	return loaded
+}
+
+func newRedisOpt(cfg *config.Config) asynq.RedisClientOpt {
+	return asynq.RedisClientOpt{
 		Addr:     fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port),
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB + 2,
 	}
+}
+
+// NewKernel Create scheduled task kernel
+func NewKernel() *Kernel {
+	cfg := loadConfig()
+	redisOpt := newRedisOpt(cfg)
 
 	return &Kernel{
 		scheduler: asynq.NewScheduler(redisOpt, nil),
 		client:    asynq.NewClient(redisOpt),
-		config:    cfg,
-		tasks:     make([]*scheduledTask, 0),
+		tasks:     nil,
 	}
 }
 
 // Schedule Register scheduled tasks
 func (k *Kernel) Schedule() {
-	// Register your scheduled tasks here
-
-	// 🧪 Quick test: run every 10 seconds (uncomment to test)
-	// k.Cron("*/10 * * * * *", TestScheduleTask)
-
-	// Example 1: run every minute
-	// k.EveryMinute(func() {
-	// 	helpers.Info("Scheduled task: run every minute")
-	// 	ExampleTask()
-	// })
-
-	// Example 2: clean up temporary files every 5 minutes
-	// k.EveryFiveMinutes(CleanupTask)
-
-	// Example 3: run every hour
-	// k.Hourly(func() {
-	// 	helpers.Info("Scheduled task: run every hour")
-	// })
-
-	// Example 4: backup database at 2 AM daily
-	// k.DailyAt("02:00", BackupDatabaseTask)
-
-	// Example 5: generate report at 9 AM every Monday
-	// k.Cron("0 0 9 * * 1", GenerateReportTask)
-
-	// Example 6: send email at 8 AM every weekday
-	// k.Cron("0 0 8 * * 1-5", SendEmailTask)
-
-	// Add more tasks here...
-	// Tip: uncomment the example tasks above, or add your own tasks
 }
 
-// Start Start scheduled tasks
+// Start scheduled tasks
 func (k *Kernel) Start() {
 	k.Schedule()
 	helpers.Info("Scheduled tasks registered", zap.Int("count", len(k.tasks)))
 
-	go func() {
-		if err := k.scheduler.Run(); err != nil {
-			helpers.Error("Scheduler failed to run", zap.Error(err))
-		}
-	}()
+	go k.run()
 
 	helpers.Info("Scheduled tasks started")
 }
 
-// Stop Stop scheduled tasks
+func (k *Kernel) run() {
+	if err := k.scheduler.Run(); err != nil {
+		helpers.Error("Scheduler failed to run", zap.Error(err))
+	}
+}
+
+// Stop scheduled tasks
 func (k *Kernel) Stop() {
 	k.mu.Lock()
 	defer k.mu.Unlock()
@@ -129,8 +111,7 @@ func (k *Kernel) Cron(spec string, cmd func()) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
-	taskName := fmt.Sprintf("scheduled_task_%p", cmd)
-	task := asynq.NewTask(taskName, nil)
+	task := asynq.NewTask(taskTypeFor(cmd), nil)
 
 	entryID, err := k.scheduler.Register(spec, task)
 	if err != nil {
@@ -140,7 +121,6 @@ func (k *Kernel) Cron(spec string, cmd func()) {
 
 	scheduledTask := &scheduledTask{
 		spec:    spec,
-		task:    task,
 		entryID: entryID,
 	}
 	k.tasks = append(k.tasks, scheduledTask)
@@ -196,7 +176,13 @@ func (k *Kernel) Daily(cmd func()) {
 // DailyAt Run at specified time every day
 // Example: DailyAt("13:30", func() {})
 func (k *Kernel) DailyAt(time string, cmd func()) {
-	k.Cron(fmt.Sprintf("0 %s:00 * * *", time), cmd)
+	spec, err := cronDailyAtSpec(time)
+	if err != nil {
+		helpers.Error("Invalid daily schedule time", zap.String("time", time), zap.Error(err))
+		return
+	}
+
+	k.Cron(spec, cmd)
 }
 
 // Weekly Run at midnight every Sunday
@@ -223,4 +209,31 @@ func RegisterScheduledTaskHandlers(mux *asynq.ServeMux) {
 func handleScheduledTask(_ context.Context, t *asynq.Task) error {
 	helpers.Info("Executing scheduled task", zap.String("type", t.Type()))
 	return nil
+}
+
+func taskTypeFor(cmd func()) string {
+	return fmt.Sprintf("scheduled_task_%p", cmd)
+}
+
+func cronDailyAtSpec(value string) (string, error) {
+	parts := strings.Split(value, ":")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("expected HH:MM, got %q", value)
+	}
+
+	hour, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+	if err != nil {
+		return "", fmt.Errorf("invalid hour %q: %w", parts[0], err)
+	}
+
+	minute, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if err != nil {
+		return "", fmt.Errorf("invalid minute %q: %w", parts[1], err)
+	}
+
+	if hour < 0 || hour > 23 || minute < 0 || minute > 59 {
+		return "", fmt.Errorf("time out of range: %02d:%02d", hour, minute)
+	}
+
+	return fmt.Sprintf("0 %d %d * * *", minute, hour), nil
 }

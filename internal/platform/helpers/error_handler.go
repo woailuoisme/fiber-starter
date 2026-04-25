@@ -2,11 +2,40 @@ package helpers
 
 import (
 	models "fiber-starter/internal/domain/model"
-	apierrors "fiber-starter/internal/platform/apierrors"
+	"fiber-starter/internal/platform/apierrors"
 	"fiber-starter/internal/transport/http/resources"
+	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v3"
 )
+
+func writeResponse(ctx fiber.Ctx, status int, payload any) error {
+	return ctx.Status(status).JSON(payload)
+}
+
+func errorPayload(code apierrors.ErrorCode, details any) fiber.Map {
+	return fiber.Map{
+		"code":    code,
+		"details": details,
+	}
+}
+
+func paginationPayload(data any, total int64, page, limit int) fiber.Map {
+	return fiber.Map{
+		"data":       data,
+		"pagination": paginationMeta(total, page, limit),
+	}
+}
+
+func paginationMeta(total int64, page, limit int) fiber.Map {
+	return fiber.Map{
+		"page":  page,
+		"limit": limit,
+		"total": total,
+		"pages": (total + int64(limit) - 1) / int64(limit),
+	}
+}
 
 // HandleError Unified error handler function
 func HandleError(ctx fiber.Ctx, err error) error {
@@ -17,21 +46,16 @@ func HandleError(ctx fiber.Ctx, err error) error {
 	// If it's an application error, return directly
 	if apierrors.IsAppError(err) {
 		appErr, _ := apierrors.GetAppError(err)
-		return ctx.Status(appErr.StatusCode).JSON(resources.ErrorResponse(appErr.Message, fiber.Map{
-			"code":    appErr.Code,
-			"details": appErr.Details,
-		}))
+		return writeResponse(ctx, appErr.StatusCode, resources.ErrorResponse(appErr.Message, errorPayload(appErr.Code, appErr.Details)))
 	}
 
 	// Handle other types of errors
-	return ctx.Status(fiber.StatusInternalServerError).JSON(resources.ErrorResponse("Internal server error", fiber.Map{
-		"code": apierrors.ErrCodeInternalServer,
-	}))
+	return writeResponse(ctx, fiber.StatusInternalServerError, resources.ErrorResponse("Internal server error", errorPayload(apierrors.ErrCodeInternalServer, nil)))
 }
 
 // HandleValidationError Handle validation error
 func HandleValidationError(ctx fiber.Ctx, err error) error {
-	return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse(
+	return writeResponse(ctx, fiber.StatusBadRequest, resources.ErrorResponse(
 		"Request parameter validation failed",
 		resources.FormatValidationErrors(err),
 	))
@@ -39,47 +63,37 @@ func HandleValidationError(ctx fiber.Ctx, err error) error {
 
 // HandleSuccess Handle success response
 func HandleSuccess(ctx fiber.Ctx, message string, data interface{}) error {
-	return ctx.Status(fiber.StatusOK).JSON(resources.SuccessResponse(message, data))
+	return writeResponse(ctx, fiber.StatusOK, resources.SuccessResponse(message, data))
 }
 
 // HandleCreated Handle created success response
 func HandleCreated(ctx fiber.Ctx, message string, data interface{}) error {
-	return ctx.Status(fiber.StatusCreated).JSON(resources.SuccessResponse(message, data))
+	return writeResponse(ctx, fiber.StatusCreated, resources.SuccessResponse(message, data))
 }
 
 // HandleNotFound Handle not found error
 func HandleNotFound(ctx fiber.Ctx, message string) error {
-	return ctx.Status(fiber.StatusNotFound).JSON(resources.ErrorResponse(message, fiber.Map{
-		"code": apierrors.ErrCodeNotFound,
-	}))
+	return writeResponse(ctx, fiber.StatusNotFound, resources.ErrorResponse(message, errorPayload(apierrors.ErrCodeNotFound, nil)))
 }
 
 // HandleBadRequest Handle bad request error
 func HandleBadRequest(ctx fiber.Ctx, message string) error {
-	return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse(message, fiber.Map{
-		"code": apierrors.ErrCodeBadRequest,
-	}))
+	return writeResponse(ctx, fiber.StatusBadRequest, resources.ErrorResponse(message, errorPayload(apierrors.ErrCodeBadRequest, nil)))
 }
 
 // HandleUnauthorized Handle unauthorized error
 func HandleUnauthorized(ctx fiber.Ctx, message string) error {
-	return ctx.Status(fiber.StatusUnauthorized).JSON(resources.ErrorResponse(message, fiber.Map{
-		"code": apierrors.ErrCodeUnauthorized,
-	}))
+	return writeResponse(ctx, fiber.StatusUnauthorized, resources.ErrorResponse(message, errorPayload(apierrors.ErrCodeUnauthorized, nil)))
 }
 
 // HandleForbidden Handle forbidden error
 func HandleForbidden(ctx fiber.Ctx, message string) error {
-	return ctx.Status(fiber.StatusForbidden).JSON(resources.ErrorResponse(message, fiber.Map{
-		"code": apierrors.ErrCodeForbidden,
-	}))
+	return writeResponse(ctx, fiber.StatusForbidden, resources.ErrorResponse(message, errorPayload(apierrors.ErrCodeForbidden, nil)))
 }
 
 // HandleConflict Handle conflict error
 func HandleConflict(ctx fiber.Ctx, message string) error {
-	return ctx.Status(fiber.StatusConflict).JSON(resources.ErrorResponse(message, fiber.Map{
-		"code": apierrors.ErrCodeConflict,
-	}))
+	return writeResponse(ctx, fiber.StatusConflict, resources.ErrorResponse(message, errorPayload(apierrors.ErrCodeConflict, nil)))
 }
 
 // ParseAndValidate Parse and validate request parameters
@@ -102,16 +116,13 @@ func ParseAndValidate(ctx fiber.Ctx, req interface{}, validate interface{}) erro
 // FormatValidationErrorsToString Convert validation errors to string
 func FormatValidationErrorsToString(err error) string {
 	if validationErrors := resources.FormatValidationErrors(err); validationErrors != nil {
-		result := ""
+		parts := make([]string, 0, len(validationErrors))
 		for field, messages := range validationErrors {
 			for _, message := range messages {
-				if result != "" {
-					result += "; "
-				}
-				result += field + ": " + message
+				parts = append(parts, field+": "+message)
 			}
 		}
-		return result
+		return strings.Join(parts, "; ")
 	}
 	return err.Error()
 }
@@ -129,27 +140,14 @@ func HandleUserListResponse(ctx fiber.Ctx, message string, users []models.User, 
 	}
 
 	return HandleSuccess(ctx, message, fiber.Map{
-		"users": userResponses,
-		"pagination": fiber.Map{
-			"page":  page,
-			"limit": limit,
-			"total": total,
-			"pages": (total + int64(limit) - 1) / int64(limit),
-		},
+		"users":      userResponses,
+		"pagination": paginationMeta(total, page, limit),
 	})
 }
 
 // HandlePaginationResponse Handle pagination response
 func HandlePaginationResponse(ctx fiber.Ctx, message string, data interface{}, total int64, page, limit int) error {
-	return HandleSuccess(ctx, message, fiber.Map{
-		"data": data,
-		"pagination": fiber.Map{
-			"page":  page,
-			"limit": limit,
-			"total": total,
-			"pages": (total + int64(limit) - 1) / int64(limit),
-		},
-	})
+	return HandleSuccess(ctx, message, paginationPayload(data, total, page, limit))
 }
 
 // ValidatePaginationParams Validate pagination parameters
@@ -174,12 +172,9 @@ func ValidatePaginationParams(pageStr, limitStr string) (int, int, error) {
 
 // parseInt Safe integer parsing
 func parseInt(s string) (int, error) {
-	var result int
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			return 0, apierrors.BadRequest("Invalid number format")
-		}
-		result = result*10 + int(r-'0')
+	value, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, apierrors.BadRequest("Invalid number format")
 	}
-	return result, nil
+	return value, nil
 }

@@ -22,7 +22,7 @@ import (
 
 // 创建存储服务
 storageConfig := &config.StorageConfig{
-    Driver: "memory", // 或其他驱动如 "redis", "bbolt", "minio", "s3"
+    Driver: "memory", // 或其他驱动如 "redis", "bbolt", "garage", "s3"
 }
 
 storageService, err := services.NewStorageService(storageConfig, nil)
@@ -131,7 +131,7 @@ if err != nil {
 2. **CPU开销**：压缩会增加CPU使用，需要在空间和性能间权衡
 3. **内存使用**：压缩过程需要额外的内存空间
 4. **数据一致性**：压缩不会影响数据完整性，所有压缩数据都能正确解压
-5. **存储驱动兼容**：压缩功能与所有存储驱动兼容（内存、Redis、BBolt、MinIO、S3）
+5. **存储驱动兼容**：压缩功能与所有存储驱动兼容（内存、Redis、BBolt、Garage、S3）
 
 ## 示例代码
 

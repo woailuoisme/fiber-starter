@@ -50,6 +50,77 @@ func initDBWithConfig() (*sql.DB, *config.Config, error) {
 	return db, cfg, nil
 }
 
+func migrationEnvName(driver string) string {
+	if isSQLiteDriver(driver) {
+		return driverSQLite
+	}
+	return driverPostgres
+}
+
+func runAtlasForConnection(connConfig config.DBConnection, args ...string) error {
+	fullArgs := append([]string{}, args...)
+	fullArgs = append(fullArgs, "--env", migrationEnvName(connConfig.Driver))
+	return runAtlas(fullArgs...)
+}
+
+func runAtlasForCurrentConnection(args ...string) error {
+	connConfig, err := getDefaultConnection()
+	if err != nil {
+		return err
+	}
+
+	return runAtlasForConnection(connConfig, args...)
+}
+
+func confirmDestructiveAction() bool {
+	fmt.Print("Warning: This will delete all data! Are you sure you want to continue? (y/N): ")
+	var response string
+	_, _ = fmt.Scanln(&response)
+
+	return strings.EqualFold(response, "y") || strings.EqualFold(response, "yes")
+}
+
+func runSeedOperation(action string, fn func(db *sql.DB, dialect string) error) {
+	db, cfg, err := initDBWithConfig()
+	if err != nil {
+		color.Red("Failed to initialize database connection: %v", err)
+		os.Exit(1)
+	}
+
+	if err := fn(db, seedDialectFromConfig(cfg)); err != nil {
+		color.Red("%s: %v", action, err)
+		os.Exit(1)
+	}
+}
+
+func rebuildDatabase(startMessage string, withSeed bool) {
+	color.Cyan(startMessage)
+
+	connConfig, err := getDefaultConnection()
+	if err != nil {
+		color.Red("Failed to read database config: %v", err)
+		os.Exit(1)
+	}
+
+	if isSQLiteDriver(connConfig.Driver) {
+		_ = os.Remove(connConfig.Database)
+	}
+
+	if err := runAtlasForConnection(connConfig, "migrate", "apply"); err != nil {
+		color.Red("Migration failed: %v", err)
+		os.Exit(1)
+	}
+
+	if !withSeed {
+		return
+	}
+
+	color.Cyan("Running seed data...")
+	runSeedOperation("Failed to run seed data", func(db *sql.DB, dialect string) error {
+		return seeders.RunAllSeeders(db, dialect)
+	})
+}
+
 // migrateCmd represents the migrate command
 var migrateCmd = &cobra.Command{
 	Use:   "migrate",
@@ -139,7 +210,7 @@ If no count is specified, defaults to 10 records.`,
 	Run: func(_ *cobra.Command, args []string) {
 		count := 10 // default count
 		if len(args) > 0 {
-			_, _ = fmt.Sscanf(args[0], "%d", &count)
+			count = parsePositiveInt(args[0], count)
 		}
 		runRandomSeeds(count)
 	},
@@ -241,21 +312,7 @@ func runAtlas(args ...string) error {
 // runMigrations Run database migrations
 func runMigrations() {
 	color.Cyan("Running database migrations...")
-
-	connConfig, err := getDefaultConnection()
-	if err != nil {
-		color.Red("Failed to read database config: %v", err)
-		os.Exit(1)
-	}
-
-	var envName string
-	if isSQLiteDriver(connConfig.Driver) {
-		envName = driverSQLite
-	} else {
-		envName = driverPostgres
-	}
-
-	if err := runAtlas("migrate", "apply", "--env", envName); err != nil {
+	if err := runAtlasForCurrentConnection("migrate", "apply"); err != nil {
 		color.Red("Migration failed: %v", err)
 		os.Exit(1)
 	}
@@ -266,21 +323,7 @@ func runMigrations() {
 // rollbackMigrations Rollback database migrations
 func rollbackMigrations() {
 	color.Cyan("Rolling back database migrations...")
-
-	connConfig, err := getDefaultConnection()
-	if err != nil {
-		color.Red("Failed to read database config: %v", err)
-		os.Exit(1)
-	}
-
-	var envName string
-	if isSQLiteDriver(connConfig.Driver) {
-		envName = driverSQLite
-	} else {
-		envName = driverPostgres
-	}
-
-	if err := runAtlas("migrate", "down", "--env", envName, "1"); err != nil {
+	if err := runAtlasForCurrentConnection("migrate", "down", "1"); err != nil {
 		color.Red("Rollback failed: %v", err)
 		os.Exit(1)
 	}
@@ -290,105 +333,30 @@ func rollbackMigrations() {
 
 // resetDatabase Reset database
 func resetDatabase() {
-	// Confirm operation
-	fmt.Print("Warning: This will delete all data! Are you sure you want to continue? (y/N): ")
-	var response string
-	_, _ = fmt.Scanln(&response)
-
-	if !strings.EqualFold(response, "y") && !strings.EqualFold(response, "yes") {
+	if !confirmDestructiveAction() {
 		color.Yellow("Operation cancelled")
 		return
 	}
 
-	color.Cyan("Resetting database...")
-
-	connConfig, err := getDefaultConnection()
-	if err != nil {
-		_, _ = color.New(color.FgRed).Printf("Failed to read database config: %v\n", err)
-		os.Exit(1)
-	}
-
-	var envName string
-	if isSQLiteDriver(connConfig.Driver) {
-		envName = driverSQLite
-		_ = os.Remove(connConfig.Database)
-	} else {
-		envName = driverPostgres
-	}
-
-	if err := runAtlas("migrate", "apply", "--env", envName); err != nil {
-		_, _ = color.New(color.FgRed).Printf("Migration failed: %v\n", err)
-		os.Exit(1)
-	}
-
+	rebuildDatabase("Resetting database...", false)
 	color.Green("Database reset completed")
 }
 
 // freshDatabase Drop all tables and re-run migrations and seed data
 func freshDatabase() {
-	// Confirm operation
-	fmt.Print("Warning: This will delete all data! Are you sure you want to continue? (y/N): ")
-	var response string
-	_, _ = fmt.Scanln(&response)
-
-	if !strings.EqualFold(response, "y") && !strings.EqualFold(response, "yes") {
+	if !confirmDestructiveAction() {
 		color.Yellow("Operation cancelled")
 		return
 	}
 
-	color.Cyan("Dropping database...")
-
-	connConfig, err := getDefaultConnection()
-	if err != nil {
-		color.Red("Failed to read database config: %v", err)
-		os.Exit(1)
-	}
-
-	var envName string
-	if isSQLiteDriver(connConfig.Driver) {
-		envName = driverSQLite
-		_ = os.Remove(connConfig.Database)
-	} else {
-		envName = driverPostgres
-	}
-
-	if err := runAtlas("migrate", "apply", "--env", envName); err != nil {
-		color.Red("Migration failed: %v", err)
-		os.Exit(1)
-	}
-
-	color.Cyan("Running seed data...")
-	db, cfg, err := initDBWithConfig()
-	if err != nil {
-		color.Red("Failed to initialize database connection: %v", err)
-		os.Exit(1)
-	}
-	if err := seeders.RunAllSeeders(db, seedDialectFromConfig(cfg)); err != nil {
-		color.Red("Failed to run seed data: %v", err)
-		os.Exit(1)
-	}
-
+	rebuildDatabase("Dropping database...", true)
 	color.Green("Database dropped and re-initialized completed")
 }
 
 // showMigrationStatus Show migration status
 func showMigrationStatus() {
 	color.Cyan("Checking migration status...")
-
-	connConfig, err := getDefaultConnection()
-	if err != nil {
-		color.Red("Failed to read database config: %v", err)
-		os.Exit(1)
-	}
-
-	var envName string
-	if isSQLiteDriver(connConfig.Driver) {
-		envName = driverSQLite
-	} else {
-		envName = driverPostgres
-	}
-
-	if err := runAtlas("migrate", "status", "--env", envName); err != nil {
+	if err := runAtlasForCurrentConnection("migrate", "status"); err != nil {
 		color.Red("Failed to get migration status: %v", err)
 		os.Exit(1)
 	}
@@ -396,72 +364,40 @@ func showMigrationStatus() {
 
 // runSeeds Run seed data
 func runSeeds() {
-	db, cfg, err := initDBWithConfig()
-	if err != nil {
-		color.Red("Failed to initialize database connection: %v", err)
-		os.Exit(1)
-	}
 	color.Cyan("Running seed data...")
-
-	err = seeders.RunAllSeeders(db, seedDialectFromConfig(cfg))
-	if err != nil {
-		color.Red("Seed data run failed: %v", err)
-		os.Exit(1)
-	}
+	runSeedOperation("Seed data run failed", func(db *sql.DB, dialect string) error {
+		return seeders.RunAllSeeders(db, dialect)
+	})
 
 	color.Green("Seed data run completed")
 }
 
 // runRandomSeeds Generate random test data
 func runRandomSeeds(count int) {
-	db, cfg, err := initDBWithConfig()
-	if err != nil {
-		color.Red("Failed to initialize database connection: %v", err)
-		os.Exit(1)
-	}
 	color.Cyan("Generating %d random test data records...", count)
-
-	err = seeders.RunRandomSeeders(db, seedDialectFromConfig(cfg), count)
-	if err != nil {
-		color.Red("Failed to generate random data: %v", err)
-		os.Exit(1)
-	}
+	runSeedOperation("Failed to generate random data", func(db *sql.DB, dialect string) error {
+		return seeders.RunRandomSeeders(db, dialect, count)
+	})
 
 	color.Green("Successfully generated %d random test data records", count)
 }
 
 // clearSeeds Clear seed data
 func clearSeeds() {
-	db, cfg, err := initDBWithConfig()
-	if err != nil {
-		color.Red("Failed to initialize database connection: %v", err)
-		os.Exit(1)
-	}
 	color.Cyan("Clearing seed data...")
-
-	err = seeders.ClearAllSeeders(db, seedDialectFromConfig(cfg))
-	if err != nil {
-		color.Red("Failed to clear seed data: %v", err)
-		os.Exit(1)
-	}
+	runSeedOperation("Failed to clear seed data", func(db *sql.DB, dialect string) error {
+		return seeders.ClearAllSeeders(db, dialect)
+	})
 
 	color.Green("Seed data clear completed")
 }
 
 // refreshSeeds Refresh seed data
 func refreshSeeds() {
-	db, cfg, err := initDBWithConfig()
-	if err != nil {
-		color.Red("Failed to initialize database connection: %v", err)
-		os.Exit(1)
-	}
 	color.Cyan("Refreshing seed data...")
-
-	err = seeders.RefreshAllSeeders(db, seedDialectFromConfig(cfg))
-	if err != nil {
-		color.Red("Failed to refresh seed data: %v", err)
-		os.Exit(1)
-	}
+	runSeedOperation("Failed to refresh seed data", func(db *sql.DB, dialect string) error {
+		return seeders.RefreshAllSeeders(db, dialect)
+	})
 
 	color.Green("Seed data refresh completed")
 }
@@ -472,36 +408,16 @@ func setupDatabase() {
 
 	// Run migrations
 	color.Yellow("Step 1/2: Running database migrations")
-	connConfig, err := getDefaultConnection()
-	if err != nil {
-		color.Red("Failed to read database config: %v", err)
-		os.Exit(1)
-	}
-
-	var envName string
-	if isSQLiteDriver(connConfig.Driver) {
-		envName = driverSQLite
-	} else {
-		envName = driverPostgres
-	}
-
-	if err := runAtlas("migrate", "apply", "--env", envName); err != nil {
+	if err := runAtlasForCurrentConnection("migrate", "apply"); err != nil {
 		color.Red("Migration failed: %v", err)
 		os.Exit(1)
 	}
 
 	// Run seed data
 	color.Yellow("Step 2/2: Running seed data")
-	db, cfg, err := initDBWithConfig()
-	if err != nil {
-		color.Red("Failed to initialize database connection: %v", err)
-		os.Exit(1)
-	}
-	err = seeders.RunAllSeeders(db, seedDialectFromConfig(cfg))
-	if err != nil {
-		color.Red("Failed to run seed data: %v", err)
-		os.Exit(1)
-	}
+	runSeedOperation("Failed to run seed data", func(db *sql.DB, dialect string) error {
+		return seeders.RunAllSeeders(db, dialect)
+	})
 
 	color.Green("Database setup completed")
 }

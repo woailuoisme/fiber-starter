@@ -1,14 +1,16 @@
 package i18n
 
 import (
+	"errors"
+
 	"fiber-starter/internal/platform/helpers"
 
 	"github.com/go-playground/locales/en"
 	"github.com/go-playground/locales/zh"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
-	en_translations "github.com/go-playground/validator/v10/translations/en"
-	zh_translations "github.com/go-playground/validator/v10/translations/zh"
+	entranslations "github.com/go-playground/validator/v10/translations/en"
+	zhtranslations "github.com/go-playground/validator/v10/translations/zh"
 	"github.com/gofiber/fiber/v3"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"go.uber.org/zap"
@@ -25,15 +27,23 @@ type Translator struct {
 const contextKey = "translator"
 
 var (
-	uni      *ut.UniversalTranslator
-	validate *validator.Validate
+	uni *ut.UniversalTranslator
 )
 
 func init() {
-	en := en.New()
-	zh := zh.New()
-	uni = ut.New(en, en, zh)
-	validate = validator.New()
+	enLocale := en.New()
+	zhLocale := zh.New()
+	uni = ut.New(enLocale, enLocale, zhLocale)
+}
+
+func registerValidatorTranslations(lang string, trans ut.Translator) {
+	validate := validator.New()
+	switch lang {
+	case "zh-CN", "zh":
+		_ = zhtranslations.RegisterDefaultTranslations(validate, trans)
+	default:
+		_ = entranslations.RegisterDefaultTranslations(validate, trans)
+	}
 }
 
 // NewTranslator Create translator
@@ -46,13 +56,7 @@ func NewTranslator(lang string) *Translator {
 		trans, _ = uni.GetTranslator("en")
 	}
 
-	// Register validator translations
-	switch lang {
-	case "zh-CN", "zh":
-		_ = zh_translations.RegisterDefaultTranslations(validate, trans)
-	default:
-		_ = en_translations.RegisterDefaultTranslations(validate, trans)
-	}
+	registerValidatorTranslations(lang, trans)
 
 	return &Translator{
 		localizer: localizer,
@@ -61,21 +65,13 @@ func NewTranslator(lang string) *Translator {
 	}
 }
 
-// T Translate message (simple version)
-// If translation doesn't exist, return messageID itself
-func (t *Translator) T(messageID string) string {
+func (t *Translator) localize(messageID string, cfg *i18n.LocalizeConfig) string {
 	if t.localizer == nil {
 		helpers.Warn("Localizer not initialized", zap.String("messageID", messageID))
 		return messageID
 	}
 
-	translation, err := t.localizer.Localize(&i18n.LocalizeConfig{
-		MessageID: messageID,
-		DefaultMessage: &i18n.Message{
-			ID: messageID,
-		},
-	})
-
+	translation, err := t.localizer.Localize(cfg)
 	if err != nil {
 		helpers.Warn("Translation failed",
 			zap.String("messageID", messageID),
@@ -87,31 +83,27 @@ func (t *Translator) T(messageID string) string {
 	return translation
 }
 
+// T Translate message (simple version)
+// If translation doesn't exist, return messageID itself
+func (t *Translator) T(messageID string) string {
+	return t.localize(messageID, &i18n.LocalizeConfig{
+		MessageID: messageID,
+		DefaultMessage: &i18n.Message{
+			ID: messageID,
+		},
+	})
+}
+
 // TWithData Translate message (with variable substitution)
 // data is a map containing variables to replace
 func (t *Translator) TWithData(messageID string, data map[string]interface{}) string {
-	if t.localizer == nil {
-		helpers.Warn("Localizer not initialized", zap.String("messageID", messageID))
-		return messageID
-	}
-
-	translation, err := t.localizer.Localize(&i18n.LocalizeConfig{
+	return t.localize(messageID, &i18n.LocalizeConfig{
 		MessageID:    messageID,
 		TemplateData: data,
 		DefaultMessage: &i18n.Message{
 			ID: messageID,
 		},
 	})
-
-	if err != nil {
-		helpers.Warn("Translation failed",
-			zap.String("messageID", messageID),
-			zap.String("language", t.lang),
-			zap.Error(err))
-		return messageID
-	}
-
-	return translation
 }
 
 // ValidateAndTranslate Validate and translate errors
@@ -121,7 +113,8 @@ func (t *Translator) ValidateAndTranslate(err error) map[string]string {
 		return errs
 	}
 
-	validatorErrs, ok := err.(validator.ValidationErrors)
+	var validatorErrs validator.ValidationErrors
+	ok := errors.As(err, &validatorErrs)
 	if !ok {
 		errs["error"] = err.Error()
 		return errs
@@ -172,22 +165,16 @@ func (t *Translator) MustT(messageID string) string {
 
 // TDefault Translate message, return default value if fails
 func (t *Translator) TDefault(messageID string, defaultValue string) string {
-	if t.localizer == nil {
-		return defaultValue
-	}
-
-	translation, err := t.localizer.Localize(&i18n.LocalizeConfig{
+	translation := t.localize(messageID, &i18n.LocalizeConfig{
 		MessageID: messageID,
 		DefaultMessage: &i18n.Message{
 			ID:    messageID,
 			Other: defaultValue,
 		},
 	})
-
-	if err != nil {
+	if translation == messageID {
 		return defaultValue
 	}
-
 	return translation
 }
 

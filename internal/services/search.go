@@ -15,21 +15,21 @@ import (
 
 // SearchService 搜索服务接口
 type SearchService interface {
-	// 索引操作
+	// CreateIndex 索引操作
 	CreateIndex(uid string, primaryKey string) (*meilisearch.TaskInfo, error)
 	GetIndex(uid string) (meilisearch.IndexManager, error)
 	DeleteIndex(uid string) (*meilisearch.TaskInfo, error)
 
-	// 文档操作
+	// AddDocuments 文档操作
 	AddDocuments(indexUID string, documents interface{}) (*meilisearch.TaskInfo, error)
 	UpdateDocuments(indexUID string, documents interface{}) (*meilisearch.TaskInfo, error)
 	DeleteDocuments(indexUID string, ids []string) (*meilisearch.TaskInfo, error)
 	DeleteAllDocuments(indexUID string) (*meilisearch.TaskInfo, error)
 
-	// 搜索操作
+	// Search 搜索操作
 	Search(indexUID string, query string, request *meilisearch.SearchRequest) (*meilisearch.SearchResponse, error)
 
-	// 健康检查
+	// Health 健康检查
 	Health() (bool, error)
 }
 
@@ -89,89 +89,110 @@ func (s *searchService) ensureInitialized() error {
 	return nil
 }
 
+func (s *searchService) withClient(fn func(meilisearch.ServiceManager) error) error {
+	if err := s.ensureInitialized(); err != nil {
+		return err
+	}
+	return fn(s.client)
+}
+
 // CreateIndex 创建索引
 func (s *searchService) CreateIndex(uid string, primaryKey string) (*meilisearch.TaskInfo, error) {
-	if err := s.ensureInitialized(); err != nil {
-		return nil, err
-	}
-	config := &meilisearch.IndexConfig{
-		Uid:        uid,
-		PrimaryKey: primaryKey,
-	}
-	return s.client.CreateIndex(config)
+	var info *meilisearch.TaskInfo
+	err := s.withClient(func(client meilisearch.ServiceManager) error {
+		var err error
+		info, err = client.CreateIndex(&meilisearch.IndexConfig{Uid: uid, PrimaryKey: primaryKey})
+		return err
+	})
+	return info, err
 }
 
 // GetIndex 获取索引
 func (s *searchService) GetIndex(uid string) (meilisearch.IndexManager, error) {
-	if err := s.ensureInitialized(); err != nil {
-		return nil, err
-	}
-	// GetIndex 在 v0.26+ 返回 (*IndexResult, error) 而不是 Index 对象
-	// 但我们需要操作索引，所以应该使用 Index(uid) 方法
-	return s.client.Index(uid), nil
+	var index meilisearch.IndexManager
+	err := s.withClient(func(client meilisearch.ServiceManager) error {
+		index = client.Index(uid)
+		return nil
+	})
+	return index, err
 }
 
 // DeleteIndex 删除索引
 func (s *searchService) DeleteIndex(uid string) (*meilisearch.TaskInfo, error) {
-	if err := s.ensureInitialized(); err != nil {
-		return nil, err
-	}
-	return s.client.DeleteIndex(uid)
+	var info *meilisearch.TaskInfo
+	err := s.withClient(func(client meilisearch.ServiceManager) error {
+		var err error
+		info, err = client.DeleteIndex(uid)
+		return err
+	})
+	return info, err
 }
 
 // AddDocuments 添加文档
 func (s *searchService) AddDocuments(indexUID string, documents interface{}) (*meilisearch.TaskInfo, error) {
-	if err := s.ensureInitialized(); err != nil {
-		return nil, err
-	}
-	index := s.client.Index(indexUID)
-	return index.AddDocuments(documents, nil)
+	var info *meilisearch.TaskInfo
+	err := s.withClient(func(client meilisearch.ServiceManager) error {
+		var err error
+		info, err = client.Index(indexUID).AddDocuments(documents, nil)
+		return err
+	})
+	return info, err
 }
 
 // UpdateDocuments 更新文档
 func (s *searchService) UpdateDocuments(indexUID string, documents interface{}) (*meilisearch.TaskInfo, error) {
-	if err := s.ensureInitialized(); err != nil {
-		return nil, err
-	}
-	index := s.client.Index(indexUID)
-	return index.UpdateDocuments(documents, nil)
+	var info *meilisearch.TaskInfo
+	err := s.withClient(func(client meilisearch.ServiceManager) error {
+		var err error
+		info, err = client.Index(indexUID).UpdateDocuments(documents, nil)
+		return err
+	})
+	return info, err
 }
 
 // DeleteDocuments 删除文档
 func (s *searchService) DeleteDocuments(indexUID string, ids []string) (*meilisearch.TaskInfo, error) {
-	if err := s.ensureInitialized(); err != nil {
-		return nil, err
-	}
-	index := s.client.Index(indexUID)
-	return index.DeleteDocuments(ids, nil)
+	var info *meilisearch.TaskInfo
+	err := s.withClient(func(client meilisearch.ServiceManager) error {
+		var err error
+		info, err = client.Index(indexUID).DeleteDocuments(ids, nil)
+		return err
+	})
+	return info, err
 }
 
 // DeleteAllDocuments 删除所有文档
 func (s *searchService) DeleteAllDocuments(indexUID string) (*meilisearch.TaskInfo, error) {
-	if err := s.ensureInitialized(); err != nil {
-		return nil, err
-	}
-	index := s.client.Index(indexUID)
-	return index.DeleteAllDocuments(nil)
+	var info *meilisearch.TaskInfo
+	err := s.withClient(func(client meilisearch.ServiceManager) error {
+		var err error
+		info, err = client.Index(indexUID).DeleteAllDocuments(nil)
+		return err
+	})
+	return info, err
 }
 
 // Search 搜索
 func (s *searchService) Search(indexUID string, query string, request *meilisearch.SearchRequest) (*meilisearch.SearchResponse, error) {
-	if err := s.ensureInitialized(); err != nil {
-		return nil, err
-	}
-	index := s.client.Index(indexUID)
-	return index.Search(query, request)
+	var response *meilisearch.SearchResponse
+	err := s.withClient(func(client meilisearch.ServiceManager) error {
+		var err error
+		response, err = client.Index(indexUID).Search(query, request)
+		return err
+	})
+	return response, err
 }
 
 // Health 健康检查
 func (s *searchService) Health() (bool, error) {
-	if err := s.ensureInitialized(); err != nil {
-		return false, err
-	}
-	resp, err := s.client.Health()
-	if err != nil {
-		return false, err
-	}
-	return resp.Status == "available", nil
+	var healthy bool
+	err := s.withClient(func(client meilisearch.ServiceManager) error {
+		resp, err := client.Health()
+		if err != nil {
+			return err
+		}
+		healthy = resp.Status == "available"
+		return nil
+	})
+	return healthy, err
 }

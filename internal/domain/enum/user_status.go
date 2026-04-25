@@ -32,9 +32,13 @@ var userStatusLegacyMap = map[string]UserStatus{
 	"Banned":    UserStatusBanned,
 }
 
+func userStatusInfo(status UserStatus) (EnumInfo[UserStatus], bool) {
+	return FindInMap(status, userStatusMap)
+}
+
 // String 实现Stringer接口
 func (s UserStatus) String() string {
-	if info, exists := userStatusMap[s]; exists {
+	if info, exists := userStatusInfo(s); exists {
 		return info.Label
 	}
 	return string(s)
@@ -42,15 +46,12 @@ func (s UserStatus) String() string {
 
 // Label 获取标签文本
 func (s UserStatus) Label() string {
-	if info, exists := userStatusMap[s]; exists {
-		return info.Label
-	}
-	return string(s)
+	return s.String()
 }
 
 // Color 获取颜色
 func (s UserStatus) Color() string {
-	if info, exists := userStatusMap[s]; exists {
+	if info, exists := userStatusInfo(s); exists {
 		return info.Color
 	}
 	return "gray"
@@ -58,7 +59,7 @@ func (s UserStatus) Color() string {
 
 // Priority 获取优先级
 func (s UserStatus) Priority() int {
-	if info, exists := userStatusMap[s]; exists {
+	if info, exists := userStatusInfo(s); exists {
 		return info.Priority
 	}
 	return 999
@@ -66,7 +67,7 @@ func (s UserStatus) Priority() int {
 
 // IsValid 检查状态是否有效
 func (s UserStatus) IsValid() bool {
-	_, exists := userStatusMap[s]
+	_, exists := userStatusInfo(s)
 	return exists
 }
 
@@ -122,14 +123,7 @@ func UserStatusValues() []UserStatus {
 
 // UserStatusSortedValues 获取按优先级排序的状态值
 func UserStatusSortedValues() []UserStatus {
-	infos := GetInfosFromMap(userStatusMap)
-	sortedInfos := SortByPriority(infos)
-
-	values := make([]UserStatus, len(sortedInfos))
-	for i, info := range sortedInfos {
-		values[i] = info.Value
-	}
-	return values
+	return GetValuesFromInfos(SortByPriority(GetInfosFromMap(userStatusMap)))
 }
 
 // UserStatusGetOptions 获取所有用户状态及其标签的数组
@@ -149,6 +143,5 @@ func UserStatusGetAllInfo() []EnumInfo[UserStatus] {
 
 // UserStatusGetSortedInfo 获取按优先级排序的状态信息
 func UserStatusGetSortedInfo() []EnumInfo[UserStatus] {
-	infos := GetInfosFromMap(userStatusMap)
-	return SortByPriority(infos)
+	return SortByPriority(GetInfosFromMap(userStatusMap))
 }

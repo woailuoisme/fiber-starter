@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -46,9 +47,9 @@ type StorageService struct {
 	initialized uint32 // 0: false, 1: true
 }
 
-// MinIOStorage MinIO存储适配器 (已废弃，使用S3Storage)
-// type MinIOStorage struct {
-// 	client *minio.Client
+// GarageStorage Garage存储适配器 (已废弃，使用S3Storage)
+// type GarageStorage struct {
+// 	client *s3.Client
 // 	bucket string
 // }
 
@@ -80,23 +81,7 @@ func (s *StorageService) ensureInitialized() error {
 		return nil
 	}
 
-	var store storage.Storage
-	var err error
-
-	switch s.config.Driver {
-	case "redis":
-		store = createRedisStorage(s.config, s.redisCfg)
-	case "minio":
-		store, err = createMinIOStorage(s.config)
-	case "s3":
-		store, err = createS3Storage(s.config)
-	case "r2":
-		store, err = createR2Storage(s.config)
-	case "oss":
-		store, err = createOSSStorage(s.config)
-	default:
-		store = createDefaultStorage(s.config, s.redisCfg)
-	}
+	store, driver, err := buildStorage(s.config, s.redisCfg)
 
 	if err != nil {
 		return err
@@ -104,86 +89,108 @@ func (s *StorageService) ensureInitialized() error {
 
 	s.storage = store
 	atomic.StoreUint32(&s.initialized, 1)
-	helpers.Logger.Info("Storage service initialized", zap.String("driver", s.config.Driver))
+	helpers.Logger.Info("Storage service initialized", zap.String("driver", driver))
 
 	return nil
 }
 
-func createRedisStorage(cfg *config.StorageConfig, redisCfg *config.RedisConfig) storage.Storage {
-	var url string
-	if redisCfg.Password == "" {
-		url = fmt.Sprintf("redis://%s:%s/%d",
-			redisCfg.Host, redisCfg.Port, redisCfg.DB)
-	} else {
-		url = fmt.Sprintf("redis://:%s@%s:%s/%d",
-			redisCfg.Password, redisCfg.Host, redisCfg.Port, redisCfg.DB)
+func buildStorage(cfg *config.StorageConfig, redisCfg *config.RedisConfig) (storage.Storage, string, error) {
+	driver := normalizeStorageDriver(cfg.Driver)
+
+	switch driver {
+	case "redis":
+		return createRedisStorage(cfg, redisCfg), driver, nil
+	case "garage":
+		return createGarageStorage(cfg)
+	case "s3":
+		return createS3Storage(cfg)
+	case "r2":
+		return createR2Storage(cfg)
+	case "oss":
+		return createOSSStorage(cfg)
+	default:
+		return createDefaultStorage(cfg, redisCfg), driver, nil
 	}
+}
+
+func normalizeStorageDriver(driver string) string {
+	driver = strings.ToLower(strings.TrimSpace(driver))
+	if driver == "minio" {
+		return "garage"
+	}
+	return driver
+}
+
+func createRedisStorage(cfg *config.StorageConfig, redisCfg *config.RedisConfig) storage.Storage {
+	url := redisURL(redisCfg)
 	return redisStorage.New(redisStorage.Config{
 		URL:   url,
 		Reset: cfg.Reset,
 	})
 }
 
-func createMinIOStorage(cfg *config.StorageConfig) (storage.Storage, error) {
-	if cfg.MinIO == nil {
-		return nil, fmt.Errorf("minio config cannot be empty")
+func createGarageStorage(cfg *config.StorageConfig) (storage.Storage, string, error) {
+	garageCfg, err := storageCompatConfig("garage", cfg.Garage, cfg.MinIO)
+	if err != nil {
+		return nil, "", err
 	}
 
 	scheme := "http"
-	if cfg.MinIO.UseSSL {
+	if garageCfg.UseSSL {
 		scheme = "https"
 	}
-	endpoint := fmt.Sprintf("%s://%s", scheme, cfg.MinIO.Endpoint)
+	endpoint := fmt.Sprintf("%s://%s", scheme, garageCfg.Endpoint)
 
 	s3Cfg := &config.S3StorageConfig{
-		AccessKeyID:     cfg.MinIO.AccessKeyID,
-		SecretAccessKey: cfg.MinIO.SecretAccessKey,
-		Region:          cfg.MinIO.Region,
-		Bucket:          cfg.MinIO.Bucket,
+		AccessKeyID:     garageCfg.AccessKeyID,
+		SecretAccessKey: garageCfg.SecretAccessKey,
+		Region:          garageCfg.Region,
+		Bucket:          garageCfg.Bucket,
 		Endpoint:        endpoint,
 	}
 
 	s3Storage, err := NewS3Storage(s3Cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize minio storage (via s3 sdk): %w", err)
+		return nil, "", fmt.Errorf("failed to initialize garage storage (via s3 sdk): %w", err)
 	}
 
-	// 确保存储桶存在
 	if err := s3Storage.EnsureBucket(); err != nil {
-		return nil, fmt.Errorf("failed to ensure bucket: %w", err)
+		return nil, "", fmt.Errorf("failed to ensure bucket: %w", err)
 	}
 
-	return s3Storage, nil
+	return s3Storage, "garage", nil
 }
 
-func createS3Storage(cfg *config.StorageConfig) (storage.Storage, error) {
+func createS3Storage(cfg *config.StorageConfig) (storage.Storage, string, error) {
 	s3Storage, err := NewS3Storage(cfg.S3)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize s3 storage: %w", err)
+		return nil, "", fmt.Errorf("failed to initialize s3 storage: %w", err)
 	}
-	return s3Storage, nil
+	return s3Storage, "s3", nil
 }
 
-func createR2Storage(cfg *config.StorageConfig) (storage.Storage, error) {
-	if cfg.R2 == nil {
-		return nil, fmt.Errorf("r2 config cannot be empty")
-	}
-	s3Storage, err := NewS3Storage(cfg.R2)
+func createR2Storage(cfg *config.StorageConfig) (storage.Storage, string, error) {
+	s3Cfg, err := storageS3Config("r2", cfg.R2)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize r2 storage: %w", err)
+		return nil, "", err
 	}
-	return s3Storage, nil
+	s3Storage, err := NewS3Storage(s3Cfg)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to initialize r2 storage: %w", err)
+	}
+	return s3Storage, "r2", nil
 }
 
-func createOSSStorage(cfg *config.StorageConfig) (storage.Storage, error) {
-	if cfg.OSS == nil {
-		return nil, fmt.Errorf("oss config cannot be empty")
-	}
-	s3Storage, err := NewS3Storage(cfg.OSS)
+func createOSSStorage(cfg *config.StorageConfig) (storage.Storage, string, error) {
+	s3Cfg, err := storageS3Config("oss", cfg.OSS)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize oss storage: %w", err)
+		return nil, "", err
 	}
-	return s3Storage, nil
+	s3Storage, err := NewS3Storage(s3Cfg)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to initialize oss storage: %w", err)
+	}
+	return s3Storage, "oss", nil
 }
 
 func createDefaultStorage(cfg *config.StorageConfig, redisCfg *config.RedisConfig) storage.Storage {
@@ -193,63 +200,54 @@ func createDefaultStorage(cfg *config.StorageConfig, redisCfg *config.RedisConfi
 
 // Get 获取存储值
 func (s *StorageService) Get(key string) ([]byte, error) {
-	if err := s.ensureInitialized(); err != nil {
-		return nil, err
-	}
-
-	if s.storage == nil {
-		return nil, fmt.Errorf("storage not initialized")
-	}
-
-	value, err := s.storage.Get(key)
-	if err != nil {
-		return nil, err
-	}
-
-	// 如果启用了压缩，需要解压数据
-	if s.compression != CompressionNone {
-		decompressed, err := s.decompressData(value)
+	var value []byte
+	err := s.withStorage(func(store storage.Storage) error {
+		rawValue, err := store.Get(key)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decompress data: %w", err)
+			return err
+		}
+
+		if s.compression == CompressionNone {
+			value = rawValue
+			return nil
+		}
+
+		decompressed, err := s.decompressData(rawValue)
+		if err != nil {
+			return fmt.Errorf("failed to decompress data: %w", err)
 		}
 		value = decompressed
-	}
-
-	return value, nil
+		return nil
+	})
+	return value, err
 }
 
 // Set 设置存储值
 func (s *StorageService) Set(key string, value []byte, ttl time.Duration) error {
-	if err := s.ensureInitialized(); err != nil {
-		return err
-	}
-
-	// 如果启用了压缩，先压缩数据
-	if s.compression != CompressionNone {
-		compressed, err := s.compressData(value)
-		if err != nil {
-			return fmt.Errorf("failed to compress data: %w", err)
+	return s.withStorage(func(store storage.Storage) error {
+		if s.compression != CompressionNone {
+			compressed, err := s.compressData(value)
+			if err != nil {
+				return fmt.Errorf("failed to compress data: %w", err)
+			}
+			value = compressed
 		}
-		value = compressed
-	}
-
-	return s.storage.Set(key, value, ttl)
+		return store.Set(key, value, ttl)
+	})
 }
 
 // Delete 删除存储值
 func (s *StorageService) Delete(key string) error {
-	if err := s.ensureInitialized(); err != nil {
-		return err
-	}
-	return s.storage.Delete(key)
+	return s.withStorage(func(store storage.Storage) error {
+		return store.Delete(key)
+	})
 }
 
 // Reset 重置存储
 func (s *StorageService) Reset() error {
-	if err := s.ensureInitialized(); err != nil {
-		return err
-	}
-	return s.storage.Reset()
+	return s.withStorage(func(store storage.Storage) error {
+		return store.Reset()
+	})
 }
 
 // Close 关闭存储服务
@@ -257,12 +255,7 @@ func (s *StorageService) Close() error {
 	if atomic.LoadUint32(&s.initialized) == 0 {
 		return nil
 	}
-	if s.zstdEncoder != nil {
-		_ = s.zstdEncoder.Close()
-	}
-	if s.zstdDecoder != nil {
-		s.zstdDecoder.Close()
-	}
+	s.closeCompression()
 	if closer, ok := s.storage.(interface{ Close() error }); ok {
 		return closer.Close()
 	}
@@ -275,31 +268,15 @@ func (s *StorageService) SetCompression(compressionType CompressionType) error {
 
 	switch compressionType {
 	case CompressionZstd:
-		// 初始化Zstd编码器
-		encoder, err := zstd.NewWriter(nil)
-		if err != nil {
-			return fmt.Errorf("failed to create zstd encoder: %w", err)
-		}
-		s.zstdEncoder = encoder
-
-		// 初始化Zstd解码器
-		decoder, err := zstd.NewReader(nil)
-		if err != nil {
-			return fmt.Errorf("failed to create zstd decoder: %w", err)
-		}
-		s.zstdDecoder = decoder
-
+		return s.initZstd()
 	case CompressionGzip:
-		// Gzip不需要预初始化
-
+		return nil
 	case CompressionNone:
-		// 无压缩
-
+		s.closeCompression()
+		return nil
 	default:
 		return fmt.Errorf("unsupported compression type: %d", compressionType)
 	}
-
-	return nil
 }
 
 // CompressData 压缩数据（公开方法用于测试）
@@ -429,8 +406,7 @@ func (s *StorageService) SetStringWithDefaultTTL(key, value string) error {
 func (s *StorageService) Exists(key string) (bool, error) {
 	val, err := s.Get(key)
 	if err != nil {
-		// 检查是否是"未找到"错误
-		if err.Error() == "key not found" || err.Error() == "not found" {
+		if isStorageNotFoundError(err) {
 			return false, nil
 		}
 		return false, err
@@ -440,18 +416,16 @@ func (s *StorageService) Exists(key string) (bool, error) {
 
 // SetExpire 设置键的过期时间
 func (s *StorageService) SetExpire(key string, ttl time.Duration) error {
-	// 获取当前值
 	val, err := s.Get(key)
 	if err != nil {
 		return err
 	}
-	// 重新设置带过期时间的值
 	return s.Set(key, val, ttl)
 }
 
-// NewMinIOStorage 创建MinIO存储实例 (已废弃，直接使用S3兼容模式)
-// func NewMinIOStorage(cfg *config.MinIOStorageConfig) (*MinIOStorage, error) {
-// 	return nil, fmt.Errorf("NewMinIOStorage is deprecated")
+// NewGarageStorage 创建Garage存储实例 (已废弃，直接使用S3兼容模式)
+// func NewGarageStorage(cfg *config.GarageStorageConfig) (*GarageStorage, error) {
+// 	return nil, fmt.Errorf("NewGarageStorage is deprecated")
 // }
 
 // NewS3Storage 创建S3存储实例
@@ -460,26 +434,11 @@ func NewS3Storage(cfg *config.S3StorageConfig) (*S3Storage, error) {
 		return nil, fmt.Errorf("s3 config cannot be empty")
 	}
 
-	// 创建AWS配置选项
-	configOptions := []func(*awsConfig.LoadOptions) error{
-		awsConfig.WithCredentialsProvider(aws.NewCredentialsCache(
-			aws.CredentialsProviderFunc(func(_ context.Context) (aws.Credentials, error) {
-				return aws.Credentials{
-					AccessKeyID:     cfg.AccessKeyID,
-					SecretAccessKey: cfg.SecretAccessKey,
-				}, nil
-			}),
-		)),
-		awsConfig.WithRegion(cfg.Region),
-	}
-
-	// 创建AWS配置
-	awsCfg, err := awsConfig.LoadDefaultConfig(context.Background(), configOptions...)
+	awsCfg, err := loadAWSConfig(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create aws config: %w", err)
 	}
 
-	// 创建S3客户端
 	s3Client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		if cfg.Endpoint != "" {
 			o.BaseEndpoint = aws.String(cfg.Endpoint)
@@ -493,28 +452,111 @@ func NewS3Storage(cfg *config.S3StorageConfig) (*S3Storage, error) {
 	}, nil
 }
 
-// Get 获取存储值 (MinIO实现 - 已废弃)
-// func (m *MinIOStorage) Get(key string) ([]byte, error) {
+func (s *StorageService) withStorage(fn func(storage.Storage) error) error {
+	if err := s.ensureInitialized(); err != nil {
+		return err
+	}
+	if s.storage == nil {
+		return fmt.Errorf("storage not initialized")
+	}
+	return fn(s.storage)
+}
+
+func (s *StorageService) initZstd() error {
+	encoder, err := zstd.NewWriter(nil)
+	if err != nil {
+		return fmt.Errorf("failed to create zstd encoder: %w", err)
+	}
+
+	decoder, err := zstd.NewReader(nil)
+	if err != nil {
+		_ = encoder.Close()
+		return fmt.Errorf("failed to create zstd decoder: %w", err)
+	}
+
+	s.closeCompression()
+	s.zstdEncoder = encoder
+	s.zstdDecoder = decoder
+	return nil
+}
+
+func (s *StorageService) closeCompression() {
+	if s.zstdEncoder != nil {
+		_ = s.zstdEncoder.Close()
+		s.zstdEncoder = nil
+	}
+	if s.zstdDecoder != nil {
+		s.zstdDecoder.Close()
+		s.zstdDecoder = nil
+	}
+}
+
+func loadAWSConfig(cfg *config.S3StorageConfig) (aws.Config, error) {
+	return awsConfig.LoadDefaultConfig(context.Background(),
+		awsConfig.WithCredentialsProvider(aws.NewCredentialsCache(
+			aws.CredentialsProviderFunc(func(_ context.Context) (aws.Credentials, error) {
+				return aws.Credentials{
+					AccessKeyID:     cfg.AccessKeyID,
+					SecretAccessKey: cfg.SecretAccessKey,
+				}, nil
+			}),
+		)),
+		awsConfig.WithRegion(cfg.Region),
+	)
+}
+
+func storageCompatConfig(name string, primary, fallback *config.GarageStorageConfig) (*config.GarageStorageConfig, error) {
+	cfg := primary
+	if cfg == nil {
+		cfg = fallback
+	}
+	if cfg == nil {
+		return nil, fmt.Errorf("%s config cannot be empty", name)
+	}
+	return cfg, nil
+}
+
+func storageS3Config(name string, cfg *config.S3StorageConfig) (*config.S3StorageConfig, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("%s config cannot be empty", name)
+	}
+	return cfg, nil
+}
+
+func redisURL(redisCfg *config.RedisConfig) string {
+	if redisCfg.Password == "" {
+		return fmt.Sprintf("redis://%s:%s/%d", redisCfg.Host, redisCfg.Port, redisCfg.DB)
+	}
+	return fmt.Sprintf("redis://:%s@%s:%s/%d", redisCfg.Password, redisCfg.Host, redisCfg.Port, redisCfg.DB)
+}
+
+func isStorageNotFoundError(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "key not found") || strings.Contains(msg, "not found")
+}
+
+// Get 获取存储值 (Garage实现 - 已废弃)
+// func (m *GarageStorage) Get(key string) ([]byte, error) {
 // 	return nil, fmt.Errorf("deprecated")
 // }
 
-// Set 设置存储值 (MinIO实现 - 已废弃)
-// func (m *MinIOStorage) Set(key string, value []byte, ttl time.Duration) error {
+// Set 设置存储值 (Garage实现 - 已废弃)
+// func (m *GarageStorage) Set(key string, value []byte, ttl time.Duration) error {
 // 	return fmt.Errorf("deprecated")
 // }
 
-// Delete 删除存储值 (MinIO实现 - 已废弃)
-// func (m *MinIOStorage) Delete(key string) error {
+// Delete 删除存储值 (Garage实现 - 已废弃)
+// func (m *GarageStorage) Delete(key string) error {
 // 	return fmt.Errorf("deprecated")
 // }
 
-// Reset 重置存储 (MinIO实现 - 已废弃)
-// func (m *MinIOStorage) Reset() error {
+// Reset 重置存储 (Garage实现 - 已废弃)
+// func (m *GarageStorage) Reset() error {
 // 	return fmt.Errorf("deprecated")
 // }
 
-// Close 关闭存储连接 (MinIO实现 - 已废弃)
-// func (m *MinIOStorage) Close() error {
+// Close 关闭存储连接 (Garage实现 - 已废弃)
+// func (m *GarageStorage) Close() error {
 // 	return nil
 // }
 

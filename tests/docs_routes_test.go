@@ -18,7 +18,7 @@ func TestDocsRoutes_ExposeScalarAndOpenAPISpec(t *testing.T) {
 	})
 	routers.SetupRoutes(app, func(c fiber.Ctx) error {
 		return c.Next()
-	}, nil, nil, nil, nil)
+	}, nil, nil, nil)
 
 	docsResp, err := app.Test(httptest.NewRequest("GET", "/docs", nil))
 	if err != nil {

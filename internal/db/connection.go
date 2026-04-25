@@ -65,14 +65,9 @@ func (c *Connection) GetDB() (*sql.DB, error) {
 		return c.db, nil
 	}
 
-	if c.config == nil {
-		return nil, errors.New("database config is nil")
-	}
-
-	defaultConn := c.config.Database.Default
-	connConfig, exists := c.config.Database.Connections[defaultConn]
-	if !exists {
-		return nil, fmt.Errorf("database connection config '%s' does not exist", defaultConn)
+	connConfig, err := c.configuredConnection()
+	if err != nil {
+		return nil, err
 	}
 
 	driverName, dsn, err := buildSQLDriverAndDSN(connConfig)
@@ -112,14 +107,9 @@ func (c *Connection) GetDB() (*sql.DB, error) {
 
 // Dialect 返回当前默认连接对应的 SQL 方言标识（sqlite / psql）。
 func (c *Connection) Dialect() (string, error) {
-	if c == nil || c.config == nil {
-		return "", errors.New("database config is nil")
-	}
-
-	defaultConn := c.config.Database.Default
-	connConfig, ok := c.config.Database.Connections[defaultConn]
-	if !ok {
-		return "", fmt.Errorf("database connection config '%s' does not exist", defaultConn)
+	connConfig, err := c.configuredConnection()
+	if err != nil {
+		return "", err
 	}
 
 	switch strings.ToLower(strings.TrimSpace(connConfig.Driver)) {
@@ -218,6 +208,60 @@ func (c *Connection) GetStats() (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	return connectionStats(db), nil
+}
+
+// GetDB 获取数据库实例
+func GetDB() *sql.DB {
+	return DB
+}
+
+// HealthCheck 数据库健康检查
+func HealthCheck() error {
+	db, err := globalDB()
+	if err != nil {
+		return err
+	}
+
+	if err := db.Ping(); err != nil {
+		return fmt.Errorf("database ping failed: %w", err)
+	}
+
+	return nil
+}
+
+// GetConnectionStats 获取数据库连接池统计信息
+func GetConnectionStats() (map[string]interface{}, error) {
+	db, err := globalDB()
+	if err != nil {
+		return nil, err
+	}
+
+	return connectionStats(db), nil
+}
+
+func (c *Connection) configuredConnection() (config.DBConnection, error) {
+	if c == nil || c.config == nil {
+		return config.DBConnection{}, errors.New("database config is nil")
+	}
+
+	defaultConn := c.config.Database.Default
+	connConfig, exists := c.config.Database.Connections[defaultConn]
+	if !exists {
+		return config.DBConnection{}, fmt.Errorf("database connection config '%s' does not exist", defaultConn)
+	}
+
+	return connConfig, nil
+}
+
+func globalDB() (*sql.DB, error) {
+	if DB == nil {
+		return nil, errors.New("database connection is not initialized")
+	}
+	return DB, nil
+}
+
+func connectionStats(db *sql.DB) map[string]interface{} {
 	stats := db.Stats()
 	return map[string]interface{}{
 		"max_open_connections": stats.MaxOpenConnections,
@@ -229,45 +273,7 @@ func (c *Connection) GetStats() (map[string]interface{}, error) {
 		"max_idle_closed":      stats.MaxIdleClosed,
 		"max_idle_time_closed": stats.MaxIdleTimeClosed,
 		"max_lifetime_closed":  stats.MaxLifetimeClosed,
-	}, nil
-}
-
-// GetDB 获取数据库实例
-func GetDB() *sql.DB {
-	return DB
-}
-
-// HealthCheck 数据库健康检查
-func HealthCheck() error {
-	if DB == nil {
-		return errors.New("database connection is not initialized")
 	}
-
-	if err := DB.Ping(); err != nil {
-		return fmt.Errorf("database ping failed: %w", err)
-	}
-
-	return nil
-}
-
-// GetConnectionStats 获取数据库连接池统计信息
-func GetConnectionStats() (map[string]interface{}, error) {
-	if DB == nil {
-		return nil, errors.New("database connection is not initialized")
-	}
-
-	stats := DB.Stats()
-	return map[string]interface{}{
-		"max_open_connections": stats.MaxOpenConnections,
-		"open_connections":     stats.OpenConnections,
-		"in_use":               stats.InUse,
-		"idle":                 stats.Idle,
-		"wait_count":           stats.WaitCount,
-		"wait_duration":        stats.WaitDuration.String(),
-		"max_idle_closed":      stats.MaxIdleClosed,
-		"max_idle_time_closed": stats.MaxIdleTimeClosed,
-		"max_lifetime_closed":  stats.MaxLifetimeClosed,
-	}, nil
 }
 
 func configureConnectionPool(db *sql.DB, poolConfig config.DBPoolConfig) {

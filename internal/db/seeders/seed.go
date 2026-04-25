@@ -5,18 +5,15 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+
+	"gorm.io/gorm"
 )
 
 // RunAllSeeders 运行所有种子数据
 func RunAllSeeders(db *sql.DB, dialect string) error {
-	if db == nil {
-		return errors.New("db is nil")
-	}
-
 	log.Println("Starting to execute seed data...")
 
-	// Create user seed data
-	if err := SeedUsers(db, dialect); err != nil {
+	if err := withSeedDB(db, dialect, SeedUsers); err != nil {
 		log.Printf("User seed data creation failed: %v", err)
 		return err
 	}
@@ -35,14 +32,11 @@ func RunAllSeeders(db *sql.DB, dialect string) error {
 
 // RunRandomSeeders Run random seed data generation
 func RunRandomSeeders(db *sql.DB, dialect string, userCount int) error {
-	if db == nil {
-		return errors.New("db is nil")
-	}
-
 	log.Printf("Starting to generate %d random user data...", userCount)
 
-	// Generate random user data
-	if err := GenerateTestUsers(db, dialect, userCount); err != nil {
+	if err := withSeedDB(db, dialect, func(sqlDB *sql.DB, driver string) error {
+		return GenerateTestUsers(sqlDB, driver, userCount)
+	}); err != nil {
 		log.Printf("Random user data generation failed: %v", err)
 		return err
 	}
@@ -53,14 +47,9 @@ func RunRandomSeeders(db *sql.DB, dialect string, userCount int) error {
 
 // ClearAllSeeders Clear all seed data
 func ClearAllSeeders(db *sql.DB, dialect string) error {
-	if db == nil {
-		return errors.New("db is nil")
-	}
-
 	log.Println("Starting to clear seed data...")
 
-	// Clear user seed data
-	if err := ClearUsers(db, dialect); err != nil {
+	if err := withSeedDB(db, dialect, ClearUsers); err != nil {
 		log.Printf("User seed data clearing failed: %v", err)
 		return err
 	}
@@ -81,13 +70,11 @@ func ClearAllSeeders(db *sql.DB, dialect string) error {
 func RefreshAllSeeders(db *sql.DB, dialect string) error {
 	log.Println("Starting to refresh seed data...")
 
-	// Clear all seed data first
 	if err := ClearAllSeeders(db, dialect); err != nil {
 		log.Printf("Seed data clearing failed: %v", err)
 		return err
 	}
 
-	// Then create all seed data
 	if err := RunAllSeeders(db, dialect); err != nil {
 		log.Printf("Seed data creation failed: %v", err)
 		return err
@@ -101,7 +88,6 @@ func RefreshAllSeeders(db *sql.DB, dialect string) error {
 func SetupDatabase(db *sql.DB, dialect string) error {
 	log.Println("Starting to setup database...")
 
-	// Then execute seed data
 	if err := RunAllSeeders(db, dialect); err != nil {
 		log.Printf("Seed data creation failed: %v", err)
 		return err
@@ -109,4 +95,21 @@ func SetupDatabase(db *sql.DB, dialect string) error {
 
 	log.Println("Database setup completed")
 	return nil
+}
+
+func withSeedDB(db *sql.DB, dialect string, fn func(*sql.DB, string) error) error {
+	if db == nil {
+		return errors.New("db is nil")
+	}
+
+	return fn(db, dialect)
+}
+
+func withSeedGormDB(db *sql.DB, dialect string, fn func(*gorm.DB) error) error {
+	gdb, err := seedGormDB(db, dialect)
+	if err != nil {
+		return err
+	}
+
+	return fn(gdb)
 }

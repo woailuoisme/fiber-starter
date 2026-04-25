@@ -35,9 +35,9 @@ func (p *AppProvider) Register() error {
 		validate := validator.New()
 
 		// 注册通用翻译器
-		en := en.New()
-		zh := zh.New()
-		uni := ut.New(en, en, zh)
+		enLocale := en.New()
+		zhLocale := zh.New()
+		uni := ut.New(enLocale, enLocale, zhLocale)
 
 		return validate, uni
 	}); err != nil {

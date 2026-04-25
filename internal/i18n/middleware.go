@@ -34,40 +34,49 @@ func Middleware() fiber.Handler {
 // detectLanguage Detect user language preference
 // Priority: Query > Cookie > Accept-Language Header > Default
 func detectLanguage(c fiber.Ctx) string {
-	// 1. Check query parameter
-	if lang := c.Query("lang"); lang != "" {
-		if IsSupported(lang) {
+	if queryLang := c.Query("lang"); queryLang != "" {
+		if lang, ok := supportedLanguage(queryLang); ok {
 			helpers.Debug("Detected language from query parameter", zap.String("lang", lang))
 			return lang
 		}
-		helpers.Warn("Language in query parameter not supported", zap.String("lang", lang))
+		helpers.Warn("Language in query parameter not supported", zap.String("lang", queryLang))
 	}
 
-	// 2. Check Cookie
 	cfg := config.GlobalConfig.I18n
-	if lang := c.Cookies(cfg.CookieName); lang != "" {
-		if IsSupported(lang) {
+	if cookieLang := c.Cookies(cfg.CookieName); cookieLang != "" {
+		if lang, ok := supportedLanguage(cookieLang); ok {
 			helpers.Debug("Detected language from Cookie", zap.String("lang", lang))
 			return lang
 		}
-		helpers.Warn("Language in Cookie not supported", zap.String("lang", lang))
+		helpers.Warn("Language in Cookie not supported", zap.String("lang", cookieLang))
 	}
 
-	// 3. Check Accept-Language header
 	if acceptLang := c.Get("Accept-Language"); acceptLang != "" {
-		langs := parseAcceptLanguage(acceptLang)
-		for _, lang := range langs {
-			if IsSupported(lang) {
-				helpers.Debug("Detected language from Accept-Language", zap.String("lang", lang))
-				return lang
-			}
+		if lang, ok := firstSupportedLanguage(parseAcceptLanguage(acceptLang)); ok {
+			helpers.Debug("Detected language from Accept-Language", zap.String("lang", lang))
+			return lang
 		}
 		helpers.Debug("No supported language in Accept-Language", zap.String("accept-language", acceptLang))
 	}
 
-	// 4. Use default language
 	helpers.Debug("Using default language", zap.String("lang", DefaultLanguage))
 	return DefaultLanguage
+}
+
+func supportedLanguage(lang string) (string, bool) {
+	if lang == "" || !IsSupported(lang) {
+		return "", false
+	}
+	return lang, true
+}
+
+func firstSupportedLanguage(languages []string) (string, bool) {
+	for _, lang := range languages {
+		if IsSupported(lang) {
+			return lang, true
+		}
+	}
+	return "", false
 }
 
 // parseAcceptLanguage Parse Accept-Language header

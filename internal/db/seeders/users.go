@@ -20,117 +20,102 @@ import (
 
 // SeedUsers 创建用户种子数据
 func SeedUsers(db *sql.DB, dialect string) error {
-	gdb, err := seedGormDB(db, dialect)
-	if err != nil {
-		return err
-	}
+	return withSeedGormDB(db, dialect, func(gdb *gorm.DB) error {
+		count, err := seedCountUsers(context.Background(), gdb)
+		if err != nil {
+			return err
+		}
+		if count > 0 {
+			return nil
+		}
 
-	count, err := seedCountUsers(context.Background(), gdb)
-	if err != nil {
-		return err
-	}
-	if count > 0 {
-		return nil
-	}
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
+		now := time.Now().UTC()
+		users := []models.User{
+			{Name: "Admin User", Email: "admin@example.com", Password: string(hashedPassword), Phone: stringPtr("13800138000"), Status: models.UserStatusActive, EmailVerifiedAt: &now, CreatedAt: now, UpdatedAt: now},
+			{Name: "Test User", Email: "user@example.com", Password: string(hashedPassword), Phone: stringPtr("13800138001"), Status: models.UserStatusActive, EmailVerifiedAt: &now, CreatedAt: now, UpdatedAt: now},
+			{Name: "Pending User", Email: "pending@example.com", Password: string(hashedPassword), Phone: stringPtr("13800138002"), Status: models.UserStatusInactive, CreatedAt: now, UpdatedAt: now},
+			{Name: "Banned User", Email: "banned@example.com", Password: string(hashedPassword), Phone: stringPtr("13800138003"), Status: models.UserStatusBanned, CreatedAt: now, UpdatedAt: now},
+		}
 
-	now := time.Now().UTC()
-	users := []models.User{
-		{Name: "Admin User", Email: "admin@example.com", Password: string(hashedPassword), Phone: new("13800138000"), Status: models.UserStatusActive, EmailVerifiedAt: &now, CreatedAt: now, UpdatedAt: now},
-		{Name: "Test User", Email: "user@example.com", Password: string(hashedPassword), Phone: new("13800138001"), Status: models.UserStatusActive, EmailVerifiedAt: &now, CreatedAt: now, UpdatedAt: now},
-		{Name: "Pending User", Email: "pending@example.com", Password: string(hashedPassword), Phone: new("13800138002"), Status: models.UserStatusInactive, CreatedAt: now, UpdatedAt: now},
-		{Name: "Banned User", Email: "banned@example.com", Password: string(hashedPassword), Phone: new("13800138003"), Status: models.UserStatusBanned, CreatedAt: now, UpdatedAt: now},
-	}
-
-	return gdb.WithContext(context.Background()).Create(&users).Error
+		return gdb.WithContext(context.Background()).Create(&users).Error
+	})
 }
 
 // SeedRandomUsers 生成随机用户种子数据
 func SeedRandomUsers(db *sql.DB, dialect string, count int) error {
-	gdb, err := seedGormDB(db, dialect)
-	if err != nil {
-		return err
-	}
+	return withSeedGormDB(db, dialect, func(gdb *gorm.DB) error {
+		existingCount, err := seedCountUsers(context.Background(), gdb)
+		if err != nil {
+			return err
+		}
+		if existingCount >= int64(count) {
+			return nil
+		}
 
-	existingCount, err := seedCountUsers(context.Background(), gdb)
-	if err != nil {
-		return err
-	}
-	if existingCount >= int64(count) {
-		return nil
-	}
+		users, err := randomUsers(count, "password123")
+		if err != nil {
+			return err
+		}
 
-	users, err := randomUsers(count, "password123")
-	if err != nil {
-		return err
-	}
-
-	return gdb.WithContext(context.Background()).Create(&users).Error
+		return gdb.WithContext(context.Background()).Create(&users).Error
+	})
 }
 
 // ClearUsers 清除用户种子数据
 func ClearUsers(db *sql.DB, dialect string) error {
-	gdb, err := seedGormDB(db, dialect)
-	if err != nil {
-		return err
-	}
-
-	return gdb.WithContext(context.Background()).
-		Where("1 = 1").
-		Delete(&models.User{}).Error
+	return withSeedGormDB(db, dialect, func(gdb *gorm.DB) error {
+		return gdb.WithContext(context.Background()).
+			Where("1 = 1").
+			Delete(&models.User{}).Error
+	})
 }
 
 // CreateAdminUser 创建管理员用户
 func CreateAdminUser(db *sql.DB, dialect string, name, email, password string) error {
-	gdb, err := seedGormDB(db, dialect)
-	if err != nil {
-		return err
-	}
+	return withSeedGormDB(db, dialect, func(gdb *gorm.DB) error {
+		exists, err := seedUserExistsByEmail(context.Background(), gdb, email)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return nil
+		}
 
-	exists, err := seedUserExistsByEmail(context.Background(), gdb, email)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return nil
-	}
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
+		now := time.Now().UTC()
+		admin := models.User{
+			Name:            name,
+			Email:           email,
+			Password:        string(hashedPassword),
+			Status:          models.UserStatusActive,
+			EmailVerifiedAt: &now,
+			CreatedAt:       now,
+			UpdatedAt:       now,
+		}
 
-	now := time.Now().UTC()
-	admin := models.User{
-		Name:            name,
-		Email:           email,
-		Password:        string(hashedPassword),
-		Status:          models.UserStatusActive,
-		EmailVerifiedAt: &now,
-		CreatedAt:       now,
-		UpdatedAt:       now,
-	}
-
-	return gdb.WithContext(context.Background()).Create(&admin).Error
+		return gdb.WithContext(context.Background()).Create(&admin).Error
+	})
 }
 
 // GenerateTestUsers 生成指定数量的测试用户（使用 faker 和 carbon）
 func GenerateTestUsers(db *sql.DB, dialect string, count int) error {
-	gdb, err := seedGormDB(db, dialect)
-	if err != nil {
-		return err
-	}
+	return withSeedGormDB(db, dialect, func(gdb *gorm.DB) error {
+		users, err := randomUsers(count, "test123456")
+		if err != nil {
+			return err
+		}
 
-	users, err := randomUsers(count, "test123456")
-	if err != nil {
-		return err
-	}
-
-	return gdb.WithContext(context.Background()).Create(&users).Error
+		return gdb.WithContext(context.Background()).Create(&users).Error
+	})
 }
 
 func seedCountUsers(ctx context.Context, db *gorm.DB) (int64, error) {
@@ -167,13 +152,14 @@ func randomUsers(count int, password string) ([]models.User, error) {
 	}
 
 	users := make([]models.User, 0, count)
+	now := time.Now().UTC()
 	for i := 0; i < count; i++ {
-		now := time.Now().UTC()
+		phone := faker.Phonenumber()
 		user := models.User{
 			Name:      faker.Name(),
 			Email:     faker.Email(),
 			Password:  string(hashedPassword),
-			Phone:     new(faker.Phonenumber()),
+			Phone:     &phone,
 			Status:    models.UserStatusActive,
 			CreatedAt: now,
 			UpdatedAt: now,
@@ -193,4 +179,8 @@ func randomUsers(count int, password string) ([]models.User, error) {
 	}
 
 	return users, nil
+}
+
+func stringPtr(value string) *string {
+	return &value
 }

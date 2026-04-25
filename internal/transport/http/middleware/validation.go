@@ -72,8 +72,23 @@ func QueryValidationMiddleware(rules map[string]string) fiber.Handler {
 	}
 }
 
+func ruleValue(rule, key string) (string, bool) {
+	prefix := key + ":"
+	_, value, ok := strings.Cut(rule, prefix)
+	if !ok {
+		return "", false
+	}
+
+	end := strings.IndexByte(value, ',')
+	if end >= 0 {
+		value = value[:end]
+	}
+
+	return strings.TrimSpace(value), true
+}
+
 func validateQueryField(field, value, rule string) []string {
-	var errors []string
+	errors := make([]string, 0, 3)
 
 	// 检查必填字段
 	if strings.Contains(rule, "required") && value == "" {
@@ -95,18 +110,18 @@ func validateQueryField(field, value, rule string) []string {
 	}
 
 	// 验证最小长度
-	if strings.Contains(rule, "min:") {
+	if minValue, ok := ruleValue(rule, "min"); ok {
 		minLength := 0
-		_, _ = fmt.Sscanf(strings.Split(rule, "min:")[1], "%d", &minLength)
+		_, _ = fmt.Sscanf(minValue, "%d", &minLength)
 		if len(value) < minLength {
 			errors = append(errors, fmt.Sprintf("The %s must be at least %d characters.", field, minLength))
 		}
 	}
 
 	// 验证最大长度
-	if strings.Contains(rule, "max:") {
+	if maxValue, ok := ruleValue(rule, "max"); ok {
 		maxLength := 0
-		_, _ = fmt.Sscanf(strings.Split(rule, "max:")[1], "%d", &maxLength)
+		_, _ = fmt.Sscanf(maxValue, "%d", &maxLength)
 		if len(value) > maxLength {
 			errors = append(errors, fmt.Sprintf("The %s must not exceed %d characters.", field, maxLength))
 		}

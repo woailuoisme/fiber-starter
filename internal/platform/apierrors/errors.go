@@ -36,25 +36,25 @@ const (
 	ErrCodeUserDeleteFailed    ErrorCode = "USER_DELETE_FAILED"
 	ErrCodeProfileUpdateFailed ErrorCode = "PROFILE_UPDATE_FAILED"
 
-	// 数据库相关错误码
+	// ErrCodeDatabaseError 数据库相关错误码
 	ErrCodeDatabaseError   ErrorCode = "DATABASE_ERROR"
 	ErrCodeRecordNotFound  ErrorCode = "RECORD_NOT_FOUND"
 	ErrCodeDuplicateEntry  ErrorCode = "DUPLICATE_ENTRY"
 	ErrCodeForeignKeyError ErrorCode = "FOREIGN_KEY_ERROR"
 
-	// 业务逻辑错误码
+	// ErrCodeBusinessLogicError 业务逻辑错误码
 	ErrCodeBusinessLogicError     ErrorCode = "BUSINESS_LOGIC_ERROR"
 	ErrCodeInsufficientPermission ErrorCode = "INSUFFICIENT_PERMISSION"
 	ErrCodeResourceNotFound       ErrorCode = "RESOURCE_NOT_FOUND"
 	ErrCodeOperationNotAllowed    ErrorCode = "OPERATION_NOT_ALLOWED"
 
-	// 外部服务错误码
+	// ErrCodeExternalServiceError 外部服务错误码
 	ErrCodeExternalServiceError ErrorCode = "EXTERNAL_SERVICE_ERROR"
 	ErrCodeEmailSendFailed      ErrorCode = "EMAIL_SEND_FAILED"
 	ErrCodeSMSSendFailed        ErrorCode = "SMS_SEND_FAILED"
 	ErrCodePaymentFailed        ErrorCode = "PAYMENT_FAILED"
 
-	// 文件相关错误码
+	// ErrCodeFileUploadFailed 文件相关错误码
 	ErrCodeFileUploadFailed ErrorCode = "FILE_UPLOAD_FAILED"
 	ErrCodeFileNotFound     ErrorCode = "FILE_NOT_FOUND"
 	ErrCodeInvalidFileType  ErrorCode = "INVALID_FILE_TYPE"
@@ -68,6 +68,14 @@ type AppError struct {
 	Details    string    `json:"details,omitempty"`
 	StatusCode int       `json:"-"`
 	Cause      error     `json:"-"`
+}
+
+func newAppError(code ErrorCode, message string, statusCode int) *AppError {
+	return &AppError{
+		Code:       code,
+		Message:    message,
+		StatusCode: statusCode,
+	}
 }
 
 // Error 实现error接口
@@ -93,42 +101,22 @@ func (e *AppError) Is(target error) bool {
 
 // NewAppError 创建新的应用程序错误
 func NewAppError(code ErrorCode, message string, statusCode int) *AppError {
-	return &AppError{
-		Code:       code,
-		Message:    message,
-		StatusCode: statusCode,
-	}
+	return newAppError(code, message, statusCode)
 }
 
 // NewAppErrorWithDetails 创建带详细信息的应用程序错误
 func NewAppErrorWithDetails(code ErrorCode, message, details string, statusCode int) *AppError {
-	return &AppError{
-		Code:       code,
-		Message:    message,
-		Details:    details,
-		StatusCode: statusCode,
-	}
+	return &AppError{Code: code, Message: message, Details: details, StatusCode: statusCode}
 }
 
 // NewAppErrorWithCause 创建带原因的应用程序错误
 func NewAppErrorWithCause(code ErrorCode, message string, statusCode int, cause error) *AppError {
-	return &AppError{
-		Code:       code,
-		Message:    message,
-		StatusCode: statusCode,
-		Cause:      cause,
-	}
+	return &AppError{Code: code, Message: message, StatusCode: statusCode, Cause: cause}
 }
 
 // NewAppErrorWithDetailsAndCause 创建带详细信息和原因的应用程序错误
 func NewAppErrorWithDetailsAndCause(code ErrorCode, message, details string, statusCode int, cause error) *AppError {
-	return &AppError{
-		Code:       code,
-		Message:    message,
-		Details:    details,
-		StatusCode: statusCode,
-		Cause:      cause,
-	}
+	return &AppError{Code: code, Message: message, Details: details, StatusCode: statusCode, Cause: cause}
 }
 
 // 预定义错误创建函数
@@ -260,8 +248,7 @@ func ExternalServiceErrorWithCause(message string, cause error) *AppError {
 // IsAppError 检查是否为应用程序错误
 func IsAppError(err error) bool {
 	var appError *AppError
-	ok := errors.As(err, &appError)
-	return ok
+	return errors.As(err, &appError)
 }
 
 // GetAppError 获取应用程序错误

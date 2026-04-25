@@ -29,21 +29,20 @@ func TranslateValidationErrors(err error, t *Translator) map[string]string {
 		return errMap
 	}
 
-	// Translate each validation error
 	for _, fieldError := range validationErrors {
-		// Get field name
 		fieldName := getFieldName(fieldError)
-
-		// Translate field name
-		translatedFieldName := GetFieldName(fieldName, t)
-
-		// Translate error message
-		errorMessage := translateFieldError(fieldError, translatedFieldName, t)
-
-		errMap[fieldName] = errorMessage
+		errMap[fieldName] = translateFieldError(fieldError, translatedFieldName(fieldName, t), t)
 	}
 
 	return errMap
+}
+
+func translatedFieldName(field string, t *Translator) string {
+	if t == nil {
+		return toFriendlyName(field)
+	}
+
+	return GetFieldName(field, t)
 }
 
 // translateFieldError Translate single field error
@@ -73,7 +72,10 @@ func translateFieldError(fe validator.FieldError, fieldName string, t *Translato
 	}
 
 	// Try to translate
-	translation := t.TWithData(messageID, data)
+	translation := messageID
+	if t != nil {
+		translation = t.TWithData(messageID, data)
+	}
 
 	// If translation doesn't exist, use default message
 	if translation == messageID {
@@ -142,6 +144,10 @@ func getDefaultErrorMessage(tag, fieldName, param string) string {
 
 // GetFieldName Get translated field name
 func GetFieldName(field string, t *Translator) string {
+	if t == nil {
+		return toFriendlyName(field)
+	}
+
 	// Build translation key
 	messageID := fmt.Sprintf("fields.%s", strings.ToLower(field))
 
@@ -158,16 +164,7 @@ func GetFieldName(field string, t *Translator) string {
 
 // getFieldName Get field name from FieldError
 func getFieldName(fe validator.FieldError) string {
-	// Prefer JSON tag name
-	field := fe.Field()
-
-	// If struct tag exists, try to get json tag
-	if fe.StructField() != "" {
-		// Simplified handling here, actual usage may need reflection to get tags
-		field = fe.Field()
-	}
-
-	return field
+	return fe.Field()
 }
 
 // toFriendlyName Convert field name to friendly format
@@ -204,25 +201,16 @@ func RegisterValidatorTranslations(_ *validator.Validate) {
 
 // GetValidationErrorsAsString Get string representation of validation errors
 func GetValidationErrorsAsString(err error, t *Translator) string {
-	errors := TranslateValidationErrors(err, t)
-
-	messages := make([]string, 0, len(errors))
-	for _, msg := range errors {
-		messages = append(messages, msg)
-	}
-
-	return strings.Join(messages, "; ")
+	return strings.Join(validationMessages(err, t), "; ")
 }
 
 // GetFirstValidationError Get first validation error
 func GetFirstValidationError(err error, t *Translator) string {
-	errors := TranslateValidationErrors(err, t)
-
-	for _, msg := range errors {
-		return msg
+	messages := validationMessages(err, t)
+	if len(messages) == 0 {
+		return ""
 	}
-
-	return ""
+	return messages[0]
 }
 
 // ValidateStruct Validate struct and return translated errors
@@ -253,4 +241,13 @@ func GetStructFieldName(structType reflect.Type, fieldName string) string {
 	}
 
 	return fieldName
+}
+
+func validationMessages(err error, t *Translator) []string {
+	errors := TranslateValidationErrors(err, t)
+	messages := make([]string, 0, len(errors))
+	for _, msg := range errors {
+		messages = append(messages, msg)
+	}
+	return messages
 }

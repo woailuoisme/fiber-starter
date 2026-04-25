@@ -33,12 +33,21 @@ type UpdateProfileRequest struct {
 	Avatar string `json:"avatar" validate:"omitempty,url" example:"https://example.com/avatar.jpg" swagger:"optional,avatar_url"` //nolint:lll
 }
 
+type requestValidationError struct {
+	message string
+	details interface{}
+}
+
+func (e *requestValidationError) Error() string {
+	return e.message
+}
+
 // GetUsers 获取用户列表
 // @Summary List users
 // @Description Get a paginated list of users (admin only).
 // @Tags Users
-// @Accept json
-// @Produce json
+// @Accept JSON
+// @Produce JSON
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
 // @Security ApiKeyAuth
@@ -86,8 +95,8 @@ func (c *UserController) GetUsers(ctx fiber.Ctx) error {
 // @Summary Get user
 // @Description Get a user by ID (admin only).
 // @Tags Users
-// @Accept json
-// @Produce json
+// @Accept JSON
+// @Produce JSON
 // @Param id path int true "User ID"
 // @Security ApiKeyAuth
 // @Success 200 {object} resources.APIResponse "OK"
@@ -109,15 +118,15 @@ func (c *UserController) GetUser(ctx fiber.Ctx) error {
 		return ctx.Status(fiber.StatusNotFound).JSON(resources.ErrorResponse(err.Error(), nil))
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(resources.SuccessResponse("User fetched successfully", user.ToSafeResponse()))
+	return ctx.Status(fiber.StatusOK).JSON(resources.SuccessResponse("User fetched successfully", user.ToSafeUser()))
 }
 
 // UpdateUser 更新用户信息
 // @Summary Update user
 // @Description Update a user by ID (admin only).
 // @Tags Users
-// @Accept json
-// @Produce json
+// @Accept JSON
+// @Produce JSON
 // @Param id path int true "User ID"
 // @Param user body UpdateProfileRequest true "Update user payload"
 // @Security ApiKeyAuth
@@ -134,18 +143,9 @@ func (c *UserController) UpdateUser(ctx fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("Invalid user ID", nil))
 	}
 
-	// 解析请求体
-	var req UpdateProfileRequest
-	if err := ctx.Bind().Body(&req); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("Failed to parse request body", err.Error()))
-	}
-
-	// 验证请求参数
-	if err := c.validator.Struct(&req); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse(
-			"Request validation failed",
-			resources.FormatValidationErrors(err),
-		))
+	req, reqErr := c.bindAndValidateUpdateProfileRequest(ctx)
+	if reqErr != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse(reqErr.message, reqErr.details))
 	}
 
 	// 构建更新数据
@@ -173,7 +173,7 @@ func (c *UserController) UpdateUser(ctx fiber.Ctx) error {
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(resources.SuccessResponse("User updated successfully", fiber.Map{
-		"user": user.ToSafeResponse(),
+		"user": user.ToSafeUser(),
 	}))
 }
 
@@ -226,18 +226,9 @@ func (c *UserController) UpdateProfile(ctx fiber.Ctx) error {
 		return ctx.Status(fiber.StatusUnauthorized).JSON(resources.ErrorResponse("Unauthenticated user", nil))
 	}
 
-	// 解析请求体
-	var req UpdateProfileRequest
-	if err := ctx.Bind().Body(&req); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse("Failed to parse request body", err.Error()))
-	}
-
-	// 验证请求参数
-	if err := c.validator.Struct(&req); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse(
-			"Request validation failed",
-			resources.FormatValidationErrors(err),
-		))
+	req, reqErr := c.bindAndValidateUpdateProfileRequest(ctx)
+	if reqErr != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(resources.ErrorResponse(reqErr.message, reqErr.details))
 	}
 
 	// 构建更新资料
@@ -264,8 +255,28 @@ func (c *UserController) UpdateProfile(ctx fiber.Ctx) error {
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(resources.SuccessResponse("Profile updated successfully", fiber.Map{
-		"user": updatedUser.ToSafeResponse(),
+		"user": updatedUser.ToSafeUser(),
 	}))
+}
+
+func (c *UserController) bindAndValidateUpdateProfileRequest(ctx fiber.Ctx) (UpdateProfileRequest, *requestValidationError) {
+	var req UpdateProfileRequest
+
+	if err := ctx.Bind().Body(&req); err != nil {
+		return req, &requestValidationError{
+			message: "Failed to parse request body",
+			details: err.Error(),
+		}
+	}
+
+	if err := c.validator.Struct(&req); err != nil {
+		return req, &requestValidationError{
+			message: "Request validation failed",
+			details: resources.FormatValidationErrors(err),
+		}
+	}
+
+	return req, nil
 }
 
 // GetCurrentUser 获取当前登录用户的信息

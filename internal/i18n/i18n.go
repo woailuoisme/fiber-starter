@@ -3,6 +3,7 @@ package i18n
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -25,10 +26,7 @@ var DefaultLanguage string
 
 // Init Initialize i18n system
 func Init() error {
-	// Get config
 	cfg := config.GlobalConfig.I18n
-
-	// Set default language and supported languages list
 	DefaultLanguage = cfg.DefaultLanguage
 	SupportedLanguages = cfg.SupportedLanguages
 
@@ -58,41 +56,18 @@ func Init() error {
 
 // LoadLanguageFiles Load language files
 func LoadLanguageFiles() error {
-	cfg := config.GlobalConfig.I18n
-	languageDir := cfg.LanguageDir
+	languageDir := config.GlobalConfig.I18n.LanguageDir
 
-	// Check if language directory exists
-	if _, err := os.Stat(languageDir); os.IsNotExist(err) {
-		helpers.Warn("Language directory does not exist, will create directory", zap.String("dir", languageDir))
-		if err := os.MkdirAll(languageDir, 0750); err != nil {
-			return err
-		}
+	if err := ensureLanguageDir(languageDir); err != nil {
+		return err
 	}
 
-	// Load each supported language file
 	for _, lang := range SupportedLanguages {
-		filename := filepath.Join(languageDir, lang+".json")
-
-		// Check if file exists
-		if _, err := os.Stat(filename); os.IsNotExist(err) {
-			helpers.Warn("Language file does not exist",
+		if err := loadLanguageFile(languageDir, lang); err != nil {
+			helpers.Warn("Skipping language file",
 				zap.String("language", lang),
-				zap.String("file", filename))
-			continue
-		}
-
-		// Load language file
-		if _, err := Bundle.LoadMessageFile(filename); err != nil {
-			helpers.Error("Failed to load language file",
-				zap.String("language", lang),
-				zap.String("file", filename),
 				zap.Error(err))
-			continue
 		}
-
-		helpers.Info("Language file loaded successfully",
-			zap.String("language", lang),
-			zap.String("file", filename))
 	}
 
 	return nil
@@ -124,6 +99,33 @@ func IsSupported(lang string) bool {
 		}
 	}
 	return false
+}
+
+func ensureLanguageDir(languageDir string) error {
+	if _, err := os.Stat(languageDir); err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	helpers.Warn("Language directory does not exist, will create directory", zap.String("dir", languageDir))
+	return os.MkdirAll(languageDir, 0o750)
+}
+
+func loadLanguageFile(languageDir, lang string) error {
+	filename := filepath.Join(languageDir, fmt.Sprintf("%s.json", lang))
+	if _, err := os.Stat(filename); err != nil {
+		return err
+	}
+
+	if _, err := Bundle.LoadMessageFile(filename); err != nil {
+		return err
+	}
+
+	helpers.Info("Language file loaded successfully",
+		zap.String("language", lang),
+		zap.String("file", filename))
+	return nil
 }
 
 // Reload Reload language files (for hot reload)

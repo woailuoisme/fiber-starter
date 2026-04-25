@@ -1,10 +1,6 @@
 package command
 
 import (
-	"os"
-	"os/signal"
-	"syscall"
-
 	"fiber-starter/internal/platform/helpers"
 	schedule "fiber-starter/internal/scheduler"
 
@@ -39,9 +35,7 @@ func runSchedule() {
 	kernel.Start()
 
 	// Wait for interrupt signal
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	<-waitForInterrupt()
 
 	helpers.Info("Stopping scheduled task scheduler...")
 	kernel.Stop()

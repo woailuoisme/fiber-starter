@@ -5,6 +5,14 @@ import (
 	"fmt"
 )
 
+func newAPIException(message string, code int) *APIException {
+	return &APIException{
+		Message: message,
+		Code:    code,
+		Errors:  make(map[string][]string),
+	}
+}
+
 // APIException 基础异常类型
 // Requirements: 11.1, 11.3, 11.11, 11.12, 11.13
 type APIException struct {
@@ -20,11 +28,7 @@ func (e *APIException) Error() string {
 
 // NewAPIException 创建新的 API 异常
 func NewAPIException(message string, code int) *APIException {
-	return &APIException{
-		Message: message,
-		Code:    code,
-		Errors:  make(map[string][]string),
-	}
+	return newAPIException(message, code)
 }
 
 // WithMessage 设置异常消息（链式调用）
@@ -69,11 +73,7 @@ func NewValidationException(message string) *ValidationException {
 		message = "Validation failed"
 	}
 	return &ValidationException{
-		APIException: &APIException{
-			Message: message,
-			Code:    422,
-			Errors:  make(map[string][]string),
-		},
+		APIException: newAPIException(message, 422),
 	}
 }
 
@@ -83,11 +83,7 @@ func NewValidationExceptionWithErrors(message string, errors map[string][]string
 		message = "Validation failed"
 	}
 	return &ValidationException{
-		APIException: &APIException{
-			Message: message,
-			Code:    422,
-			Errors:  errors,
-		},
+		APIException: &APIException{Message: message, Code: 422, Errors: errors},
 	}
 }
 
@@ -103,11 +99,7 @@ func NewAuthenticationException(message string) *AuthenticationException {
 		message = "Unauthenticated"
 	}
 	return &AuthenticationException{
-		APIException: &APIException{
-			Message: message,
-			Code:    401,
-			Errors:  make(map[string][]string),
-		},
+		APIException: newAPIException(message, 401),
 	}
 }
 
@@ -123,11 +115,7 @@ func NewAuthorizationException(message string) *AuthorizationException {
 		message = "Forbidden"
 	}
 	return &AuthorizationException{
-		APIException: &APIException{
-			Message: message,
-			Code:    403,
-			Errors:  make(map[string][]string),
-		},
+		APIException: newAPIException(message, 403),
 	}
 }
 
@@ -143,11 +131,7 @@ func NewNotFoundException(message string) *NotFoundException {
 		message = "Resource not found"
 	}
 	return &NotFoundException{
-		APIException: &APIException{
-			Message: message,
-			Code:    404,
-			Errors:  make(map[string][]string),
-		},
+		APIException: newAPIException(message, 404),
 	}
 }
 
@@ -168,11 +152,7 @@ func NewBadRequestException(message string) *BadRequestException {
 		message = "Bad request"
 	}
 	return &BadRequestException{
-		APIException: &APIException{
-			Message: message,
-			Code:    400,
-			Errors:  make(map[string][]string),
-		},
+		APIException: newAPIException(message, 400),
 	}
 }
 
@@ -188,11 +168,7 @@ func NewConflictException(message string) *ConflictException {
 		message = "Conflict"
 	}
 	return &ConflictException{
-		APIException: &APIException{
-			Message: message,
-			Code:    409,
-			Errors:  make(map[string][]string),
-		},
+		APIException: newAPIException(message, 409),
 	}
 }
 
@@ -208,21 +184,13 @@ func NewServerException(message string) *ServerException {
 		message = "Internal server error"
 	}
 	return &ServerException{
-		APIException: &APIException{
-			Message: message,
-			Code:    500,
-			Errors:  make(map[string][]string),
-		},
+		APIException: newAPIException(message, 500),
 	}
 }
 
 // NewServerExceptionFromError 从 error 创建服务器异常
 func NewServerExceptionFromError(err error) *ServerException {
 	return &ServerException{
-		APIException: &APIException{
-			Message: err.Error(),
-			Code:    500,
-			Errors:  make(map[string][]string),
-		},
+		APIException: newAPIException(err.Error(), 500),
 	}
 }

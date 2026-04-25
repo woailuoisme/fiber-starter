@@ -3,6 +3,7 @@ package providers
 import (
 	"fiber-starter/internal/config"
 	"fiber-starter/internal/platform/helpers"
+
 	"go.uber.org/dig"
 )
 

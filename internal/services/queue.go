@@ -83,66 +83,54 @@ func (q *queueService) getServer() *asynq.Server {
 	return q.server
 }
 
-// Enqueue Add task to queue
-func (q *queueService) Enqueue(taskName string, payload interface{}, opts ...asynq.Option) (*asynq.TaskInfo, error) {
-	// Serialize payload
+func (q *queueService) enqueue(taskName string, payload interface{}, enqueue func(*asynq.Client, *asynq.Task) (*asynq.TaskInfo, error), opts ...asynq.Option) (*asynq.TaskInfo, error) {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize task payload: %w", err)
 	}
 
-	// Create task
 	task := asynq.NewTask(taskName, payloadBytes, opts...)
-
-	// Add to queue
-	info, err := q.getClient().Enqueue(task)
+	info, err := enqueue(q.getClient(), task)
 	if err != nil {
-		return nil, fmt.Errorf("failed to add task to queue: %w", err)
+		return nil, err
 	}
 
 	return info, nil
+}
+
+// Enqueue Add task to queue
+func (q *queueService) Enqueue(taskName string, payload interface{}, opts ...asynq.Option) (*asynq.TaskInfo, error) {
+	return q.enqueue(taskName, payload, func(client *asynq.Client, task *asynq.Task) (*asynq.TaskInfo, error) {
+		info, err := client.Enqueue(task)
+		if err != nil {
+			return nil, fmt.Errorf("failed to add task to queue: %w", err)
+		}
+		return info, nil
+	}, opts...)
 }
 
 // EnqueueIn Add task to queue with delay
 func (q *queueService) EnqueueIn(taskName string, payload interface{},
 	delay time.Duration, opts ...asynq.Option) (*asynq.TaskInfo, error) {
-	// Serialize payload
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to serialize task payload: %w", err)
-	}
-
-	// Create task
-	task := asynq.NewTask(taskName, payloadBytes, opts...)
-
-	// Delayed add to queue
-	info, err := q.getClient().Enqueue(task, asynq.ProcessIn(delay))
-	if err != nil {
-		return nil, fmt.Errorf("failed to add task to queue with delay: %w", err)
-	}
-
-	return info, nil
+	return q.enqueue(taskName, payload, func(client *asynq.Client, task *asynq.Task) (*asynq.TaskInfo, error) {
+		info, err := client.Enqueue(task, asynq.ProcessIn(delay))
+		if err != nil {
+			return nil, fmt.Errorf("failed to add task to queue with delay: %w", err)
+		}
+		return info, nil
+	}, opts...)
 }
 
 // EnqueueAt Add task to queue at specified time
 func (q *queueService) EnqueueAt(taskName string, payload interface{},
 	at time.Time, opts ...asynq.Option) (*asynq.TaskInfo, error) {
-	// Serialize payload
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to serialize task payload: %w", err)
-	}
-
-	// Create task
-	task := asynq.NewTask(taskName, payloadBytes, opts...)
-
-	// Add to queue at specified time
-	info, err := q.getClient().Enqueue(task, asynq.ProcessAt(at))
-	if err != nil {
-		return nil, fmt.Errorf("failed to add task to queue at specified time: %w", err)
-	}
-
-	return info, nil
+	return q.enqueue(taskName, payload, func(client *asynq.Client, task *asynq.Task) (*asynq.TaskInfo, error) {
+		info, err := client.Enqueue(task, asynq.ProcessAt(at))
+		if err != nil {
+			return nil, fmt.Errorf("failed to add task to queue at specified time: %w", err)
+		}
+		return info, nil
+	}, opts...)
 }
 
 // RegisterHandler Register task handler
@@ -153,69 +141,47 @@ func (q *queueService) RegisterHandler(taskName string, handler asynq.HandlerFun
 
 // StartWorker Start worker process
 func (q *queueService) StartWorker() error {
-	q.mu.Lock()
-	if q.isRunning {
-		q.mu.Unlock()
+	if !q.setRunning(true) {
 		return fmt.Errorf("worker process is already running")
 	}
-	q.isRunning = true
-	q.mu.Unlock()
 
 	go func() {
 		if err := q.getServer().Run(q.mux); err != nil {
 			helpers.LogError("Queue worker process start failed", zap.Error(err))
 		}
-		q.mu.Lock()
-		q.isRunning = false
-		q.mu.Unlock()
+		q.setRunning(false)
 	}()
 
 	return nil
 }
 
 func (q *queueService) RunWorker() error {
-	q.mu.Lock()
-	if q.isRunning {
-		q.mu.Unlock()
+	if !q.setRunning(true) {
 		return fmt.Errorf("worker process is already running")
 	}
-	q.isRunning = true
-	q.mu.Unlock()
 
 	err := q.getServer().Run(q.mux)
-
-	q.mu.Lock()
-	q.isRunning = false
-	q.mu.Unlock()
+	q.setRunning(false)
 
 	return err
 }
 
 // StopWorker Stop worker process
 func (q *queueService) StopWorker() error {
-	q.mu.Lock()
-	if !q.isRunning {
-		q.mu.Unlock()
+	if !q.setRunning(false) {
 		return fmt.Errorf("worker process is not running")
 	}
-	q.mu.Unlock()
 
-	// 优雅关闭
 	q.getServer().Shutdown()
-	q.mu.Lock()
-	q.isRunning = false
-	q.mu.Unlock()
 
-	// 关闭客户端
 	_ = q.getClient().Close()
 
 	return nil
 }
 
 func (q *queueService) Close() error {
-	if q.isRunning {
+	if q.setRunning(false) {
 		q.getServer().Shutdown()
-		q.isRunning = false
 	}
 	if q.client != nil {
 		return q.client.Close()
@@ -266,3 +232,15 @@ type (
 		UserID uint `json:"user_id"`
 	}
 )
+
+func (q *queueService) setRunning(running bool) bool {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	if q.isRunning == running {
+		return false
+	}
+
+	q.isRunning = running
+	return true
+}

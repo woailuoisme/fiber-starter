@@ -147,7 +147,7 @@ func (c *redisCache) GetJSON(key string, dest interface{}) error {
 	return nil
 }
 
-// Delete Delete cache
+// Delete cache
 func (c *redisCache) Delete(key string) error {
 	ctx := context.Background()
 	cacheKey := c.buildKey(key)
@@ -243,7 +243,7 @@ func (c *redisCache) Expire(key string, expiration time.Duration) error {
 	return nil
 }
 
-// Increment Increment cache value
+// Increment cache value
 func (c *redisCache) Increment(key string) (int64, error) {
 	ctx := context.Background()
 	cacheKey := c.buildKey(key)
@@ -258,7 +258,7 @@ func (c *redisCache) Increment(key string) (int64, error) {
 	return result, nil
 }
 
-// Decrement Decrement cache value
+// Decrement cache value
 func (c *redisCache) Decrement(key string) (int64, error) {
 	ctx := context.Background()
 	cacheKey := c.buildKey(key)

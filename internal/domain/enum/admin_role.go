@@ -42,9 +42,13 @@ var legacyRoleMap = map[string]AdminRole{
 	"Customer Service": RepWorker,
 }
 
+func adminRoleInfo(role AdminRole) (EnumInfo[AdminRole], bool) {
+	return FindInMap(role, adminRoleMap)
+}
+
 // String 实现Stringer接口
 func (r AdminRole) String() string {
-	if info, exists := FindInMap(r, adminRoleMap); exists {
+	if info, exists := adminRoleInfo(r); exists {
 		return info.Label
 	}
 	return string(r)
@@ -52,15 +56,12 @@ func (r AdminRole) String() string {
 
 // Label 获取标签文本（类似PHP的getLabelText）
 func (r AdminRole) Label() string {
-	if info, exists := FindInMap(r, adminRoleMap); exists {
-		return info.Label
-	}
-	return string(r)
+	return r.String()
 }
 
 // Color 获取颜色（类似PHP的getColor）
 func (r AdminRole) Color() string {
-	if info, exists := FindInMap(r, adminRoleMap); exists {
+	if info, exists := adminRoleInfo(r); exists {
 		return info.Color
 	}
 	return "gray"
@@ -68,7 +69,7 @@ func (r AdminRole) Color() string {
 
 // Priority 获取优先级
 func (r AdminRole) Priority() int {
-	if info, exists := FindInMap(r, adminRoleMap); exists {
+	if info, exists := adminRoleInfo(r); exists {
 		return info.Priority
 	}
 	return 999
@@ -76,7 +77,7 @@ func (r AdminRole) Priority() int {
 
 // IsValid 检查角色是否有效
 func (r AdminRole) IsValid() bool {
-	_, exists := FindInMap(r, adminRoleMap)
+	_, exists := adminRoleInfo(r)
 	return exists
 }
 
@@ -117,14 +118,7 @@ func AdminRoleValues() []AdminRole {
 
 // AdminRoleSortedValues SortedValues 获取按优先级排序的角色值
 func AdminRoleSortedValues() []AdminRole {
-	infos := GetInfosFromMap(adminRoleMap)
-	sortedInfos := SortByPriority(infos)
-
-	values := make([]AdminRole, len(sortedInfos))
-	for i, info := range sortedInfos {
-		values[i] = info.Value
-	}
-	return values
+	return GetValuesFromInfos(SortByPriority(GetInfosFromMap(adminRoleMap)))
 }
 
 // AdminRoleGetOptions GetOptions 获取所有管理员角色及其标签的数组（类似PHP的getOptions）
@@ -144,8 +138,7 @@ func AdminRoleGetAllInfo() []EnumInfo[AdminRole] {
 
 // AdminRoleGetSortedInfo GetSortedInfo 获取按优先级排序的角色信息
 func AdminRoleGetSortedInfo() []EnumInfo[AdminRole] {
-	infos := GetInfosFromMap(adminRoleMap)
-	return SortByPriority(infos)
+	return SortByPriority(GetInfosFromMap(adminRoleMap))
 }
 
 // HasPermission 检查是否有权限（可以扩展为更复杂的权限系统）

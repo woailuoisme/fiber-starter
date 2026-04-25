@@ -22,18 +22,19 @@ type MailConfig struct {
 
 // StorageConfig 存储配置
 type StorageConfig struct {
-	Driver     string              `mapstructure:"driver"`
-	Database   string              `mapstructure:"database"`
-	Reset      bool                `mapstructure:"reset"`
-	GCInterval int                 `mapstructure:"gc_interval"`
-	MinIO      *MinIOStorageConfig `mapstructure:"minio"`
-	S3         *S3StorageConfig    `mapstructure:"s3"`
-	R2         *S3StorageConfig    `mapstructure:"r2"`  // R2 复用 S3 配置
-	OSS        *S3StorageConfig    `mapstructure:"oss"` // OSS 复用 S3 配置
+	Driver     string               `mapstructure:"driver"`
+	Database   string               `mapstructure:"database"`
+	Reset      bool                 `mapstructure:"reset"`
+	GCInterval int                  `mapstructure:"gc_interval"`
+	Garage     *GarageStorageConfig `mapstructure:"garage"`
+	MinIO      *GarageStorageConfig `mapstructure:"minio"` // Legacy alias for backward compatibility
+	S3         *S3StorageConfig     `mapstructure:"s3"`
+	R2         *S3StorageConfig     `mapstructure:"r2"`  // R2 复用 S3 配置
+	OSS        *S3StorageConfig     `mapstructure:"oss"` // OSS 复用 S3 配置
 }
 
-// MinIOStorageConfig MinIO存储配置
-type MinIOStorageConfig struct {
+// GarageStorageConfig Garage存储配置
+type GarageStorageConfig struct {
 	Endpoint        string `mapstructure:"endpoint"`
 	AccessKeyID     string `mapstructure:"access_key_id"`
 	SecretAccessKey string `mapstructure:"secret_access_key"`
@@ -90,10 +91,11 @@ type AppConfig struct {
 
 // FiberConfig Fiber 框架配置
 type FiberConfig struct {
-	Prefork      bool   `mapstructure:"prefork"`
-	ServerHeader string `mapstructure:"server_header"`
-	BodyLimit    int    `mapstructure:"body_limit"`
-	Concurrency  int    `mapstructure:"concurrency"`
+	Prefork        bool   `mapstructure:"prefork"`
+	ServerHeader   string `mapstructure:"server_header"`
+	BodyLimit      int    `mapstructure:"body_limit"`
+	Concurrency    int    `mapstructure:"concurrency"`
+	ReadBufferSize int    `mapstructure:"read_buffer_size"`
 }
 
 // DatabaseConfig 数据库配置
@@ -554,13 +556,15 @@ func LoadConfig() (*Config, error) {
 // defaultConfigValues 默认配置值
 var defaultConfigValues = map[string]interface{}{
 	// App配置
-	"app.name":     "fiber-starter",
-	"app.env":      "development",
-	"app.debug":    true,
-	"app.port":     "3000",
-	"app.host":     "0.0.0.0",
-	"app.timezone": "UTC",
-	"app.url":      "http://localhost:3000",
+	"app.name":                   "fiber-starter",
+	"app.env":                    "development",
+	"app.debug":                  true,
+	"app.port":                   "3000",
+	"app.host":                   "0.0.0.0",
+	"app.timezone":               "UTC",
+	"app.url":                    "http://localhost:3000",
+	"app.fiber.prefork":          false,
+	"app.fiber.read_buffer_size": 16384,
 
 	// 日志配置
 	"logger.level":       "info",
@@ -600,18 +604,18 @@ var defaultConfigValues = map[string]interface{}{
 	"queue.concurrency": 10,
 
 	// 存储配置
-	"storage.driver":      "minio",
+	"storage.driver":      "garage",
 	"storage.database":    "./storage/storage.db",
 	"storage.reset":       false,
 	"storage.gc_interval": 10, // 10分钟
 
-	// MinIO配置
-	"storage.minio.endpoint":          "localhost:9000",
-	"storage.minio.access_key_id":     "minioadmin",
-	"storage.minio.secret_access_key": "minioadmin",
-	"storage.minio.use_ssl":           false,
-	"storage.minio.bucket":            "lunchbox-media",
-	"storage.minio.region":            "us-east-1",
+	// Garage配置
+	"storage.garage.endpoint":          "localhost:9000",
+	"storage.garage.access_key_id":     "garageadmin",
+	"storage.garage.secret_access_key": "garageadmin",
+	"storage.garage.use_ssl":           false,
+	"storage.garage.bucket":            "lunchbox-media",
+	"storage.garage.region":            "us-east-1",
 
 	// S3配置
 	"storage.s3.region": "us-east-1",
@@ -663,7 +667,8 @@ var envVarMappings = map[string]string{
 	"MEILISEARCH_API_KEY": "meilisearch.api_key",
 
 	// Fiber配置
-	"FIBER_PREFORK": "app.fiber.prefork",
+	"FIBER_PREFORK":          "app.fiber.prefork",
+	"FIBER_READ_BUFFER_SIZE": "app.fiber.read_buffer_size",
 
 	// JWT配置
 	"JWT_SECRET":          "jwt.secret",
@@ -703,13 +708,13 @@ var envVarMappings = map[string]string{
 	// Storage配置
 	"STORAGE_DRIVER": "storage.driver",
 
-	// MinIO配置
-	"MINIO_ENDPOINT":          "storage.minio.endpoint",
-	"MINIO_ACCESS_KEY_ID":     "storage.minio.access_key_id",
-	"MINIO_SECRET_ACCESS_KEY": "storage.minio.secret_access_key",
-	"MINIO_USE_SSL":           "storage.minio.use_ssl",
-	"MINIO_BUCKET":            "storage.minio.bucket",
-	"MINIO_REGION":            "storage.minio.region",
+	// Garage配置
+	"GARAGE_ENDPOINT":          "storage.garage.endpoint",
+	"GARAGE_ACCESS_KEY_ID":     "storage.garage.access_key_id",
+	"GARAGE_SECRET_ACCESS_KEY": "storage.garage.secret_access_key",
+	"GARAGE_USE_SSL":           "storage.garage.use_ssl",
+	"GARAGE_BUCKET":            "storage.garage.bucket",
+	"GARAGE_REGION":            "storage.garage.region",
 
 	// S3配置
 	"S3_ACCESS_KEY_ID":     "storage.s3.access_key_id",
@@ -763,9 +768,32 @@ func overrideWithEnv() {
 		}
 	}
 
+	overrideLegacyGarageEnv()
+
 	// 特殊处理 CACHE_DEFAULT_TTL
 	if v := os.Getenv("CACHE_DEFAULT_TTL"); v != "" {
 		viper.Set("cache.ttl", v)
+	}
+}
+
+func overrideLegacyGarageEnv() {
+	legacyMappings := map[string]string{
+		"MINIO_ENDPOINT":          "storage.garage.endpoint",
+		"MINIO_ACCESS_KEY_ID":     "storage.garage.access_key_id",
+		"MINIO_SECRET_ACCESS_KEY": "storage.garage.secret_access_key",
+		"MINIO_USE_SSL":           "storage.garage.use_ssl",
+		"MINIO_BUCKET":            "storage.garage.bucket",
+		"MINIO_REGION":            "storage.garage.region",
+	}
+
+	for legacyEnv, key := range legacyMappings {
+		canonicalEnv := strings.Replace(legacyEnv, "MINIO_", "GARAGE_", 1)
+		if os.Getenv(canonicalEnv) != "" {
+			continue
+		}
+		if v := os.Getenv(legacyEnv); v != "" {
+			viper.Set(key, v)
+		}
 	}
 }
 
