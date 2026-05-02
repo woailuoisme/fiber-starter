@@ -9,7 +9,6 @@ import (
 	helpers "fiber-starter/app/Support"
 	"fiber-starter/config"
 
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gofiber/storage"
 	"github.com/klauspost/compress/zstd"
 	"go.uber.org/zap"
@@ -34,11 +33,6 @@ type StorageService struct {
 	zstdDecoder *zstd.Decoder
 	initMu      sync.Mutex
 	initialized uint32
-}
-
-type S3Storage struct {
-	client *s3.Client
-	bucket string
 }
 
 func NewStorageService(cfg *config.StorageConfig, redisCfg *config.RedisConfig) (*StorageService, error) {

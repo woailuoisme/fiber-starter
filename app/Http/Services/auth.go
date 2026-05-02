@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -11,10 +12,10 @@ import (
 	helpers "fiber-starter/app/Support"
 	"fiber-starter/config"
 	database "fiber-starter/database"
+	dbsqlc "fiber-starter/database/sqlc"
 
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 // AuthService 认证服务接口
@@ -39,8 +40,8 @@ func NewAuthService(db *database.Connection, cfg *config.Config, cache helpers.C
 }
 
 func (s *authService) Register(user *models.User) error {
-	return withGormDB(s.db, func(db *gorm.DB) error {
-		exists, err := userExistsByEmail(context.Background(), db, user.Email)
+	return withQueries(s.db, func(q *dbsqlc.Queries) error {
+		exists, err := q.UserExistsByEmail(context.Background(), user.Email)
 		if err != nil {
 			return err
 		}
@@ -57,10 +58,22 @@ func (s *authService) Register(user *models.User) error {
 		if user.Status == "" {
 			user.Status = models.UserStatusActive
 		}
-		user.CreatedAt = utcNow()
-		user.UpdatedAt = user.CreatedAt
+		now := utcNow()
+		user.CreatedAt = now
+		user.UpdatedAt = now
 
-		if err := db.WithContext(context.Background()).Create(user).Error; err != nil {
+		_, err = q.CreateUser(context.Background(), dbsqlc.CreateUserParams{
+			Name:            user.Name,
+			Email:           user.Email,
+			Password:        user.Password,
+			Avatar:          user.Avatar,
+			Phone:           user.Phone,
+			Status:          user.Status,
+			EmailVerifiedAt: user.EmailVerifiedAt,
+			CreatedAt:       user.CreatedAt,
+			UpdatedAt:       user.UpdatedAt,
+		})
+		if err != nil {
 			return fmt.Errorf("failed to create user: %w", err)
 		}
 
@@ -72,11 +85,11 @@ func (s *authService) Login(email, password string) (*models.User, string, strin
 	var user models.User
 	var accessToken, refreshToken string
 
-	err := withGormDB(s.db, func(db *gorm.DB) error {
+	err := withQueries(s.db, func(q *dbsqlc.Queries) error {
 		var err error
-		user, err = getUserByEmail(context.Background(), db, email)
+		user, err = q.GetUserByEmail(context.Background(), email)
 		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
+			if errors.Is(err, sql.ErrNoRows) {
 				return errors.New("invalid email or password")
 			}
 			helpers.LogError("Failed to query user", zap.Error(err))
@@ -129,9 +142,9 @@ func (s *authService) RefreshToken(refreshToken string) (string, string, error) 
 
 	var user models.User
 	var newAccessToken, newRefreshToken string
-	err = withGormDB(s.db, func(db *gorm.DB) error {
+	err = withQueries(s.db, func(q *dbsqlc.Queries) error {
 		var err error
-		user, err = getUserByID(context.Background(), db, claims.UserID)
+		user, err = q.GetUserByID(context.Background(), claims.UserID)
 		if err != nil {
 			return fmt.Errorf("user not found: %w", err)
 		}
@@ -183,9 +196,12 @@ func (s *authService) Logout(token string) error {
 }
 
 func (s *authService) ChangePassword(userID int64, oldPassword, newPassword string) error {
-	return withGormDB(s.db, func(db *gorm.DB) error {
-		user, err := getUserByID(context.Background(), db, userID)
+	return withQueries(s.db, func(q *dbsqlc.Queries) error {
+		user, err := q.GetUserByID(context.Background(), userID)
 		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return errors.New("user not found")
+			}
 			return fmt.Errorf("user not found: %w", err)
 		}
 
@@ -198,14 +214,11 @@ func (s *authService) ChangePassword(userID int64, oldPassword, newPassword stri
 			return fmt.Errorf("failed to hash password: %w", err)
 		}
 
-		err = db.WithContext(context.Background()).
-			Model(&models.User{}).
-			Where("id = ? AND deleted_at IS NULL", userID).
-			Updates(map[string]interface{}{
-				"password":   string(hashedPassword),
-				"updated_at": utcNow(),
-			}).Error
-		if err != nil {
+		if err := q.UpdatePassword(context.Background(), dbsqlc.UpdatePasswordParams{
+			ID:        userID,
+			Password:  string(hashedPassword),
+			UpdatedAt: utcNow(),
+		}); err != nil {
 			return fmt.Errorf("failed to update password: %w", err)
 		}
 
@@ -214,10 +227,10 @@ func (s *authService) ChangePassword(userID int64, oldPassword, newPassword stri
 }
 
 func (s *authService) ForgotPassword(email string) error {
-	return withGormDB(s.db, func(db *gorm.DB) error {
-		user, err := getUserByEmail(context.Background(), db, email)
+	return withQueries(s.db, func(q *dbsqlc.Queries) error {
+		user, err := q.GetUserByEmail(context.Background(), email)
 		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
+			if errors.Is(err, sql.ErrNoRows) {
 				return nil
 			}
 			return fmt.Errorf("failed to query user: %w", err)
@@ -241,49 +254,24 @@ func (s *authService) ResetPassword(token, email, newPassword string) error {
 		return errors.New("invalid or expired reset token")
 	}
 
-	return withGormDB(s.db, func(db *gorm.DB) error {
+	return withQueries(s.db, func(q *dbsqlc.Queries) error {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 		if err != nil {
 			return fmt.Errorf("failed to hash password: %w", err)
 		}
 
-		err = db.WithContext(context.Background()).
-			Model(&models.User{}).
-			Where("email = ? AND deleted_at IS NULL", email).
-			Updates(map[string]interface{}{
-				"password":   string(hashedPassword),
-				"updated_at": utcNow(),
-			}).Error
-		if err != nil {
+		if err := q.ResetPasswordByEmail(context.Background(), dbsqlc.ResetPasswordByEmailParams{
+			Email:     email,
+			Password:  string(hashedPassword),
+			UpdatedAt: utcNow(),
+		}); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return errors.New("user not found")
+			}
 			return fmt.Errorf("failed to reset password: %w", err)
 		}
 
 		_ = s.cache.Delete(cacheKey)
 		return nil
 	})
-}
-
-func userExistsByEmail(ctx context.Context, db *gorm.DB, email string) (bool, error) {
-	var count int64
-	err := db.WithContext(ctx).
-		Model(&models.User{}).
-		Where("email = ? AND deleted_at IS NULL", email).
-		Count(&count).Error
-	return count > 0, err
-}
-
-func getUserByEmail(ctx context.Context, db *gorm.DB, email string) (models.User, error) {
-	var user models.User
-	err := db.WithContext(ctx).
-		Where("email = ? AND deleted_at IS NULL", email).
-		First(&user).Error
-	return user, err
-}
-
-func getUserByID(ctx context.Context, db *gorm.DB, id int64) (models.User, error) {
-	var user models.User
-	err := db.WithContext(ctx).
-		Where("id = ? AND deleted_at IS NULL", id).
-		First(&user).Error
-	return user, err
 }

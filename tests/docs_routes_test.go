@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"fiber-starter/app/Http/Controllers"
 	"fiber-starter/routes"
 
 	"github.com/gofiber/fiber/v3"
@@ -13,12 +14,28 @@ import (
 
 func TestDocsRoutes_ExposeScalarAndOpenAPISpec(t *testing.T) {
 	app := fiber.New()
-	app.Get("/", func(c fiber.Ctx) error {
-		return c.SendStatus(fiber.StatusOK)
-	})
-	routes.SetupRoutes(app, func(c fiber.Ctx) error {
+	routes.SetupRoutes(app, nil, func(c fiber.Ctx) error {
 		return c.Next()
-	}, nil, nil, nil)
+	}, &controllers.AuthController{}, &controllers.UserController{}, &controllers.HealthController{})
+
+	rootResp, err := app.Test(httptest.NewRequest("GET", "/", nil))
+	if err != nil {
+		t.Fatalf("Request / failed: %v", err)
+	}
+	if rootResp.StatusCode != fiber.StatusOK {
+		t.Fatalf("/ status code incorrect: got=%d want=%d", rootResp.StatusCode, fiber.StatusOK)
+	}
+	rootBody, err := io.ReadAll(rootResp.Body)
+	if err != nil {
+		t.Fatalf("Read / body failed: %v", err)
+	}
+	rootJSON := string(rootBody)
+	if !strings.Contains(rootJSON, `"success":true`) || !strings.Contains(rootJSON, `"message":"Welcome to Fiber Starter API"`) {
+		t.Fatalf("/ did not return unified success response")
+	}
+	if !strings.Contains(rootJSON, `"api":"/api/v1"`) {
+		t.Fatalf("/ response did not include api version link")
+	}
 
 	docsResp, err := app.Test(httptest.NewRequest("GET", "/docs", nil))
 	if err != nil {
@@ -47,8 +64,8 @@ func TestDocsRoutes_ExposeScalarAndOpenAPISpec(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Read /openapi.json body failed: %v", err)
 	}
-	if !strings.Contains(string(specBody), `"swagger"`) {
-		t.Fatalf("/openapi.json did not return generated swagger spec")
+	if !strings.Contains(string(specBody), `"openapi": "3.1.0"`) {
+		t.Fatalf("/openapi.json did not return an OpenAPI 3.1 document")
 	}
 
 	monitorResp, err := app.Test(httptest.NewRequest("GET", "/monitor", nil))

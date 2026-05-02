@@ -47,7 +47,7 @@ func NewCacheService(cfg *config.Config) CacheService {
 
 	// Lazy connection: no Ping check here
 	// Connection will be established automatically when commands are actually called
-	Logger.Info("Redis service configured (lazy connection)",
+	Info("Redis service configured (lazy connection)",
 		zap.String("host", cfg.Redis.Host),
 		zap.String("port", cfg.Redis.Port),
 		zap.Int("db", cfg.Redis.DB))

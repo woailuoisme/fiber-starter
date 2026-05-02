@@ -6,21 +6,25 @@ import (
 	"time"
 
 	database "fiber-starter/database"
-
-	"gorm.io/gorm"
+	dbsqlc "fiber-starter/database/sqlc"
 )
 
-func withGormDB(conn *database.Connection, fn func(*gorm.DB) error) error {
+func withQueries(conn *database.Connection, fn func(*dbsqlc.Queries) error) error {
 	if conn == nil {
 		return errors.New("database connection is nil")
 	}
 
-	db, err := conn.GetGormDB()
+	db, err := conn.GetDB()
 	if err != nil {
 		return err
 	}
 
-	return fn(db)
+	dialect, err := conn.Dialect()
+	if err != nil {
+		return err
+	}
+
+	return fn(dbsqlc.New(db, dialect))
 }
 
 func utcNow() time.Time {

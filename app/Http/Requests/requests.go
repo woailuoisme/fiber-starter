@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	exceptions "fiber-starter/app/Exceptions"
-	appresources "fiber-starter/app/Http/Resources"
+	helpers "fiber-starter/app/Support"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
@@ -81,7 +81,7 @@ func ValidateStruct(s interface{}) error {
 	err := Validator.Struct(s)
 	if err != nil {
 		if validationErrors, ok := errors.AsType[validator.ValidationErrors](err); ok {
-			errors := appresources.FormatValidationErrors(validationErrors)
+			errors := helpers.FormatValidationErrors(validationErrors)
 			return exceptions.NewValidationExceptionWithErrors("Validation failed", errors)
 		}
 		return exceptions.NewValidationException(err.Error())

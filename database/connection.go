@@ -17,9 +17,6 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
-	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
 const (
@@ -35,7 +32,6 @@ var DB *sql.DB
 
 type Connection struct {
 	db     *sql.DB
-	gormDB *gorm.DB
 	config *config.Config
 	mu     sync.RWMutex
 }
@@ -116,49 +112,6 @@ func (c *Connection) Dialect() (string, error) {
 	}
 }
 
-func (c *Connection) GetGormDB() (*gorm.DB, error) {
-	c.mu.RLock()
-	if c.gormDB != nil {
-		db := c.gormDB
-		c.mu.RUnlock()
-		return db, nil
-	}
-	c.mu.RUnlock()
-
-	sqlDB, err := c.GetDB()
-	if err != nil {
-		return nil, err
-	}
-
-	dialect, err := c.Dialect()
-	if err != nil {
-		return nil, err
-	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if c.gormDB != nil {
-		return c.gormDB, nil
-	}
-
-	var gormDB *gorm.DB
-	switch dialect {
-	case dialectPostgres:
-		gormDB, err = gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
-	case dialectSQLite:
-		gormDB, err = gorm.Open(sqlite.Dialector{Conn: sqlDB}, &gorm.Config{})
-	default:
-		err = fmt.Errorf("unsupported database dialect: %s", dialect)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize gorm: %w", err)
-	}
-
-	c.gormDB = gormDB
-	return gormDB, nil
-}
-
 func (c *Connection) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -173,7 +126,6 @@ func (c *Connection) Close() error {
 	}
 
 	c.db = nil
-	c.gormDB = nil
 	helpers.Info("Database connection closed")
 	return nil
 }
@@ -294,6 +246,8 @@ func buildSQLDriverAndDSN(cfg config.DBConnection) (string, string, error) {
 		q := u.Query()
 		q.Set("_foreign_keys", "1")
 		q.Set("_busy_timeout", "5000")
+		q.Set("parseTime", "true")
+		q.Set("_loc", "UTC")
 		u.RawQuery = q.Encode()
 		return "sqlite3", u.String(), nil
 	case driverPostgres, driverPostgreSQL:

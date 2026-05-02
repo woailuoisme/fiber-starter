@@ -118,3 +118,5 @@ storage/framework/views/*
 .claude
 .gemini
 .trae
+specs
+.specify

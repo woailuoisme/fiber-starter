@@ -7,18 +7,18 @@ tmp_dir = "tmp"
   cmd = "go build -o ./tmp/main ./cmd/server"
   # 构建的二进制文件路径
   bin = "tmp/main"
-  # 要监视的文件扩展名
-  include_ext = ["go", "tpl", "tmpl", "html", "yaml", "yml", "env"]
+  # 只监控会影响服务重建的文件类型
+  include_ext = ["go"]
   # 要忽略的文件扩展名
   exclude_ext = ["_test.go"]
-  # 要包含的目录
-  include_dir = []
+  # 白名单目录：只监控服务启动和编译真正依赖的源码目录
+  include_dir = ["app", "bootstrap", "config", "routes", "cmd", "database", "lang"]
   # 要忽略的目录
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "docs", "build", "coverage", "deploy", "storage/logs"]
   # 要忽略的文件
   exclude_file = []
-  # 要监视的文件
-  include_file = []
+  # 仅补充监控 .env 相关文件，避免改环境变量后不重启
+  include_file = [".env", ".env.local", ".env.development", ".env.development.local", ".env.production", ".env.production.local", ".env.test", ".env.test.local"]
   # 延迟时间（毫秒）
   delay = 1000
   # 停止旧进程后启动新进程前的延迟

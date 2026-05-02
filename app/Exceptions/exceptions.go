@@ -210,6 +210,34 @@ func GetAppError(err error) (*AppError, bool) {
 	return nil, false
 }
 
+func GetAPIException(err error) (*APIException, bool) {
+	if apiErr, ok := errors.AsType[*ValidationException](err); ok {
+		return apiErr.APIException, true
+	}
+	if apiErr, ok := errors.AsType[*AuthenticationException](err); ok {
+		return apiErr.APIException, true
+	}
+	if apiErr, ok := errors.AsType[*AuthorizationException](err); ok {
+		return apiErr.APIException, true
+	}
+	if apiErr, ok := errors.AsType[*NotFoundException](err); ok {
+		return apiErr.APIException, true
+	}
+	if apiErr, ok := errors.AsType[*BadRequestException](err); ok {
+		return apiErr.APIException, true
+	}
+	if apiErr, ok := errors.AsType[*ConflictException](err); ok {
+		return apiErr.APIException, true
+	}
+	if apiErr, ok := errors.AsType[*ServerException](err); ok {
+		return apiErr.APIException, true
+	}
+	if apiErr, ok := errors.AsType[*APIException](err); ok {
+		return apiErr, true
+	}
+	return nil, false
+}
+
 func WrapError(err error, code ErrorCode, message string, statusCode int) *AppError {
 	return NewAppErrorWithCause(code, message, statusCode, err)
 }

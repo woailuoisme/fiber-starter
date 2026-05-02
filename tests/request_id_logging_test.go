@@ -65,7 +65,7 @@ func TestRequestID_GeneratedAndLogged(t *testing.T) {
 	var resp *http.Response
 	out := captureStdout(t, func() {
 		app := fiber.New()
-		middleware.SetupMiddleware(app)
+		middleware.SetupMiddleware(app, nil)
 		app.Get("/boom", func(c fiber.Ctx) error {
 			return fiber.NewError(fiber.StatusBadRequest, "boom")
 		})
@@ -113,7 +113,7 @@ func TestRequestID_PreservedAndLogged(t *testing.T) {
 	var resp *http.Response
 	out := captureStdout(t, func() {
 		app := fiber.New()
-		middleware.SetupMiddleware(app)
+		middleware.SetupMiddleware(app, nil)
 		app.Get("/boom", func(c fiber.Ctx) error {
 			return fiber.NewError(fiber.StatusBadRequest, "boom")
 		})

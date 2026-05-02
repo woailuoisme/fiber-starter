@@ -1,11 +1,12 @@
 package bootstrap
 
 import (
-	"encoding/json"
+	"time"
 
-	"fiber-starter/app/Http/Middleware"
+	helpers "fiber-starter/app/Support"
 	"fiber-starter/config"
 
+	json "github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -27,15 +28,42 @@ func createFiberApp(cfg *config.Config) *fiber.App {
 		readBufferSize = 16 * 1024
 	}
 
+	readTimeout := fiberCfg.ReadTimeout
+	if readTimeout <= 0 {
+		readTimeout = 30
+	}
+
+	writeTimeout := fiberCfg.WriteTimeout
+	if writeTimeout <= 0 {
+		writeTimeout = 30
+	}
+
+	idleTimeout := fiberCfg.IdleTimeout
+	if idleTimeout <= 0 {
+		idleTimeout = 120
+	}
+
+	proxyHeader := fiberCfg.ProxyHeader
+	if proxyHeader == "" {
+		proxyHeader = fiber.HeaderXForwardedFor
+	}
+
 	return fiber.New(fiber.Config{
-		ServerHeader:   fiberCfg.ServerHeader,
-		BodyLimit:      bodyLimit,
-		Concurrency:    concurrency,
-		ReadBufferSize: readBufferSize,
-		JSONEncoder:    json.Marshal,
-		JSONDecoder:    json.Unmarshal,
+		ServerHeader:      fiberCfg.ServerHeader,
+		BodyLimit:         bodyLimit,
+		Concurrency:       concurrency,
+		ReadBufferSize:    readBufferSize,
+		ReadTimeout:       time.Duration(readTimeout) * time.Second,
+		WriteTimeout:      time.Duration(writeTimeout) * time.Second,
+		IdleTimeout:       time.Duration(idleTimeout) * time.Second,
+		TrustProxy:        fiberCfg.TrustProxy,
+		ProxyHeader:       proxyHeader,
+		StreamRequestBody: fiberCfg.StreamRequestBody,
+		Immutable:         fiberCfg.Immutable,
+		JSONEncoder:       json.Marshal,
+		JSONDecoder:       json.Unmarshal,
 		ErrorHandler: func(c fiber.Ctx, err error) error {
-			return middleware.HandleError(c, err)
+			return helpers.HandleHTTPError(c, err)
 		},
 	})
 }

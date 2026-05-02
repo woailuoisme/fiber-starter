@@ -10,6 +10,11 @@ const (
 	TaskGenerateReport       = "generate_report"
 	TaskCleanupTempFiles     = "cleanup_temp_files"
 	TaskUpdateUserStatistics = "update_user_statistics"
+
+	DefaultQueueName        = "default"
+	DefaultQueueRetryCount  = 3
+	DefaultQueueRetryDelay  = 30 * time.Second
+	DefaultQueueTaskTimeout = 30 * time.Second
 )
 
 type (

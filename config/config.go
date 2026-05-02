@@ -2,14 +2,17 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 
-	"github.com/spf13/viper"
+	"github.com/joho/godotenv"
+	"github.com/knadh/koanf/providers/confmap"
+	"github.com/knadh/koanf/v2"
 )
 
 type MailConfig struct {
@@ -83,11 +86,18 @@ type AppConfig struct {
 }
 
 type FiberConfig struct {
-	Prefork        bool   `mapstructure:"prefork"`
-	ServerHeader   string `mapstructure:"server_header"`
-	BodyLimit      int    `mapstructure:"body_limit"`
-	Concurrency    int    `mapstructure:"concurrency"`
-	ReadBufferSize int    `mapstructure:"read_buffer_size"`
+	Prefork           bool   `mapstructure:"prefork"`
+	ServerHeader      string `mapstructure:"server_header"`
+	BodyLimit         int    `mapstructure:"body_limit"`
+	Concurrency       int    `mapstructure:"concurrency"`
+	ReadBufferSize    int    `mapstructure:"read_buffer_size"`
+	ReadTimeout       int    `mapstructure:"read_timeout"`
+	WriteTimeout      int    `mapstructure:"write_timeout"`
+	IdleTimeout       int    `mapstructure:"idle_timeout"`
+	TrustProxy        bool   `mapstructure:"trust_proxy"`
+	ProxyHeader       string `mapstructure:"proxy_header"`
+	StreamRequestBody bool   `mapstructure:"stream_request_body"`
+	Immutable         bool   `mapstructure:"immutable"`
 }
 
 type DatabaseConfig struct {
@@ -255,48 +265,26 @@ var loadEnvOnce sync.Once
 func loadEnvFile() {
 	loadEnvOnce.Do(func() {
 		appEnv := os.Getenv("APP_ENV")
-
-		var envFiles []string
-		if appEnv != "" {
-			envFiles = []string{
-				fmt.Sprintf(".env.%s", appEnv),
-				".env",
-			}
-		} else {
-			envFiles = []string{".env"}
+		if appEnv == "" {
+			appEnv = "development"
 		}
 
-		var loaded bool
-		for _, envFile := range envFiles {
-			envPaths := []string{
-				envFile,
-				fmt.Sprintf("./config/%s", envFile),
-				fmt.Sprintf("./configs/%s", envFile),
-				fmt.Sprintf("../%s", envFile),
-			}
+		files := []string{fmt.Sprintf(".env.%s.local", appEnv)}
+		if appEnv != "test" {
+			files = append(files, ".env.local")
+		}
+		files = append(files, fmt.Sprintf(".env.%s", appEnv), ".env")
 
-			for _, path := range envPaths {
+		loaded := false
+		for _, file := range files {
+			for _, path := range envFileCandidates(file) {
 				if fileExists(path) {
-					v := viper.New()
-					v.SetConfigFile(path)
-					v.SetConfigType("env")
-					if err := v.ReadInConfig(); err == nil {
-						for k, v := range v.AllSettings() {
-							if strVal, ok := v.(string); ok {
-								if os.Getenv(k) == "" {
-									_ = os.Setenv(k, strVal)
-								}
-							}
-						}
+					if err := godotenv.Load(path); err == nil {
 						log.Printf("Successfully loaded environment file: %s", path) //nolint:gosec // environment file path is controlled by local project config
 						loaded = true
 						break
 					}
 				}
-			}
-
-			if loaded {
-				break
 			}
 		}
 
@@ -312,143 +300,44 @@ func fileExists(path string) bool {
 }
 
 func LoadDatabaseConfig() (*DatabaseConfig, error) {
-	dbConfig := &DatabaseConfig{}
 	loadEnvFile()
-	viper.SetConfigName("database")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("./configs")
-	viper.AddConfigPath("./config")
-	viper.AutomaticEnv()
-	viper.SetEnvPrefix("DB")
-	setDatabaseDefaults()
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); ok {
-			log.Printf("Database configuration file not found, using default configuration and environment variables")
-		} else {
-			return nil, err
-		}
-	}
-	replaceEnvVars()
-	if err := viper.Unmarshal(dbConfig); err != nil {
+
+	dbConfig := &DatabaseConfig{}
+	k := koanf.New(".")
+	if err := k.Load(confmap.Provider(defaultConfigMap(), "."), nil); err != nil {
 		return nil, err
 	}
-	if dbConnection := os.Getenv("DB_CONNECTION"); dbConnection != "" {
-		dbConfig.Default = dbConnection
+	if err := k.Load(confmap.Provider(envConfigMap(), "."), nil); err != nil {
+		return nil, err
+	}
+	if err := k.Unmarshal("", dbConfig); err != nil {
+		return nil, err
 	}
 	return dbConfig, nil
 }
 
-func setDatabaseDefaults() {
-	defaults := map[string]interface{}{
-		"default":                     "mysql",
-		"connections.mysql.driver":    "mysql",
-		"connections.mysql.host":      "localhost",
-		"connections.mysql.port":      "3306",
-		"connections.mysql.database":  "fiber_starter",
-		"connections.mysql.username":  "root",
-		"connections.mysql.password":  "",
-		"connections.mysql.charset":   "utf8mb4",
-		"connections.mysql.collation": "utf8mb4_unicode_ci",
-		"connections.mysql.prefix":    "",
-		"connections.mysql.strict":    true,
-		"connections.mysql.timezone":  "Local",
-		"connections.pgsql.driver":    "postgres",
-		"connections.pgsql.host":      "localhost",
-		"connections.pgsql.port":      "5432",
-		"connections.pgsql.database":  "fiber_starter",
-		"connections.pgsql.username":  "postgres",
-		"connections.pgsql.password":  "",
-		"connections.pgsql.charset":   "utf8",
-		"connections.pgsql.prefix":    "",
-		"connections.pgsql.schema":    "public",
-		"connections.pgsql.sslmode":   "disable",
-		"connections.pgsql.timezone":  "UTC",
-		"connections.sqlite.driver":   "sqlite",
-		"connections.sqlite.database": "./database/database.sqlite",
-		"connections.sqlite.prefix":   "",
-		"pool.max_open_conns":         100,
-		"pool.max_idle_conns":         10,
-		"pool.conn_max_lifetime":      3600,
-		"pool.conn_max_idle_time":     600,
-		"migrations.table":            "migrations",
-		"migrations.path":             "./database/migrations",
-		"seeders.path":                "./database/seeders",
-	}
-	for key, value := range defaults {
-		viper.SetDefault(key, value)
-	}
-}
-
-func replaceEnvVars() {
-	connections := viper.GetStringMap("connections")
-	for connName, connConfig := range connections {
-		if connMap, ok := connConfig.(map[string]interface{}); ok {
-			for key, value := range connMap {
-				if valueStr, ok := value.(string); ok {
-					if newValue, changed := processEnvVarSubstitution(valueStr); changed {
-						viper.Set(fmt.Sprintf("connections.%s.%s", connName, key), newValue)
-					}
-				}
-			}
-		}
-	}
-}
-
-func processEnvVarSubstitution(valueStr string) (string, bool) {
-	if strings.Contains(valueStr, "${") && strings.Contains(valueStr, "}") {
-		start := strings.Index(valueStr, "${") + 2
-		end := strings.Index(valueStr, "}")
-		if start > 1 && end > start {
-			envPart := valueStr[start:end]
-			parts := strings.SplitN(envPart, ":", 2)
-			envKey := parts[0]
-			defaultValue := ""
-			if len(parts) > 1 {
-				defaultValue = parts[1]
-			}
-			envValue := os.Getenv(envKey)
-			if envValue == "" {
-				envValue = defaultValue
-			}
-			return envValue, true
-		}
-	}
-	return "", false
-}
-
 func LoadConfig() (*Config, error) {
-	dbConfig, err := LoadDatabaseConfig()
-	if err != nil {
-		log.Printf("Failed to load database configuration: %v", err)
-		dbConfig = &DatabaseConfig{}
-	}
-
-	config := &Config{Database: *dbConfig}
 	loadEnvFile()
 
-	viper.SetConfigName("app")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("./configs")
-	viper.AddConfigPath("./config")
-	viper.AutomaticEnv()
-	setAppDefaults()
-
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); ok {
-			log.Printf("App configuration file not found, using default configuration and environment variables")
-		} else {
-			return nil, err
-		}
+	k := koanf.New(".")
+	if err := k.Load(confmap.Provider(defaultConfigMap(), "."), nil); err != nil {
+		return nil, err
 	}
-
-	if err := viper.Unmarshal(config); err != nil {
+	if err := k.Load(confmap.Provider(envConfigMap(), "."), nil); err != nil {
 		return nil, err
 	}
 
-	GlobalConfig = config
-	return config, nil
+	cfg := &Config{}
+	if err := k.Unmarshal("", cfg); err != nil {
+		return nil, err
+	}
+
+	if cfg.Database.Default == "" {
+		cfg.Database.Default = "postgres"
+	}
+
+	GlobalConfig = cfg
+	return cfg, nil
 }
 
 // Init loads the application config and stores it in GlobalConfig.
@@ -457,17 +346,351 @@ func Init() error {
 	return err
 }
 
-func setAppDefaults() {
-	viper.SetDefault("app.name", "Fiber Starter")
-	viper.SetDefault("app.env", "development")
-	viper.SetDefault("app.debug", true)
-	viper.SetDefault("app.port", "8080")
-	viper.SetDefault("app.host", "0.0.0.0")
-	viper.SetDefault("app.timezone", "UTC")
-	viper.SetDefault("app.url", "http://localhost:8080")
-	viper.SetDefault("app.fiber.prefork", false)
-	viper.SetDefault("app.fiber.server_header", "")
-	viper.SetDefault("app.fiber.body_limit", 4*1024*1024)
-	viper.SetDefault("app.fiber.concurrency", 256*1024)
-	viper.SetDefault("app.fiber.read_buffer_size", 16*1024)
+func defaultConfigMap() map[string]any {
+	return map[string]any{
+		"app.name":                               "Fiber Starter",
+		"app.env":                                "development",
+		"app.debug":                              true,
+		"app.port":                               "8080",
+		"app.host":                               "0.0.0.0",
+		"app.timezone":                           "UTC",
+		"app.url":                                "http://localhost:8080",
+		"app.fiber.prefork":                      false,
+		"app.fiber.server_header":                "",
+		"app.fiber.body_limit":                   4 * 1024 * 1024,
+		"app.fiber.concurrency":                  256 * 1024,
+		"app.fiber.read_buffer_size":             16 * 1024,
+		"app.fiber.read_timeout":                 30,
+		"app.fiber.write_timeout":                30,
+		"app.fiber.idle_timeout":                 120,
+		"app.fiber.trust_proxy":                  false,
+		"app.fiber.proxy_header":                 "X-Forwarded-For",
+		"app.fiber.stream_request_body":          false,
+		"app.fiber.immutable":                    false,
+		"database.default":                       "postgres",
+		"database.connections.postgres.driver":   "postgres",
+		"database.connections.postgres.host":     "localhost",
+		"database.connections.postgres.port":     "5432",
+		"database.connections.postgres.database": "fiber_starter",
+		"database.connections.postgres.username": "postgres",
+		"database.connections.postgres.password": "",
+		"database.connections.postgres.charset":  "utf8",
+		"database.connections.postgres.prefix":   "",
+		"database.connections.postgres.schema":   "public",
+		"database.connections.postgres.sslmode":  "disable",
+		"database.connections.postgres.timezone": "UTC",
+		"database.connections.pgsql.driver":      "postgres",
+		"database.connections.pgsql.host":        "localhost",
+		"database.connections.pgsql.port":        "5432",
+		"database.connections.pgsql.database":    "fiber_starter",
+		"database.connections.pgsql.username":    "postgres",
+		"database.connections.pgsql.password":    "",
+		"database.connections.pgsql.charset":     "utf8",
+		"database.connections.pgsql.prefix":      "",
+		"database.connections.pgsql.schema":      "public",
+		"database.connections.pgsql.sslmode":     "disable",
+		"database.connections.pgsql.timezone":    "UTC",
+		"database.connections.sqlite.driver":     "sqlite",
+		"database.connections.sqlite.database":   "./database/database.sqlite",
+		"database.connections.sqlite.prefix":     "",
+		"database.pool.max_open_conns":           100,
+		"database.pool.max_idle_conns":           10,
+		"database.pool.conn_max_lifetime":        3600,
+		"database.pool.conn_max_idle_time":       600,
+		"database.migrations.table":              "migrations",
+		"database.migrations.path":               "./database/migrations",
+		"database.seeders.path":                  "./database/seeders",
+		"database.redis.client":                  "default",
+		"queue.concurrency":                      10,
+		"cache.driver":                           "redis",
+		"cache.prefix":                           "fiber_starter_cache",
+		"cache.default":                          0,
+		"cache.ttl":                              3600,
+		"redis.host":                             "127.0.0.1",
+		"redis.port":                             "6379",
+		"redis.password":                         "",
+		"redis.db":                               0,
+		"jwt.secret":                             "change-me",
+		"jwt.expiration_time":                    86400,
+		"jwt.refresh_time":                       604800,
+		"jwt.expire_hours":                       24,
+		"jwt.issuer":                             "fiber-starter",
+		"logger.level":                           "info",
+		"logger.format":                          "json",
+		"logger.output":                          "stdout",
+		"logger.max_size":                        100,
+		"logger.max_age":                         30,
+		"logger.max_backups":                     10,
+		"logger.compress":                        true,
+		"mail.from_name":                         "Fiber Starter",
+		"mail.from_address":                      "noreply@example.com",
+		"mail.reply_to":                          "",
+		"mail.api_key":                           "",
+		"storage.driver":                         "redis",
+		"storage.database":                       "./database/storage.db",
+		"storage.reset":                          false,
+		"storage.gc_interval":                    3600,
+		"storage.garage.endpoint":                "",
+		"storage.garage.access_key_id":           "",
+		"storage.garage.secret_access_key":       "",
+		"storage.garage.use_ssl":                 false,
+		"storage.garage.bucket":                  "",
+		"storage.garage.region":                  "",
+		"storage.minio.endpoint":                 "",
+		"storage.minio.access_key_id":            "",
+		"storage.minio.secret_access_key":        "",
+		"storage.minio.use_ssl":                  false,
+		"storage.minio.bucket":                   "",
+		"storage.minio.region":                   "",
+		"storage.s3.access_key_id":               "",
+		"storage.s3.secret_access_key":           "",
+		"storage.s3.region":                      "",
+		"storage.s3.bucket":                      "",
+		"storage.s3.endpoint":                    "",
+		"storage.r2.access_key_id":               "",
+		"storage.r2.secret_access_key":           "",
+		"storage.r2.region":                      "",
+		"storage.r2.bucket":                      "",
+		"storage.r2.endpoint":                    "",
+		"storage.oss.access_key_id":              "",
+		"storage.oss.secret_access_key":          "",
+		"storage.oss.region":                     "",
+		"storage.oss.bucket":                     "",
+		"storage.oss.endpoint":                   "",
+		"websocket.port":                         "3001",
+		"websocket.path":                         "/ws",
+		"websocket.heartbeat_interval":           30,
+		"payment.wechat.app_id":                  "",
+		"payment.wechat.mch_id":                  "",
+		"payment.wechat.api_key":                 "",
+		"payment.wechat.cert_path":               "",
+		"payment.wechat.key_path":                "",
+		"payment.wechat.notify_url":              "",
+		"payment.alipay.app_id":                  "",
+		"payment.alipay.private_key":             "",
+		"payment.alipay.public_key":              "",
+		"payment.alipay.notify_url":              "",
+		"business.order.payment_timeout":         30,
+		"business.order.pickup_timeout":          1440,
+		"business.device.channel_count":          53,
+		"business.device.channel_max_capacity":   4,
+		"security.cors.allowed_origins":          "http://localhost:3000",
+		"security.cors.allowed_methods":          "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
+		"security.cors.allowed_headers":          "Origin,Content-Type,Accept,Authorization,Cache-Control,X-Requested-With",
+		"security.rate_limit.max":                100,
+		"security.rate_limit.window":             60,
+		"i18n.default_language":                  "en",
+		"i18n.supported_languages":               []string{"en", "zh-CN"},
+		"i18n.language_dir":                      "./lang",
+		"i18n.cookie_name":                       "lang",
+		"i18n.cookie_max_age":                    86400,
+		"meilisearch.host":                       "",
+		"meilisearch.api_key":                    "",
+	}
+}
+
+func envConfigMap() map[string]any {
+	m := map[string]any{}
+	setString := func(envKey, target string) {
+		if value := strings.TrimSpace(os.Getenv(envKey)); value != "" {
+			m[target] = value
+		}
+	}
+	setBool := func(envKey, target string) {
+		if value := strings.TrimSpace(os.Getenv(envKey)); value != "" {
+			if parsed, err := strconv.ParseBool(value); err == nil {
+				m[target] = parsed
+			}
+		}
+	}
+	setInt := func(envKey, target string) {
+		if value := strings.TrimSpace(os.Getenv(envKey)); value != "" {
+			if parsed, err := strconv.Atoi(value); err == nil {
+				m[target] = parsed
+			}
+		}
+	}
+
+	setString("APP_NAME", "app.name")
+	setString("APP_ENV", "app.env")
+	setBool("APP_DEBUG", "app.debug")
+	setString("APP_PORT", "app.port")
+	setString("APP_HOST", "app.host")
+	setString("APP_TIMEZONE", "app.timezone")
+	setString("APP_URL", "app.url")
+	setBool("APP_FIBER_PREFORK", "app.fiber.prefork")
+	setBool("FIBER_PREFORK", "app.fiber.prefork")
+	setString("APP_FIBER_SERVER_HEADER", "app.fiber.server_header")
+	setInt("APP_FIBER_BODY_LIMIT", "app.fiber.body_limit")
+	setInt("APP_FIBER_CONCURRENCY", "app.fiber.concurrency")
+	setInt("APP_FIBER_READ_BUFFER_SIZE", "app.fiber.read_buffer_size")
+	setInt("APP_FIBER_READ_TIMEOUT", "app.fiber.read_timeout")
+	setInt("APP_FIBER_WRITE_TIMEOUT", "app.fiber.write_timeout")
+	setInt("APP_FIBER_IDLE_TIMEOUT", "app.fiber.idle_timeout")
+	setBool("APP_FIBER_TRUST_PROXY", "app.fiber.trust_proxy")
+	setString("APP_FIBER_PROXY_HEADER", "app.fiber.proxy_header")
+	setBool("APP_FIBER_STREAM_REQUEST_BODY", "app.fiber.stream_request_body")
+	setBool("APP_FIBER_IMMUTABLE", "app.fiber.immutable")
+	setInt("FIBER_READ_BUFFER_SIZE", "app.fiber.read_buffer_size")
+
+	dbDefault := strings.ToLower(strings.TrimSpace(os.Getenv("DB_CONNECTION")))
+	if dbDefault == "" {
+		dbDefault = "postgres"
+	}
+	m["database.default"] = dbDefault
+	for _, conn := range []string{"postgres", "pgsql"} {
+		setString("DB_HOST", fmt.Sprintf("database.connections.%s.host", conn))
+		setString("DB_PORT", fmt.Sprintf("database.connections.%s.port", conn))
+		setString("DB_DATABASE", fmt.Sprintf("database.connections.%s.database", conn))
+		setString("DB_USERNAME", fmt.Sprintf("database.connections.%s.username", conn))
+		setString("DB_PASSWORD", fmt.Sprintf("database.connections.%s.password", conn))
+		setString("DB_CHARSET", fmt.Sprintf("database.connections.%s.charset", conn))
+		setString("DB_COLLATION", fmt.Sprintf("database.connections.%s.collation", conn))
+		setString("DB_PREFIX", fmt.Sprintf("database.connections.%s.prefix", conn))
+		setBool("DB_STRICT", fmt.Sprintf("database.connections.%s.strict", conn))
+		setString("DB_TIMEZONE", fmt.Sprintf("database.connections.%s.timezone", conn))
+		setString("DB_SCHEMA", fmt.Sprintf("database.connections.%s.schema", conn))
+		setString("DB_SSLMODE", fmt.Sprintf("database.connections.%s.sslmode", conn))
+	}
+	if dbDefault == "sqlite" {
+		setString("DB_DATABASE", "database.connections.sqlite.database")
+		setString("DB_SQLITE_DATABASE", "database.connections.sqlite.database")
+	}
+
+	setInt("DB_POOL_MAX_OPEN_CONNS", "database.pool.max_open_conns")
+	setInt("DB_POOL_MAX_IDLE_CONNS", "database.pool.max_idle_conns")
+	setInt("DB_POOL_CONN_MAX_LIFETIME", "database.pool.conn_max_lifetime")
+	setInt("DB_POOL_CONN_MAX_IDLE_TIME", "database.pool.conn_max_idle_time")
+	setString("DB_MIGRATIONS_TABLE", "database.migrations.table")
+	setString("DB_MIGRATIONS_PATH", "database.migrations.path")
+	setString("DB_SEEDERS_PATH", "database.seeders.path")
+
+	setString("REDIS_HOST", "redis.host")
+	setString("REDIS_PORT", "redis.port")
+	setString("REDIS_PASSWORD", "redis.password")
+	setInt("REDIS_DB", "redis.db")
+
+	setInt("QUEUE_CONCURRENCY", "queue.concurrency")
+
+	setString("CACHE_DRIVER", "cache.driver")
+	setString("CACHE_PREFIX", "cache.prefix")
+	setInt("CACHE_DEFAULT", "cache.default")
+	setInt("CACHE_DEFAULT_TTL", "cache.ttl")
+	setInt("CACHE_TTL", "cache.ttl")
+
+	setString("JWT_SECRET", "jwt.secret")
+	setInt("JWT_EXPIRATION_TIME", "jwt.expiration_time")
+	setInt("JWT_REFRESH_TIME", "jwt.refresh_time")
+	setInt("JWT_EXPIRE_HOURS", "jwt.expire_hours")
+	setString("JWT_ISSUER", "jwt.issuer")
+
+	setString("LOGGER_LEVEL", "logger.level")
+	setString("LOG_LEVEL", "logger.level")
+	setString("LOGGER_FORMAT", "logger.format")
+	setString("LOG_FORMAT", "logger.format")
+	setString("LOGGER_OUTPUT", "logger.output")
+	setString("LOG_OUTPUT", "logger.output")
+	setInt("LOGGER_MAX_SIZE", "logger.max_size")
+	setInt("LOG_MAX_SIZE", "logger.max_size")
+	setInt("LOGGER_MAX_AGE", "logger.max_age")
+	setInt("LOG_MAX_AGE", "logger.max_age")
+	setInt("LOGGER_MAX_BACKUPS", "logger.max_backups")
+	setInt("LOG_MAX_BACKUPS", "logger.max_backups")
+	setBool("LOGGER_COMPRESS", "logger.compress")
+	setBool("LOG_COMPRESS", "logger.compress")
+
+	setString("MAIL_FROM_NAME", "mail.from_name")
+	setString("MAIL_FROM_ADDRESS", "mail.from_address")
+	setString("MAIL_REPLY_TO", "mail.reply_to")
+	setString("RESEND_API_KEY", "mail.api_key")
+	setString("MAIL_API_KEY", "mail.api_key")
+
+	setString("STORAGE_DRIVER", "storage.driver")
+	setString("STORAGE_DATABASE", "storage.database")
+	setBool("STORAGE_RESET", "storage.reset")
+	setInt("STORAGE_GC_INTERVAL", "storage.gc_interval")
+	setString("GARAGE_ENDPOINT", "storage.garage.endpoint")
+	setString("GARAGE_ACCESS_KEY_ID", "storage.garage.access_key_id")
+	setString("GARAGE_SECRET_ACCESS_KEY", "storage.garage.secret_access_key")
+	setBool("GARAGE_USE_SSL", "storage.garage.use_ssl")
+	setString("GARAGE_BUCKET", "storage.garage.bucket")
+	setString("GARAGE_REGION", "storage.garage.region")
+	setString("MINIO_ENDPOINT", "storage.minio.endpoint")
+	setString("MINIO_ACCESS_KEY_ID", "storage.minio.access_key_id")
+	setString("MINIO_SECRET_ACCESS_KEY", "storage.minio.secret_access_key")
+	setBool("MINIO_USE_SSL", "storage.minio.use_ssl")
+	setString("MINIO_BUCKET", "storage.minio.bucket")
+	setString("MINIO_REGION", "storage.minio.region")
+	setString("S3_ACCESS_KEY_ID", "storage.s3.access_key_id")
+	setString("S3_SECRET_ACCESS_KEY", "storage.s3.secret_access_key")
+	setString("S3_REGION", "storage.s3.region")
+	setString("S3_BUCKET", "storage.s3.bucket")
+	setString("S3_ENDPOINT", "storage.s3.endpoint")
+	setString("R2_ACCESS_KEY_ID", "storage.r2.access_key_id")
+	setString("R2_SECRET_ACCESS_KEY", "storage.r2.secret_access_key")
+	setString("R2_REGION", "storage.r2.region")
+	setString("R2_BUCKET", "storage.r2.bucket")
+	setString("R2_ENDPOINT", "storage.r2.endpoint")
+	setString("OSS_ACCESS_KEY_ID", "storage.oss.access_key_id")
+	setString("OSS_SECRET_ACCESS_KEY", "storage.oss.secret_access_key")
+	setString("OSS_REGION", "storage.oss.region")
+	setString("OSS_BUCKET", "storage.oss.bucket")
+	setString("OSS_ENDPOINT", "storage.oss.endpoint")
+
+	setString("WEBSOCKET_PORT", "websocket.port")
+	setString("WEBSOCKET_PATH", "websocket.path")
+	setInt("WEBSOCKET_HEARTBEAT_INTERVAL", "websocket.heartbeat_interval")
+
+	setString("WECHAT_APP_ID", "payment.wechat.app_id")
+	setString("WECHAT_MCH_ID", "payment.wechat.mch_id")
+	setString("WECHAT_API_KEY", "payment.wechat.api_key")
+	setString("WECHAT_CERT_PATH", "payment.wechat.cert_path")
+	setString("WECHAT_KEY_PATH", "payment.wechat.key_path")
+	setString("WECHAT_NOTIFY_URL", "payment.wechat.notify_url")
+	setString("ALIPAY_APP_ID", "payment.alipay.app_id")
+	setString("ALIPAY_PRIVATE_KEY", "payment.alipay.private_key")
+	setString("ALIPAY_PUBLIC_KEY", "payment.alipay.public_key")
+	setString("ALIPAY_NOTIFY_URL", "payment.alipay.notify_url")
+
+	setInt("ORDER_PAYMENT_TIMEOUT", "business.order.payment_timeout")
+	setInt("ORDER_PICKUP_TIMEOUT", "business.order.pickup_timeout")
+	setInt("DEVICE_CHANNEL_COUNT", "business.device.channel_count")
+	setInt("DEVICE_CHANNEL_MAX_CAPACITY", "business.device.channel_max_capacity")
+
+	setString("SECURITY_CORS_ALLOWED_ORIGINS", "security.cors.allowed_origins")
+	setString("SECURITY_CORS_ALLOWED_METHODS", "security.cors.allowed_methods")
+	setString("SECURITY_CORS_ALLOWED_HEADERS", "security.cors.allowed_headers")
+	setInt("SECURITY_RATE_LIMIT_MAX", "security.rate_limit.max")
+	setInt("SECURITY_RATE_LIMIT_WINDOW", "security.rate_limit.window")
+
+	setString("I18N_DEFAULT_LANGUAGE", "i18n.default_language")
+	if value := strings.TrimSpace(os.Getenv("I18N_SUPPORTED_LANGUAGES")); value != "" {
+		parts := strings.Split(value, ",")
+		supported := make([]string, 0, len(parts))
+		for _, part := range parts {
+			if trimmed := strings.TrimSpace(part); trimmed != "" {
+				supported = append(supported, trimmed)
+			}
+		}
+		if len(supported) > 0 {
+			m["i18n.supported_languages"] = supported
+		}
+	}
+	setString("I18N_LANGUAGE_DIR", "i18n.language_dir")
+	setString("I18N_COOKIE_NAME", "i18n.cookie_name")
+	setInt("I18N_COOKIE_MAX_AGE", "i18n.cookie_max_age")
+
+	setString("MEILISEARCH_HOST", "meilisearch.host")
+	setString("MEILISEARCH_API_KEY", "meilisearch.api_key")
+
+	return m
+}
+
+func envFileCandidates(file string) []string {
+	return []string{
+		file,
+		filepath.Join("config", file),
+		filepath.Join("configs", file),
+		filepath.Join("..", file),
+	}
 }

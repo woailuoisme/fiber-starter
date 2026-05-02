@@ -1,0 +1,12 @@
+pre-commit:
+  jobs:
+    - name: fmt
+      glob: "**/*.go"
+      stage_fixed: true
+      run: make fmt
+
+pre-push:
+  jobs:
+    - name: lint
+      glob: "**/*.go"
+      run: make lint

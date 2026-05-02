@@ -13,12 +13,12 @@
 - **延迟加载**：S3、Meilisearch、数据库、Redis、队列等按需连接。
 - **RESTful API**：标准 REST 接口设计，便于前端集成。
 - **JWT 认证**：支持 token 刷新、注销和黑名单。
-- **多数据库支持**：通过 GORM 支持 MySQL、PostgreSQL、SQLite。
+- **数据库访问**：通过 pgx + sqlc 直连 PostgreSQL，保留 SQLite 作为本地测试数据库。
 - **全文搜索**：集成 Meilisearch。
 - **异步任务队列**：基于 Asynq + Redis。
-- **对象存储**：支持 AWS S3、Garage、R2 等后端。
+- **对象存储**：基于 Fiber S3 驱动，支持 AWS S3、Garage、Cloudflare R2、阿里云 OSS 等 S3 兼容后端，bucket 需预先创建。
 - **命令行工具**：基于 Cobra，支持迁移、种子、调度等。
-- **Scalar 文档**：自动生成 OpenAPI/Swagger，并通过 Scalar 展示。
+- **Scalar 文档**：自动生成 OpenAPI 3.1，并通过 Scalar 展示。
 - **统一错误处理**：统一异常类型和错误响应格式。
 
 ## 技术栈
@@ -26,8 +26,8 @@
 ### 核心框架
 - **Go**: 1.26+
 - **Fiber**: v3（Web 框架）
-- **GORM**: ORM 框架
-- **Viper**: 配置管理
+- **pgx + sqlc**: PostgreSQL 访问层
+- **Koanf + godotenv**: 配置管理
 - **Cobra**: 命令行工具
 - **Dig**: 依赖注入容器
 
@@ -38,7 +38,7 @@
 
 ### 搜索与存储
 - **Meilisearch**：全文搜索引擎
-- **AWS S3 / Garage**：对象存储
+- **AWS S3 / Garage / R2 / OSS**：对象存储
 
 ### 队列与任务
 - **Asynq**：分布式任务队列
@@ -47,7 +47,33 @@
 - **Zap**：高性能日志库
 - **Validator**：数据验证
 - **Carbon**：时间处理
-- **Swag + Scalar**：API 规范生成与文档展示
+- **OpenAPI 3.1 + Scalar**：API 规范展示
+
+## Fiber 启动配置
+
+Fiber 的启动参数统一通过配置文件和环境变量管理，当前可配置项主要包括：
+
+- `APP_FIBER_PREFORK`：是否开启 Prefork 多进程模式，启动时映射到 `fiber.ListenConfig.EnablePrefork`
+- `APP_FIBER_SERVER_HEADER`：响应头 `Server`
+- `APP_FIBER_BODY_LIMIT`：请求体大小上限
+- `APP_FIBER_CONCURRENCY`：最大并发连接数
+- `APP_FIBER_READ_BUFFER_SIZE`：读取缓冲区大小
+- `APP_FIBER_READ_TIMEOUT` / `APP_FIBER_WRITE_TIMEOUT` / `APP_FIBER_IDLE_TIMEOUT`：请求读写与空闲超时
+- `APP_FIBER_TRUST_PROXY` / `APP_FIBER_PROXY_HEADER`：代理场景下的真实客户端 IP 识别
+- `APP_FIBER_STREAM_REQUEST_BODY`：大请求体流式读取
+- `APP_FIBER_IMMUTABLE`：将上下文返回值设为不可变
+
+单机部署时，通常建议将 `APP_FIBER_PREFORK=true`，让 Fiber 通过多进程更充分利用多核 CPU；如果你已经在 Kubernetes、Docker Compose 多副本或负载均衡后面部署，也可以保持 `false`，交给外层做水平扩容。
+
+配置示例：
+
+```env
+APP_FIBER_PREFORK=true
+APP_FIBER_READ_TIMEOUT=30
+APP_FIBER_WRITE_TIMEOUT=30
+APP_FIBER_IDLE_TIMEOUT=30
+APP_FIBER_READ_BUFFER_SIZE=16384
+```
 
 ## 架构设计
 
@@ -68,7 +94,7 @@
 │   │   ├── Resources/        # API 资源转换
 │   │   └── Services/         # HTTP 用例/业务服务
 │   ├── I18n/                 # 国际化
-│   ├── Models/               # GORM 数据模型
+│   ├── Models/               # 数据模型
 │   ├── Providers/            # 依赖注入服务提供者
 │   ├── Services/             # 基础设施服务（Search、Queue、Storage、Email）
 │   └── Support/              # 日志、缓存、错误响应等支持层
@@ -89,7 +115,7 @@
 │   │   └── main.go
 │   └── cli/                  # CLI 入口
 │       └── main.go
-├── docs/                     # OpenAPI/Swagger 生成文件
+├── docs/                     # OpenAPI 3.1 生成文件
 ├── lang/                     # 语言文件
 ├── public/                   # 静态资源
 ├── storage/                  # 运行时存储
@@ -124,7 +150,7 @@
    ```bash
    make init
    # 该命令会自动：
-   # 1. 安装开发工具（Air、Lint、Swag）
+   # 1. 安装开发工具（Air、Lint、sqlc、Atlas）
    # 2. 下载依赖（go mod tidy）
    # 3. 复制 .env 文件
    ```
@@ -172,7 +198,7 @@
 - `make coverage`：生成测试覆盖率报告
 
 ### 文档
-- `make docs`：生成 OpenAPI/Swagger 规范文件（运行后通过 `/docs` 查看 Scalar 文档）
+- `make docs`：生成 OpenAPI 3.1 规范文件（运行后通过 `/docs` 查看 Scalar 文档）
 
 ### 构建配置
 - 配置文件：`.buildconfig`

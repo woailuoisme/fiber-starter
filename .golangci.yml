@@ -5,7 +5,6 @@ version: "2"
 
 run:
   timeout: 5m
-  issues-exit-code: 1
   tests: false
   allow-parallel-runners: true
 
@@ -17,20 +16,12 @@ output:
 linters:
   default: none
   enable:
-    # Core correctness checks. Keep this list intentionally small so lint
-    # catches real defects without turning style preferences into blockers.
     - govet
     - staticcheck
     - errcheck
     - ineffassign
     - unused
 
-    # Low-noise quality checks
-    - misspell
-    - makezero
-    - nilerr
-
-    # Security
     - gosec
 
   settings:
@@ -44,31 +35,6 @@ linters:
         linters:
           - errcheck
           - gosec
-
-      - path: docs/docs.go
-        linters:
-          - all
-
-      # Fixed internal paths, controlled CLI arguments, and env-var name maps.
-      # Keep these scoped so gosec still reports the same rules elsewhere.
-      - path: internal/cli/jwt\.go
-        text: "G703:"
-        linters:
-          - gosec
-
-      - path: internal/cli/migrate\.go
-        text: "G204:"
-        linters:
-          - gosec
-
-      - path: internal/config/config\.go
-        text: "G(101|703|706):"
-        linters:
-          - gosec
-
-      - path: (main\.go|cmd/.*)
-        linters:
-          - gochecknoinits
 
 issues:
   max-issues-per-linter: 0

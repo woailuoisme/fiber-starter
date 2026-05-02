@@ -6,8 +6,7 @@ import (
 
 	models "fiber-starter/app/Models"
 	"fiber-starter/database/factories"
-
-	"gorm.io/gorm"
+	dbsqlc "fiber-starter/database/sqlc"
 )
 
 // UserSeeder 负责用户相关种子数据
@@ -20,8 +19,8 @@ func WithUserSeeder() *UserSeeder {
 
 // SeedUsers 插入默认用户种子数据
 func (s *UserSeeder) SeedUsers(db *sql.DB, dialect string) error {
-	return withSeedGormDB(db, dialect, func(gdb *gorm.DB) error {
-		count, err := seedCountUsers(context.Background(), gdb)
+	return withSeedQueries(db, dialect, func(q *dbsqlc.Queries) error {
+		count, err := q.CountUsers(context.Background())
 		if err != nil {
 			return err
 		}
@@ -35,14 +34,14 @@ func (s *UserSeeder) SeedUsers(db *sql.DB, dialect string) error {
 			return err
 		}
 
-		return gdb.WithContext(context.Background()).Create(&users).Error
+		return createSeedUsers(context.Background(), q, users)
 	})
 }
 
 // SeedRandomUsers 插入随机用户种子数据
 func (s *UserSeeder) SeedRandomUsers(db *sql.DB, dialect string, count int) error {
-	return withSeedGormDB(db, dialect, func(gdb *gorm.DB) error {
-		existingCount, err := seedCountUsers(context.Background(), gdb)
+	return withSeedQueries(db, dialect, func(q *dbsqlc.Queries) error {
+		existingCount, err := q.CountUsers(context.Background())
 		if err != nil {
 			return err
 		}
@@ -56,23 +55,21 @@ func (s *UserSeeder) SeedRandomUsers(db *sql.DB, dialect string, count int) erro
 			return err
 		}
 
-		return gdb.WithContext(context.Background()).Create(&users).Error
+		return createSeedUsers(context.Background(), q, users)
 	})
 }
 
 // ClearUsers 清空用户种子数据
 func (s *UserSeeder) ClearUsers(db *sql.DB, dialect string) error {
-	return withSeedGormDB(db, dialect, func(gdb *gorm.DB) error {
-		return gdb.WithContext(context.Background()).
-			Where("1 = 1").
-			Delete(&models.User{}).Error
+	return withSeedQueries(db, dialect, func(q *dbsqlc.Queries) error {
+		return q.DeleteAllUsers(context.Background())
 	})
 }
 
 // CreateAdminUser 创建指定管理员用户
 func (s *UserSeeder) CreateAdminUser(db *sql.DB, dialect string, name, email, password string) error {
-	return withSeedGormDB(db, dialect, func(gdb *gorm.DB) error {
-		exists, err := seedUserExistsByEmail(context.Background(), gdb, email)
+	return withSeedQueries(db, dialect, func(q *dbsqlc.Queries) error {
+		exists, err := q.UserExistsByEmail(context.Background(), email)
 		if err != nil {
 			return err
 		}
@@ -86,13 +83,45 @@ func (s *UserSeeder) CreateAdminUser(db *sql.DB, dialect string, name, email, pa
 			return err
 		}
 
-		return gdb.WithContext(context.Background()).Create(&admin).Error
+		_, err = q.CreateUser(context.Background(), dbsqlc.CreateUserParams{
+			Name:            admin.Name,
+			Email:           admin.Email,
+			Password:        admin.Password,
+			Avatar:          admin.Avatar,
+			Phone:           admin.Phone,
+			Status:          admin.Status,
+			EmailVerifiedAt: admin.EmailVerifiedAt,
+			CreatedAt:       admin.CreatedAt,
+			UpdatedAt:       admin.UpdatedAt,
+		})
+		return err
 	})
 }
 
 // GenerateTestUsers 生成测试用户
 func (s *UserSeeder) GenerateTestUsers(db *sql.DB, dialect string, count int) error {
 	return s.SeedRandomUsers(db, dialect, count)
+}
+
+func createSeedUsers(ctx context.Context, q *dbsqlc.Queries, users []models.User) error {
+	for i := range users {
+		user := users[i]
+		_, err := q.CreateUser(ctx, dbsqlc.CreateUserParams{
+			Name:            user.Name,
+			Email:           user.Email,
+			Password:        user.Password,
+			Avatar:          user.Avatar,
+			Phone:           user.Phone,
+			Status:          user.Status,
+			EmailVerifiedAt: user.EmailVerifiedAt,
+			CreatedAt:       user.CreatedAt,
+			UpdatedAt:       user.UpdatedAt,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Package-level compatibility helpers

@@ -8,22 +8,17 @@ import (
 
 // User 用户模型
 type User struct {
-	ID              int64      `db:"id" gorm:"column:id;primaryKey" json:"id"`
-	Name            string     `db:"name" gorm:"column:name" json:"name"`
-	Email           string     `db:"email" gorm:"column:email" json:"email"`
-	Password        string     `db:"password" gorm:"column:password" json:"-"`
-	Avatar          *string    `db:"avatar" gorm:"column:avatar" json:"avatar,omitempty"`
-	Phone           *string    `db:"phone" gorm:"column:phone" json:"phone,omitempty"`
-	Status          UserStatus `db:"status" gorm:"column:status" json:"status"`
-	EmailVerifiedAt *time.Time `db:"email_verified_at" gorm:"column:email_verified_at" json:"email_verified_at,omitempty"`
-	CreatedAt       time.Time  `db:"created_at" gorm:"column:created_at" json:"created_at"`
-	UpdatedAt       time.Time  `db:"updated_at" gorm:"column:updated_at" json:"updated_at"`
-	DeletedAt       *time.Time `db:"deleted_at" gorm:"column:deleted_at" json:"-"`
-}
-
-// TableName returns the Atlas-managed table name for GORM.
-func (User) TableName() string {
-	return "users"
+	ID              int64      `db:"id" json:"id"`
+	Name            string     `db:"name" json:"name"`
+	Email           string     `db:"email" json:"email"`
+	Password        string     `db:"password" json:"-"`
+	Avatar          *string    `db:"avatar" json:"avatar,omitempty"`
+	Phone           *string    `db:"phone" json:"phone,omitempty"`
+	Status          UserStatus `db:"status" json:"status"`
+	EmailVerifiedAt *time.Time `db:"email_verified_at" json:"email_verified_at,omitempty"`
+	CreatedAt       time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt       time.Time  `db:"updated_at" json:"updated_at"`
+	DeletedAt       *time.Time `db:"deleted_at" json:"-"`
 }
 
 // UserStatus 用户状态枚举

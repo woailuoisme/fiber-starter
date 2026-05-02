@@ -4,8 +4,10 @@ export PATH := /opt/homebrew/bin:/usr/local/bin:$(PATH)
 GO ?= go
 GOFMT ?= gofmt
 GOLANGCI_LINT ?= golangci-lint
-SWAG ?= swag
+K6 ?= k6
+OPENAPI_GEN ?= $(GO) run ./scripts/openapi
 ATLAS ?= atlas
+SQLC ?= sqlc
 BUILD_DIR ?= build
 COVERAGE_DIR ?= coverage
 LINT_CACHE_HOME ?= /tmp/fiber-starter-cache
@@ -16,7 +18,6 @@ APP_LOG_DIR ?= storage/logs
 DEPLOY_DIR ?= deploy
 SERVER_MAIN ?= ./cmd/server
 CLI_MAIN ?= ./cmd/cli
-SWAG_MAIN ?= ./cmd/server/main.go
 SERVER_RUN = $(GO) run $(SERVER_MAIN)
 CLI_RUN = $(GO) run $(CLI_MAIN)
 
@@ -37,6 +38,7 @@ define build_binary
 endef
 
 .PHONY: all help build build-cli build-prod build-dir coverage-dir config run dev test coverage lint lint-strict fmt vet clean \
+        k6-root k6-root-load \
         migrate migrate-rollback seed seed-random routes jwt schedule \
 	        docs install-tools deps init sync \
 	        atlas-status atlas-history atlas-repair atlas-reset \
@@ -103,7 +105,7 @@ lint-fix: ## 运行代码检查并自动修复
 	$(call run_golangci_lint,run --fix)
 
 fmt: ## 格式化代码
-	@files="$$(find . -name '*.go' -not -path './vendor/*' -not -path './build/*' -not -path './coverage/*')"; \
+	@files="$$(find app bootstrap cmd config database routes scripts tests -name '*.go' -not -path './vendor/*' -not -path './build/*' -not -path './coverage/*')"; \
 	if [ -n "$$files" ]; then $(GOFMT) -w $$files; fi
 
 vet: ## 静态检查
@@ -154,7 +156,8 @@ deps: ## 下载并整理依赖
 install-tools: ## 安装开发工具
 	@$(GO) install github.com/air-verse/air@latest
 	@$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	@$(GO) install github.com/swaggo/swag/cmd/swag@latest
+	@$(GO) install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+	@$(GO) install ariga.io/atlas/cmd/atlas@latest
 
 atlas-diff-postgres: ## 生成 PostgreSQL 迁移（NAME=xxx）
 	@$(ATLAS) migrate diff $(NAME) --env postgres
@@ -192,6 +195,13 @@ atlas-lint: ## 检查数据库 schema（默认 postgres，ENV=sqlite 可切换�
 atlas-inspect: ## 检查当前数据库 schema（默认 postgres，ENV=sqlite 可切换）
 	@$(ATLAS) schema inspect --env $(or $(ENV),postgres)
 
-docs: ## 生成 OpenAPI/Swagger 规范（由 Scalar 展示）
-	@$(SWAG) init -g $(SWAG_MAIN) -o docs
-	@rm -f docs/docs.go
+docs: ## 生成 OpenAPI 3.1 规范（由 Scalar 展示）
+	@$(OPENAPI_GEN)
+
+k6-root: ## 运行根路径 / 的 k6 smoke test（BASE_URL=http://localhost:8080）
+	@command -v $(K6) >/dev/null 2>&1 || { echo "$(K6) is not installed"; exit 1; }
+	@BASE_URL=$${BASE_URL:-http://localhost:8080} $(K6) run scripts/k6/root.js
+
+k6-root-load: ## 运行根路径 / 的 k6 load test（BASE_URL=http://localhost:8080, VUS=10, DURATION=1m）
+	@command -v $(K6) >/dev/null 2>&1 || { echo "$(K6) is not installed"; exit 1; }
+	@BASE_URL=$${BASE_URL:-http://localhost:8080} VUS=$${VUS:-10} DURATION=$${DURATION:-1m} TARGET_DURATION=$${TARGET_DURATION:-500} $(K6) run scripts/k6/root-load.js

@@ -1,0 +1,212 @@
+openapi: 3.1.0
+info:
+  title: Fiber Starter API
+  version: 1.0.0
+  description: OpenAPI 3.1 contract for the Fiber Starter backend.
+servers:
+  - url: http://localhost:8080
+paths:
+  /:
+    get:
+      summary: Service landing page
+      responses:
+        "200":
+          description: OK
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+  /ready:
+    get:
+      summary: Readiness probe
+      responses:
+        "200":
+          description: OK
+  /openapi.json:
+    get:
+      summary: OpenAPI document
+      responses:
+        "200":
+          description: OpenAPI 3.1 JSON document
+  /docs:
+    get:
+      summary: Scalar API reference
+      responses:
+        "200":
+          description: Scalar UI
+  /api/v1/auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered
+  /api/v1/auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Logged in
+  /api/v1/auth/refresh:
+    post:
+      summary: Refresh JWT tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenRequest"
+      responses:
+        "200":
+          description: Tokens refreshed
+  /api/v1/auth/logout:
+    post:
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+  /api/v1/auth/change-password:
+    post:
+      summary: Change password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "200":
+          description: Password changed
+  /api/v1/auth/reset-password:
+    post:
+      summary: Reset password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Reset email sent or password updated
+  /api/v1/users/:
+    get:
+      summary: List users
+      responses:
+        "200":
+          description: OK
+  /api/v1/users/me:
+    get:
+      summary: Current user profile
+      responses:
+        "200":
+          description: OK
+  /api/v1/users/search:
+    get:
+      summary: Search users
+      responses:
+        "200":
+          description: OK
+  /api/v1/users/{id}:
+    put:
+      summary: Update user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: User updated
+    delete:
+      summary: Delete user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: User deleted
+  /api/v1/users/profile:
+    put:
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Profile updated
+components:
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    RefreshTokenRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+        new_password:
+          type: string
+    ResetPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        avatar:
+          type: string
+          format: uri

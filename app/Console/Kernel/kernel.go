@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	helpers "fiber-starter/app/Support"
 	"fiber-starter/config"
@@ -16,15 +17,17 @@ import (
 )
 
 type scheduledTask struct {
-	spec    string
-	entryID string
+	spec     string
+	entryID  string
+	taskType string
 }
 
 type Kernel struct {
-	scheduler *asynq.Scheduler
-	client    *asynq.Client
-	tasks     []*scheduledTask
-	mu        sync.Mutex
+	scheduler   *asynq.Scheduler
+	client      *asynq.Client
+	tasks       []*scheduledTask
+	mu          sync.Mutex
+	catchUpOnce sync.Once
 }
 
 func loadConfig() *config.Config {
@@ -65,6 +68,9 @@ func (k *Kernel) Schedule() {}
 func (k *Kernel) Start() {
 	k.Schedule()
 	helpers.Info("Scheduled tasks registered", zap.Int("count", len(k.tasks)))
+	k.catchUpOnce.Do(func() {
+		k.enqueueCatchUpTasks()
+	})
 
 	go k.run()
 
@@ -98,7 +104,8 @@ func (k *Kernel) Cron(spec string, cmd func()) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
-	task := asynq.NewTask(taskTypeFor(cmd), nil)
+	taskType := taskTypeFor(cmd)
+	task := asynq.NewTask(taskType, nil)
 
 	entryID, err := k.scheduler.Register(spec, task)
 	if err != nil {
@@ -107,8 +114,9 @@ func (k *Kernel) Cron(spec string, cmd func()) {
 	}
 
 	scheduledTask := &scheduledTask{
-		spec:    spec,
-		entryID: entryID,
+		spec:     spec,
+		entryID:  entryID,
+		taskType: taskType,
 	}
 	k.tasks = append(k.tasks, scheduledTask)
 
@@ -154,6 +162,21 @@ func handleScheduledTask(_ context.Context, t *asynq.Task) error {
 
 func taskTypeFor(cmd func()) string {
 	return fmt.Sprintf("scheduled_task_%p", cmd)
+}
+
+func (k *Kernel) enqueueCatchUpTasks() {
+	for _, task := range k.tasks {
+		if task == nil || task.taskType == "" {
+			continue
+		}
+		if _, err := k.client.Enqueue(
+			asynq.NewTask(task.taskType, nil),
+			asynq.ProcessAt(time.Now().UTC()),
+			asynq.MaxRetry(3),
+		); err != nil {
+			helpers.Error("Failed to enqueue catch-up task", zap.String("spec", task.spec), zap.Error(err))
+		}
+	}
 }
 
 func cronDailyAtSpec(value string) (string, error) {

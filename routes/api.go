@@ -9,6 +9,7 @@ import (
 	"fiber-starter/app/Providers"
 	helpers "fiber-starter/app/Support"
 	"fiber-starter/config"
+	v1routes "fiber-starter/routes/v1"
 
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"
@@ -17,19 +18,20 @@ import (
 // SetupRoutes registers all HTTP routes.
 func SetupRoutes(
 	app *fiber.App,
+	cfg *config.Config,
 	jwtProtected fiber.Handler,
 	authController *controllers.AuthController,
 	userController *controllers.UserController,
 	healthController *controllers.HealthController,
 ) {
 	app.Get("/", func(c fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"message": "Welcome to Fiber Starter API",
+		return helpers.HandleSuccess(c, "Welcome to Fiber Starter API", fiber.Map{
 			"version": "1.0.0",
 			"docs":    "/docs",
 			"openapi": "/openapi.json",
 			"health":  "/health",
 			"ready":   "/ready",
+			"readyz":  "/readyz",
 			"api":     "/api/v1",
 		})
 	})
@@ -47,34 +49,18 @@ func SetupRoutes(
 	})
 	app.Get("/docs", scalarDocs)
 
+	// Health Check：给 Docker / K8s / 负载均衡器使用的存活探针。
+	// 使用方式：调用 /health 获取基础存活状态，/ready 和 /readyz 获取就绪状态。
 	app.Get("/health", healthController.Health)
 	app.Get("/ready", healthController.Ready)
+	app.Get("/readyz", healthController.Ready)
 
-	api := app.Group("/api/v1")
-
-	auth := api.Group("/auth")
-	auth.Post("/register", authController.Register)
-	auth.Post("/login", authController.Login)
-	auth.Post("/refresh", authController.RefreshToken)
-	auth.Post("/logout", jwtProtected, authController.Logout)
-	auth.Post("/change-password", jwtProtected, authController.ChangePassword)
-	auth.Post("/reset-password", authController.ResetPassword)
-
-	users := api.Group("/users")
-	users.Get("/", jwtProtected, userController.GetUsers)
-	users.Get("/me", jwtProtected, userController.GetCurrentUser)
-	users.Get("/search", jwtProtected, userController.SearchUsers)
-	users.Put("/:id", jwtProtected, userController.UpdateUser)
-	users.Delete("/:id", jwtProtected, userController.DeleteUser)
-	users.Put("/profile", jwtProtected, userController.UpdateProfile)
+	api := app.Group("/api")
+	v1routes.SetupRoutes(api.Group("/v1"), cfg, jwtProtected, authController, userController)
 }
 
 // SetupApplicationRoutes binds middleware and routes in one place for Laravel-style bootstrapping.
 func SetupApplicationRoutes(app *fiber.App, container *providers.Container) error {
-	middleware.SetupMiddleware(app)
-	middleware.SetupTimeoutRedirect(app)
-	middleware.SetupAuthMiddleware(app)
-
 	return container.Invoke(func(
 		cfg *config.Config,
 		cache helpers.CacheService,
@@ -83,7 +69,10 @@ func SetupApplicationRoutes(app *fiber.App, container *providers.Container) erro
 		healthController *controllers.HealthController,
 	) {
 		jwtProtected := middleware.JWTProtected(cfg, cache)
-		SetupRoutes(app, jwtProtected, authController, userController, healthController)
+		middleware.SetupMiddleware(app, cfg)
+		middleware.SetupTimeoutRedirect(app)
+		middleware.SetupAuthMiddleware(app)
+		SetupRoutes(app, cfg, jwtProtected, authController, userController, healthController)
 		if cfg.App.Debug {
 			helpers.Info("registered_routes", zap.Int("total", len(app.GetRoutes())))
 		}
@@ -91,12 +80,12 @@ func SetupApplicationRoutes(app *fiber.App, container *providers.Container) erro
 }
 
 func openAPISpecPath() string {
-	path := filepath.Join("docs", "swagger.json")
+	path := filepath.Join("docs", "openapi.json")
 	if _, err := os.Stat(path); err == nil {
 		return path
 	}
 
-	parentPath := filepath.Join("..", "docs", "swagger.json")
+	parentPath := filepath.Join("..", "docs", "openapi.json")
 	if _, err := os.Stat(parentPath); err == nil {
 		return parentPath
 	}

@@ -33,6 +33,7 @@ func TestHealthEndpoints_DoNotRegress(t *testing.T) {
 	app := fiber.New()
 	app.Get("/health", hc.Health)
 	app.Get("/ready", hc.Ready)
+	app.Get("/readyz", hc.Ready)
 
 	healthResp, err := app.Test(httptest.NewRequest("GET", "/health", nil))
 	if err != nil {
@@ -56,5 +57,13 @@ func TestHealthEndpoints_DoNotRegress(t *testing.T) {
 	}
 	if payload["status"] != "ok" {
 		t.Fatalf("/ready status incorrect: got=%v want=%v", payload["status"], "ok")
+	}
+
+	readyzResp, err := app.Test(httptest.NewRequest("GET", "/readyz", nil))
+	if err != nil {
+		t.Fatalf("Request /readyz failed: %v", err)
+	}
+	if readyzResp.StatusCode != fiber.StatusOK {
+		t.Fatalf("/readyz status code incorrect: got=%d want=%d", readyzResp.StatusCode, fiber.StatusOK)
 	}
 }
