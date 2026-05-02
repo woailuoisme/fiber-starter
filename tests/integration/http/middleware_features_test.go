@@ -12,6 +12,8 @@ import (
 	"fiber-starter/config"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAuthLimiter_EnforcesRequestLimit(t *testing.T) {
@@ -29,20 +31,12 @@ func TestAuthLimiter_EnforcesRequestLimit(t *testing.T) {
 	})
 
 	resp1, err := app.Test(httptest.NewRequest("GET", "/limited", nil))
-	if err != nil {
-		t.Fatalf("first request failed: %v", err)
-	}
-	if resp1.StatusCode != fiber.StatusOK {
-		t.Fatalf("first request status incorrect: got=%d want=%d", resp1.StatusCode, fiber.StatusOK)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp1.StatusCode)
 
 	resp2, err := app.Test(httptest.NewRequest("GET", "/limited", nil))
-	if err != nil {
-		t.Fatalf("second request failed: %v", err)
-	}
-	if resp2.StatusCode != fiber.StatusTooManyRequests {
-		t.Fatalf("second request status incorrect: got=%d want=%d", resp2.StatusCode, fiber.StatusTooManyRequests)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusTooManyRequests, resp2.StatusCode)
 }
 
 func TestIdempotencyMiddleware_ReusesCachedResponse(t *testing.T) {
@@ -59,32 +53,20 @@ func TestIdempotencyMiddleware_ReusesCachedResponse(t *testing.T) {
 	req1.Header.Set("Content-Type", "application/json")
 	req1.Header.Set("X-Idempotency-Key", "12345678-1234-1234-1234-123456789012")
 	resp1, err := app.Test(req1)
-	if err != nil {
-		t.Fatalf("first request failed: %v", err)
-	}
+	require.NoError(t, err)
 	body1, err := io.ReadAll(resp1.Body)
-	if err != nil {
-		t.Fatalf("read first response failed: %v", err)
-	}
+	require.NoError(t, err)
 
 	req2 := httptest.NewRequest("POST", "/submit", bytes.NewBufferString(`{"name":"demo"}`))
 	req2.Header.Set("Content-Type", "application/json")
 	req2.Header.Set("X-Idempotency-Key", "12345678-1234-1234-1234-123456789012")
 	resp2, err := app.Test(req2)
-	if err != nil {
-		t.Fatalf("second request failed: %v", err)
-	}
+	require.NoError(t, err)
 	body2, err := io.ReadAll(resp2.Body)
-	if err != nil {
-		t.Fatalf("read second response failed: %v", err)
-	}
+	require.NoError(t, err)
 
-	if string(body1) != string(body2) {
-		t.Fatalf("expected cached response body, got %q want %q", string(body2), string(body1))
-	}
-	if got := atomic.LoadInt32(&count); got != 1 {
-		t.Fatalf("expected handler to run once, got %d", got)
-	}
+	assert.Equal(t, string(body1), string(body2))
+	assert.EqualValues(t, 1, atomic.LoadInt32(&count))
 }
 
 func TestAPIKeyAuth_ValidatesBearerAndHeaderTokens(t *testing.T) {
@@ -95,42 +77,26 @@ func TestAPIKeyAuth_ValidatesBearerAndHeaderTokens(t *testing.T) {
 	})
 
 	missingResp, err := app.Test(httptest.NewRequest("GET", "/secure", nil))
-	if err != nil {
-		t.Fatalf("missing token request failed: %v", err)
-	}
-	if missingResp.StatusCode != fiber.StatusUnauthorized {
-		t.Fatalf("missing token status incorrect: got=%d want=%d", missingResp.StatusCode, fiber.StatusUnauthorized)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusUnauthorized, missingResp.StatusCode)
 
 	bearerReq := httptest.NewRequest("GET", "/secure", nil)
 	bearerReq.Header.Set("Authorization", "Bearer secret-token")
 	bearerResp, err := app.Test(bearerReq)
-	if err != nil {
-		t.Fatalf("bearer token request failed: %v", err)
-	}
-	if bearerResp.StatusCode != fiber.StatusOK {
-		t.Fatalf("bearer token status incorrect: got=%d want=%d", bearerResp.StatusCode, fiber.StatusOK)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, bearerResp.StatusCode)
 
 	headerReq := httptest.NewRequest("GET", "/secure", nil)
 	headerReq.Header.Set("X-API-Key", "secret-token")
 	headerResp, err := app.Test(headerReq)
-	if err != nil {
-		t.Fatalf("header token request failed: %v", err)
-	}
-	if headerResp.StatusCode != fiber.StatusOK {
-		t.Fatalf("header token status incorrect: got=%d want=%d", headerResp.StatusCode, fiber.StatusOK)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, headerResp.StatusCode)
 
 	wrongReq := httptest.NewRequest("GET", "/secure", nil)
 	wrongReq.Header.Set("Authorization", "Bearer wrong-token")
 	wrongResp, err := app.Test(wrongReq)
-	if err != nil {
-		t.Fatalf("wrong token request failed: %v", err)
-	}
-	if wrongResp.StatusCode != fiber.StatusUnauthorized {
-		t.Fatalf("wrong token status incorrect: got=%d want=%d", wrongResp.StatusCode, fiber.StatusUnauthorized)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusUnauthorized, wrongResp.StatusCode)
 }
 
 func TestIdempotencyMiddleware_AllowsSafeMethods(t *testing.T) {
@@ -141,15 +107,9 @@ func TestIdempotencyMiddleware_AllowsSafeMethods(t *testing.T) {
 	})
 
 	resp, err := app.Test(httptest.NewRequest("GET", "/health", nil))
-	if err != nil {
-		t.Fatalf("safe method request failed: %v", err)
-	}
+	require.NoError(t, err)
 
 	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("read safe method response failed: %v", err)
-	}
-	if strings.TrimSpace(string(body)) != "ok" {
-		t.Fatalf("safe method response incorrect: got=%q want=%q", string(body), "ok")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "ok", strings.TrimSpace(string(body)))
 }

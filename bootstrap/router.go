@@ -1,7 +1,7 @@
 package bootstrap
 
 import (
-	"fiber-starter/app/Providers"
+	providers "fiber-starter/app/Providers"
 	"fiber-starter/routes"
 
 	"github.com/gofiber/fiber/v3"

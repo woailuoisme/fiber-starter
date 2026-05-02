@@ -7,13 +7,10 @@ import (
 	httpservices "fiber-starter/app/Http/Services"
 	services "fiber-starter/app/Services"
 	helpers "fiber-starter/app/Support"
+	supporti18n "fiber-starter/app/Support/i18n"
 	"fiber-starter/config"
 	"fiber-starter/database"
 
-	"github.com/go-playground/locales/en"
-	"github.com/go-playground/locales/zh"
-	ut "github.com/go-playground/universal-translator"
-	"github.com/go-playground/validator/v10"
 	"go.uber.org/dig"
 )
 
@@ -70,9 +67,7 @@ func (c *Container) registerServices() error {
 		httpservices.NewUserService,
 		services.NewEmailService,
 		services.NewQueueService,
-		func(cfg *config.Config) services.SearchService {
-			return services.NewSearchService(cfg)
-		},
+		services.NewSearchService,
 		func(cfg *config.Config, redisCfg *config.RedisConfig) (*services.StorageService, error) {
 			return services.NewStorageService(&cfg.Storage, redisCfg)
 		},
@@ -97,14 +92,17 @@ func (c *Container) provideAll(providers []any, kind string) error {
 	return nil
 }
 
-type AppProvider struct{ container *dig.Container }
-type DatabaseProvider struct{ container *dig.Container }
-type CacheProvider struct{ container *dig.Container }
+type (
+	AppProvider      struct{ container *dig.Container }
+	DatabaseProvider struct{ container *dig.Container }
+	CacheProvider    struct{ container *dig.Container }
+)
 
 func NewAppProvider(container *dig.Container) *AppProvider { return &AppProvider{container: container} }
 func NewDatabaseProvider(container *dig.Container) *DatabaseProvider {
 	return &DatabaseProvider{container: container}
 }
+
 func NewCacheProvider(container *dig.Container) *CacheProvider {
 	return &CacheProvider{container: container}
 }
@@ -113,12 +111,8 @@ func (p *AppProvider) Register() error {
 	if err := p.container.Provide(config.LoadConfig); err != nil {
 		return err
 	}
-	if err := p.container.Provide(func() (*validator.Validate, *ut.UniversalTranslator) {
-		validate := validator.New()
-		enLocale := en.New()
-		zhLocale := zh.New()
-		uni := ut.New(enLocale, enLocale, zhLocale)
-		return validate, uni
+	if err := p.container.Provide(func(cfg *config.Config) (*supporti18n.Service, error) {
+		return supporti18n.Init(&cfg.I18n)
 	}); err != nil {
 		return err
 	}
@@ -135,7 +129,5 @@ func (p *CacheProvider) Register() error {
 	}); err != nil {
 		return err
 	}
-	return p.container.Provide(func(cfg *config.Config) helpers.CacheService {
-		return helpers.NewCacheService(cfg)
-	})
+	return p.container.Provide(helpers.NewCacheService)
 }

@@ -417,7 +417,7 @@ func defaultConfigMap() map[string]any {
 		"jwt.issuer":                             "fiber-starter",
 		"logger.level":                           "info",
 		"logger.format":                          "json",
-		"logger.output":                          "stdout",
+		"logger.output":                          "stack",
 		"logger.max_size":                        100,
 		"logger.max_age":                         30,
 		"logger.max_backups":                     10,
@@ -519,7 +519,6 @@ func envConfigMap() map[string]any {
 	setString("APP_TIMEZONE", "app.timezone")
 	setString("APP_URL", "app.url")
 	setBool("APP_FIBER_PREFORK", "app.fiber.prefork")
-	setBool("FIBER_PREFORK", "app.fiber.prefork")
 	setString("APP_FIBER_SERVER_HEADER", "app.fiber.server_header")
 	setInt("APP_FIBER_BODY_LIMIT", "app.fiber.body_limit")
 	setInt("APP_FIBER_CONCURRENCY", "app.fiber.concurrency")
@@ -531,7 +530,6 @@ func envConfigMap() map[string]any {
 	setString("APP_FIBER_PROXY_HEADER", "app.fiber.proxy_header")
 	setBool("APP_FIBER_STREAM_REQUEST_BODY", "app.fiber.stream_request_body")
 	setBool("APP_FIBER_IMMUTABLE", "app.fiber.immutable")
-	setInt("FIBER_READ_BUFFER_SIZE", "app.fiber.read_buffer_size")
 
 	dbDefault := strings.ToLower(strings.TrimSpace(os.Getenv("DB_CONNECTION")))
 	if dbDefault == "" {
@@ -585,25 +583,17 @@ func envConfigMap() map[string]any {
 	setString("JWT_ISSUER", "jwt.issuer")
 
 	setString("LOGGER_LEVEL", "logger.level")
-	setString("LOG_LEVEL", "logger.level")
 	setString("LOGGER_FORMAT", "logger.format")
-	setString("LOG_FORMAT", "logger.format")
 	setString("LOGGER_OUTPUT", "logger.output")
-	setString("LOG_OUTPUT", "logger.output")
 	setInt("LOGGER_MAX_SIZE", "logger.max_size")
-	setInt("LOG_MAX_SIZE", "logger.max_size")
 	setInt("LOGGER_MAX_AGE", "logger.max_age")
-	setInt("LOG_MAX_AGE", "logger.max_age")
 	setInt("LOGGER_MAX_BACKUPS", "logger.max_backups")
-	setInt("LOG_MAX_BACKUPS", "logger.max_backups")
 	setBool("LOGGER_COMPRESS", "logger.compress")
-	setBool("LOG_COMPRESS", "logger.compress")
 
 	setString("MAIL_FROM_NAME", "mail.from_name")
 	setString("MAIL_FROM_ADDRESS", "mail.from_address")
 	setString("MAIL_REPLY_TO", "mail.reply_to")
 	setString("RESEND_API_KEY", "mail.api_key")
-	setString("MAIL_API_KEY", "mail.api_key")
 
 	setString("STORAGE_DRIVER", "storage.driver")
 	setString("STORAGE_DATABASE", "storage.database")

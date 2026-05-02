@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	exceptions "fiber-starter/app/Exceptions"
-	helpers "fiber-starter/app/Support"
+	supporti18n "fiber-starter/app/Support/i18n"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
@@ -19,7 +19,7 @@ func BindAndValidateBody(c fiber.Ctx, req interface{}) error {
 		return exceptions.BadRequestWithDetails("Invalid request body", err.Error())
 	}
 
-	return validateStructAsAppError(req)
+	return validateStructAsAppError(c, req)
 }
 
 // BindAndValidateQuery 绑定查询参数并执行结构体校验。
@@ -28,7 +28,7 @@ func BindAndValidateQuery(c fiber.Ctx, req interface{}) error {
 		return exceptions.BadRequestWithDetails("Invalid query parameters", err.Error())
 	}
 
-	return validateStructAsAppError(req)
+	return validateStructAsAppError(c, req)
 }
 
 // ValidateQueryRules 在请求层校验 query 规则。
@@ -134,7 +134,7 @@ func ruleValue(rule, key string) (string, bool) {
 	return strings.TrimSpace(value), true
 }
 
-func validateStructAsAppError(s interface{}) error {
+func validateStructAsAppError(c fiber.Ctx, s interface{}) error {
 	if Validator == nil {
 		InitValidator()
 	}
@@ -142,7 +142,7 @@ func validateStructAsAppError(s interface{}) error {
 	err := Validator.Struct(s)
 	if err != nil {
 		if validationErrors, ok := errors.AsType[validator.ValidationErrors](err); ok {
-			return exceptions.NewValidationExceptionWithErrors("Validation failed", helpers.FormatValidationErrors(validationErrors))
+			return exceptions.NewValidationExceptionWithErrors("Validation failed", supporti18n.FormatValidationErrorsWithContext(c, validationErrors))
 		}
 		return exceptions.Validation(err.Error())
 	}

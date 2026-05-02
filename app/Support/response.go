@@ -1,7 +1,6 @@
 package support
 
 import (
-	"errors"
 	"fmt"
 	"runtime"
 	"strconv"
@@ -10,8 +9,8 @@ import (
 
 	exceptions "fiber-starter/app/Exceptions"
 	models "fiber-starter/app/Models"
+	supporti18n "fiber-starter/app/Support/i18n"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -188,7 +187,7 @@ func HandleValidationError(ctx fiber.Ctx, err error) error {
 		return writeJSONResponse(ctx, apiErr.Code, false, apiErr.Message, nil, apiErr.Errors)
 	}
 
-	validationErrors := FormatValidationErrors(err)
+	validationErrors := supporti18n.FormatValidationErrorsWithContext(ctx, err)
 	if len(validationErrors) > 0 {
 		return writeJSONResponse(ctx, fiber.StatusUnprocessableEntity, false, "Validation failed", nil, validationErrors)
 	}
@@ -249,7 +248,7 @@ func HandleInternalServerError(ctx fiber.Ctx, message string) error {
 
 // FormatValidationErrorsToString 将校验错误格式化为字符串。
 func FormatValidationErrorsToString(err error) string {
-	validationErrors := FormatValidationErrors(err)
+	validationErrors := supporti18n.FormatValidationErrors(err)
 	if len(validationErrors) == 0 {
 		return err.Error()
 	}
@@ -361,45 +360,7 @@ func IsDebugMode() bool {
 
 // FormatValidationErrors 格式化验证错误。
 func FormatValidationErrors(err error) map[string][]string {
-	errMap := make(map[string][]string)
-
-	var validationErrors validator.ValidationErrors
-	if errors.As(err, &validationErrors) {
-		for _, e := range validationErrors {
-			field := strings.ToLower(e.Field())
-			tag := e.Tag()
-
-			var message string
-			switch tag {
-			case "required":
-				message = fmt.Sprintf("The %s field is required.", field)
-			case "min":
-				message = fmt.Sprintf("The %s must be at least %s characters.", field, e.Param())
-			case "max":
-				message = fmt.Sprintf("The %s must not exceed %s characters.", field, e.Param())
-			case "email":
-				message = fmt.Sprintf("The %s must be a valid email address.", field)
-			case "e164":
-				message = fmt.Sprintf("The %s must be a valid phone number.", field)
-			case "url":
-				message = fmt.Sprintf("The %s must be a valid URL.", field)
-			case "gt":
-				message = fmt.Sprintf("The %s must be greater than %s.", field, e.Param())
-			case "gte":
-				message = fmt.Sprintf("The %s must be greater than or equal to %s.", field, e.Param())
-			case "lt":
-				message = fmt.Sprintf("The %s must be less than %s.", field, e.Param())
-			case "lte":
-				message = fmt.Sprintf("The %s must be less than or equal to %s.", field, e.Param())
-			default:
-				message = fmt.Sprintf("The %s field is invalid.", field)
-			}
-
-			errMap[field] = append(errMap[field], message)
-		}
-	}
-
-	return errMap
+	return supporti18n.FormatValidationErrors(err)
 }
 
 // SanitizeString 清理字符串。

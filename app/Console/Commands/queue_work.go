@@ -3,7 +3,7 @@ package command
 import (
 	"os"
 
-	"fiber-starter/app/Providers"
+	providers "fiber-starter/app/Providers"
 	Services "fiber-starter/app/Services"
 	helpers "fiber-starter/app/Support"
 	"fiber-starter/config"
@@ -16,7 +16,9 @@ var queueWorkCmd = &cobra.Command{
 	Use:   "queue:work",
 	Short: "Run queue worker (asynq)",
 	Run: func(_ *cobra.Command, _ []string) {
-		runQueueWorker()
+		if err := runQueueWorker(); err != nil {
+			os.Exit(1)
+		}
 	},
 }
 
@@ -24,21 +26,21 @@ func init() {
 	rootCmd.AddCommand(queueWorkCmd)
 }
 
-func runQueueWorker() {
+func runQueueWorker() error {
 	container := providers.NewContainer()
 	if err := container.RegisterProviders(); err != nil {
 		helpers.Logger.Error("queue_worker_failed_to_init_container", zap.Error(err))
-		os.Exit(1)
+		return err
 	}
 
 	if err := container.Invoke(func(_ *config.Config) {}); err != nil {
 		helpers.Logger.Error("queue_worker_failed_to_load_config", zap.Error(err))
-		os.Exit(1)
+		return err
 	}
 
 	if err := helpers.Init(); err != nil {
 		helpers.Logger.Error("queue_worker_failed_to_init_logger", zap.Error(err))
-		os.Exit(1)
+		return err
 	}
 	defer func() {
 		_ = helpers.Sync()
@@ -49,7 +51,7 @@ func runQueueWorker() {
 		queue = q
 	}); err != nil {
 		helpers.Logger.Error("queue_worker_failed_to_resolve_queue_service", zap.Error(err))
-		os.Exit(1)
+		return err
 	}
 	defer func() {
 		_ = queue.Close()
@@ -67,7 +69,7 @@ func runQueueWorker() {
 	case err := <-errCh:
 		if err != nil {
 			helpers.Logger.Error("queue_worker_exited", zap.Error(err))
-			os.Exit(1)
+			return err
 		}
 		helpers.Logger.Info("queue_worker_exited")
 	case sig := <-quit:
@@ -75,8 +77,10 @@ func runQueueWorker() {
 		_ = queue.StopWorker()
 		if err := <-errCh; err != nil {
 			helpers.Logger.Error("queue_worker_shutdown_error", zap.Error(err))
-			os.Exit(1)
+			return err
 		}
 		helpers.Logger.Info("queue_worker_stopped")
 	}
+
+	return nil
 }

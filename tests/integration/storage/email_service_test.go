@@ -1,11 +1,13 @@
 package tests
 
 import (
-	"strings"
 	"testing"
 
 	Services "fiber-starter/app/Services"
 	"fiber-starter/config"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEmailService_RequiresResendAPIKey(t *testing.T) {
@@ -15,10 +17,6 @@ func TestEmailService_RequiresResendAPIKey(t *testing.T) {
 
 	email := Services.NewEmailService(cfg)
 	err := email.SendEmail("user@example.com", "Subject", "Body", false)
-	if err == nil {
-		t.Fatal("SendEmail expected error when RESEND_API_KEY is not configured")
-	}
-	if !strings.Contains(err.Error(), "resend api key") {
-		t.Fatalf("SendEmail error mismatch: got=%v", err)
-	}
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "resend api key")
 }

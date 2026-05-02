@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"fiber-starter/app/Http/Middleware"
+	middleware "fiber-starter/app/Http/Middleware"
 	models "fiber-starter/app/Models"
 	helpers "fiber-starter/app/Support"
 	"fiber-starter/config"

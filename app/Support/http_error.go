@@ -8,7 +8,8 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"fiber-starter/app/Exceptions"
+	exceptions "fiber-starter/app/Exceptions"
+	supporti18n "fiber-starter/app/Support/i18n"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
@@ -90,7 +91,7 @@ func handleUnknownError(c fiber.Ctx, err error) error {
 }
 
 func handleValidationError(c fiber.Ctx, validationErrors validator.ValidationErrors) error {
-	return writeDebuggerError(c, 422, "Validation failed", FormatValidationErrors(validationErrors), "ValidationError", 1)
+	return writeDebuggerError(c, 422, "Validation failed", supporti18n.FormatValidationErrorsWithContext(c, validationErrors), "ValidationError", 1)
 }
 
 func fiberErrorMessage(fiberErr *fiber.Error) string {

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	exceptions "fiber-starter/app/Exceptions"
-	helpers "fiber-starter/app/Support"
+	supporti18n "fiber-starter/app/Support/i18n"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
@@ -22,6 +22,18 @@ var Validator *validator.Validate
 // Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7
 func InitValidator() {
 	Validator = validator.New()
+
+	Validator.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		tag := fld.Tag.Get("json")
+		if tag == "" || tag == "-" {
+			return fld.Name
+		}
+		name := strings.Split(tag, ",")[0]
+		if name == "" {
+			return fld.Name
+		}
+		return name
+	})
 
 	registerCustomValidations()
 }
@@ -71,9 +83,15 @@ func validatePrice(fl validator.FieldLevel) bool {
 	return value > 0
 }
 
-// ValidateStruct 验证结构体
+// ValidateStruct 验证结构体。
 // Requirements: 10.1, 10.6, 10.7
 func ValidateStruct(s interface{}) error {
+	return ValidateStructWithContext(nil, s)
+}
+
+// ValidateStructWithContext 验证结构体并使用请求语言格式化错误。
+// Requirements: 10.1, 10.6, 10.7
+func ValidateStructWithContext(c fiber.Ctx, s interface{}) error {
 	if Validator == nil {
 		InitValidator()
 	}
@@ -81,7 +99,7 @@ func ValidateStruct(s interface{}) error {
 	err := Validator.Struct(s)
 	if err != nil {
 		if validationErrors, ok := errors.AsType[validator.ValidationErrors](err); ok {
-			errors := helpers.FormatValidationErrors(validationErrors)
+			errors := supporti18n.FormatValidationErrorsWithContext(c, validationErrors)
 			return exceptions.NewValidationExceptionWithErrors("Validation failed", errors)
 		}
 		return exceptions.NewValidationException(err.Error())
@@ -97,7 +115,7 @@ func ValidateRequest(c fiber.Ctx, req interface{}) error {
 		return exceptions.NewBadRequestException("Invalid request body")
 	}
 
-	return ValidateStruct(req)
+	return ValidateStructWithContext(c, req)
 }
 
 // ValidateEmail 验证邮箱格式

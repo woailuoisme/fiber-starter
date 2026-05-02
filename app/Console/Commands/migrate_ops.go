@@ -59,9 +59,7 @@ func showMigrationStatus() {
 
 func runSeeds() {
 	color.Cyan("Running seed data...")
-	runSeedOperation("Seed data run failed", func(db *sql.DB, dialect string) error {
-		return seeders.RunAllSeeders(db, dialect)
-	})
+	runSeedOperation("Seed data run failed", seeders.RunAllSeeders)
 
 	color.Green("Seed data run completed")
 }
@@ -77,18 +75,14 @@ func runRandomSeeds(count int) {
 
 func clearSeeds() {
 	color.Cyan("Clearing seed data...")
-	runSeedOperation("Failed to clear seed data", func(db *sql.DB, dialect string) error {
-		return seeders.ClearAllSeeders(db, dialect)
-	})
+	runSeedOperation("Failed to clear seed data", seeders.ClearAllSeeders)
 
 	color.Green("Seed data clear completed")
 }
 
 func refreshSeeds() {
 	color.Cyan("Refreshing seed data...")
-	runSeedOperation("Failed to refresh seed data", func(db *sql.DB, dialect string) error {
-		return seeders.RefreshAllSeeders(db, dialect)
-	})
+	runSeedOperation("Failed to refresh seed data", seeders.RefreshAllSeeders)
 
 	color.Green("Seed data refresh completed")
 }
@@ -102,9 +96,7 @@ func setupDatabase() {
 	}
 
 	color.Yellow("Step 2/2: Running seed data")
-	runSeedOperation("Failed to run seed data", func(db *sql.DB, dialect string) error {
-		return seeders.RunAllSeeders(db, dialect)
-	})
+	runSeedOperation("Failed to run seed data", seeders.RunAllSeeders)
 
 	color.Green("Database setup completed")
 }
@@ -128,8 +120,4 @@ func init() {
 	rootCmd.AddCommand(dbCmd)
 	rootCmd.AddCommand(migrateCmd)
 	rootCmd.AddCommand(seedCmd)
-	rootCmd.AddCommand(jwtGenerateCmd)
-	rootCmd.AddCommand(scheduleCmd)
-	rootCmd.AddCommand(queueWorkCmd)
-	rootCmd.AddCommand(routesCmd)
 }

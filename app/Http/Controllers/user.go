@@ -3,7 +3,7 @@ package controllers
 import (
 	"strconv"
 
-	"fiber-starter/app/Http/Middleware"
+	middleware "fiber-starter/app/Http/Middleware"
 	requests "fiber-starter/app/Http/Requests"
 	services "fiber-starter/app/Http/Services"
 	models "fiber-starter/app/Models"

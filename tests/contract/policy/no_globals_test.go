@@ -5,10 +5,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"fiber-starter/tests/internal/testkit"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestNoKeyGlobalsInCommandAndSeeders(t *testing.T) {
-	repoRoot := filepath.Clean(filepath.Join(".."))
+	repoRoot := testkit.RepoRoot(t)
 
 	type rule struct {
 		name    string
@@ -28,29 +32,17 @@ func TestNoKeyGlobalsInCommandAndSeeders(t *testing.T) {
 	for _, r := range rules {
 		t.Run(r.name, func(t *testing.T) {
 			err := filepath.WalkDir(r.rootDir, func(path string, d os.DirEntry, err error) error {
-				if err != nil {
-					return err
-				}
-				if d.IsDir() {
-					return nil
-				}
-				if !strings.HasSuffix(path, ".go") {
+				require.NoError(t, err)
+				if d.IsDir() || !strings.HasSuffix(path, ".go") {
 					return nil
 				}
 
 				b, err := os.ReadFile(path)
-				if err != nil {
-					return err
-				}
-
-				if strings.Contains(string(b), r.needle) {
-					t.Fatalf("Disallowed reference found: %s in %s", r.needle, path)
-				}
+				require.NoError(t, err)
+				require.NotContainsf(t, string(b), r.needle, "disallowed reference found in %s", path)
 				return nil
 			})
-			if err != nil {
-				t.Fatalf("Walk failed: %v", err)
-			}
+			require.NoError(t, err)
 		})
 	}
 }

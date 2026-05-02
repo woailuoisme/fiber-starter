@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"fiber-starter/app/Providers"
+	providers "fiber-starter/app/Providers"
 	helpers "fiber-starter/app/Support"
 	"fiber-starter/config"
 	"fiber-starter/routes"
@@ -31,7 +31,8 @@ func showRoutes() {
 		return
 	}
 
-	printRouteTable(app.GetRoutes())
+	allRoutes := app.GetRoutes()
+	printRouteTable(allRoutes)
 }
 
 func setupRouteApp() (*fiber.App, error) {
@@ -68,7 +69,7 @@ type RouteInfo struct {
 
 func printRouteTable(allRoutes []fiber.Route) {
 	routes := processRoutes(allRoutes)
-	displayRoutes(routes)
+	displayRoutes(routes, len(allRoutes))
 }
 
 func processRoutes(allRoutes []fiber.Route) []*RouteInfo {
@@ -107,31 +108,30 @@ func processRoutes(allRoutes []fiber.Route) []*RouteInfo {
 	return routes
 }
 
-func displayRoutes(routes []*RouteInfo) {
+func displayRoutes(routes []*RouteInfo, totalEntries int) {
 	fmt.Println()
 	for _, route := range routes {
 		printSingleRoute(route)
 	}
 
 	fmt.Println()
-	_, _ = color.New(color.FgGreen).Printf("  Showing [%d] routes\n", len(routes))
+	_, _ = color.New(color.FgGreen).Printf("  Showing [%d] unique paths from [%d] route entries\n", len(routes), totalEntries)
 	fmt.Println()
 }
 
 func printSingleRoute(route *RouteInfo) {
 	methods := strings.Join(route.Methods, "|")
 
-	var methodColor *color.Color
-	if slices.Contains(route.Methods, "GET") {
+	methodColor := color.New(color.FgWhite)
+	switch {
+	case slices.Contains(route.Methods, "GET"):
 		methodColor = color.New(color.FgGreen)
-	} else if slices.Contains(route.Methods, "POST") {
+	case slices.Contains(route.Methods, "POST"):
 		methodColor = color.New(color.FgYellow)
-	} else if slices.Contains(route.Methods, "PUT") || slices.Contains(route.Methods, "PATCH") {
+	case slices.Contains(route.Methods, "PUT") || slices.Contains(route.Methods, "PATCH"):
 		methodColor = color.New(color.FgBlue)
-	} else if slices.Contains(route.Methods, "DELETE") {
+	case slices.Contains(route.Methods, "DELETE"):
 		methodColor = color.New(color.FgRed)
-	} else {
-		methodColor = color.New(color.FgWhite)
 	}
 
 	methodStr := fmt.Sprintf("%-12s", methods)

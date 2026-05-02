@@ -1,13 +1,15 @@
 package bootstrap
 
 import (
+	"errors"
+	"net"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
-	"fiber-starter/app/Providers"
+	providers "fiber-starter/app/Providers"
 	services "fiber-starter/app/Services"
 	helpers "fiber-starter/app/Support"
 	"fiber-starter/config"
@@ -18,12 +20,14 @@ import (
 )
 
 func runHTTPServer(app *fiber.App, container *providers.Container, cfg *config.Config) {
-	port := ":" + cfg.App.Port
-	baseURL := strings.TrimRight(cfg.App.URL, "/")
+	listenAddr := net.JoinHostPort(cfg.App.Host, cfg.App.Port)
+	baseURL := buildPublicURL(cfg.App.Host, cfg.App.Port)
 	docsURL := baseURL + "/docs"
 
 	helpers.Info(
 		"server_listening",
+		zap.String("listen_addr", listenAddr),
+		zap.String("host", cfg.App.Host),
 		zap.String("port", cfg.App.Port),
 		zap.String("app_url", baseURL),
 		zap.String("docs_url", docsURL),
@@ -31,7 +35,7 @@ func runHTTPServer(app *fiber.App, container *providers.Container, cfg *config.C
 
 	listenErr := make(chan error, 1)
 	go func() {
-		listenErr <- app.Listen(port, fiber.ListenConfig{
+		listenErr <- app.Listen(listenAddr, fiber.ListenConfig{
 			EnablePrefork:         cfg.App.Fiber.Prefork,
 			DisableStartupMessage: true,
 		})
@@ -43,7 +47,21 @@ func runHTTPServer(app *fiber.App, container *providers.Container, cfg *config.C
 	select {
 	case err := <-listenErr:
 		if err != nil {
-			helpers.Fatal("server_failed_to_start", zap.Error(err))
+			if isAddressInUse(err) {
+				helpers.Fatal(
+					"server_port_in_use",
+					zap.String("listen_addr", listenAddr),
+					zap.String("port", cfg.App.Port),
+					zap.String("hint", "stop the process using this port or change APP_PORT"),
+					zap.Error(err),
+				)
+			}
+
+			helpers.Fatal(
+				"server_failed_to_start",
+				zap.String("listen_addr", listenAddr),
+				zap.Error(err),
+			)
 		}
 		return
 	case <-sigCh:
@@ -71,4 +89,25 @@ func runHTTPServer(app *fiber.App, container *providers.Container, cfg *config.C
 		_ = conn.Close()
 	})
 	_ = helpers.Sync()
+}
+
+func buildPublicURL(host, port string) string {
+	host = strings.TrimSpace(host)
+	if host == "" || host == "0.0.0.0" || host == "::" || host == "[::]" {
+		host = "localhost"
+	}
+
+	return "http://" + net.JoinHostPort(host, port)
+}
+
+func isAddressInUse(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if errors.Is(err, syscall.EADDRINUSE) {
+		return true
+	}
+
+	return strings.Contains(strings.ToLower(err.Error()), "address already in use")
 }

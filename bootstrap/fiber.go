@@ -62,8 +62,6 @@ func createFiberApp(cfg *config.Config) *fiber.App {
 		Immutable:         fiberCfg.Immutable,
 		JSONEncoder:       json.Marshal,
 		JSONDecoder:       json.Unmarshal,
-		ErrorHandler: func(c fiber.Ctx, err error) error {
-			return helpers.HandleHTTPError(c, err)
-		},
+		ErrorHandler:      helpers.HandleHTTPError,
 	})
 }

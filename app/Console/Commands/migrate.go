@@ -8,12 +8,11 @@ import (
 	"strings"
 
 	"fiber-starter/config"
+	database "fiber-starter/database"
 	"fiber-starter/database/seeders"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-
-	database "fiber-starter/database"
 )
 
 const (
@@ -169,24 +168,31 @@ func rebuildDatabase(startMessage string, withSeed bool) {
 	}
 
 	color.Cyan("Running seed data...")
-	runSeedOperation("Failed to run seed data", func(db *sql.DB, dialect string) error {
-		return seeders.RunAllSeeders(db, dialect)
-	})
+	runSeedOperation("Failed to run seed data", seeders.RunAllSeeders)
 }
 
-var migrateCmd = &cobra.Command{Use: "migrate", Short: "Database migration management", Long: `Manage database migrations, including running migrations, rolling back migrations, etc.`}
-var migrateRunCmd = &cobra.Command{Use: "run", Short: "Run all pending database migrations", Long: `Run all pending database migrations.
+var (
+	migrateCmd    = &cobra.Command{Use: "migrate", Short: "Database migration management", Long: `Manage database migrations, including running migrations, rolling back migrations, etc.`}
+	migrateRunCmd = &cobra.Command{Use: "run", Short: "Run all pending database migrations", Long: `Run all pending database migrations.
 This command executes all migrations that have not yet been run, updating database structure to latest state.`, Run: func(_ *cobra.Command, _ []string) { runMigrations() }}
+)
+
 var migrateRollbackCmd = &cobra.Command{Use: "rollback", Short: "Rollback last database migration", Long: `Rollback last executed database migration.
 This command undoes last migration operation, restoring database to its pre-migration state.`, Run: func(_ *cobra.Command, _ []string) { rollbackMigrations() }}
+
 var migrateResetCmd = &cobra.Command{Use: "reset", Short: "Reset database (delete all tables and re-run migrations)", Long: `Reset database, delete all tables and re-run all migrations.
 Warning: This operation will delete all data, use with caution!`, Run: func(_ *cobra.Command, _ []string) { resetDatabase() }}
+
 var migrateFreshCmd = &cobra.Command{Use: "fresh", Short: "Drop all tables and re-run migrations and seed data", Long: `Drop all tables and re-run all migrations, then run seed data.
 Warning: This operation will delete all data, use with caution!`, Run: func(_ *cobra.Command, _ []string) { freshDatabase() }}
-var migrateStatusCmd = &cobra.Command{Use: "status", Short: "Show migration status", Long: `Show current status of database migrations, including run and pending migrations.`, Run: func(_ *cobra.Command, _ []string) { showMigrationStatus() }}
-var seedCmd = &cobra.Command{Use: "seed", Short: "Database seed data management", Long: `Manage database seed data, including running seed data, clearing seed data, etc.`}
-var seedRunCmd = &cobra.Command{Use: "run", Short: "Run all seed data", Long: `Run all seed data, populating database with initial data.
+
+var (
+	migrateStatusCmd = &cobra.Command{Use: "status", Short: "Show migration status", Long: `Show current status of database migrations, including run and pending migrations.`, Run: func(_ *cobra.Command, _ []string) { showMigrationStatus() }}
+	seedCmd          = &cobra.Command{Use: "seed", Short: "Database seed data management", Long: `Manage database seed data, including running seed data, clearing seed data, etc.`}
+	seedRunCmd       = &cobra.Command{Use: "run", Short: "Run all seed data", Long: `Run all seed data, populating database with initial data.
 This command executes all seed data creation operations.`, Run: func(_ *cobra.Command, _ []string) { runSeeds() }}
+)
+
 var seedRunRandomCmd = &cobra.Command{Use: "random [count]", Short: "Generate specified number of random test data", Long: `Generate specified number of random test data.
 If no count is specified, defaults to 10 records.`, Args: cobra.MaximumNArgs(1), Run: func(_ *cobra.Command, args []string) {
 	count := 10
@@ -195,7 +201,9 @@ If no count is specified, defaults to 10 records.`, Args: cobra.MaximumNArgs(1),
 	}
 	runRandomSeeds(count)
 }}
+
 var seedClearCmd = &cobra.Command{Use: "clear", Short: "Clear all seed data", Long: `Clear all seed data, deleting records created by seed data.
 This operation deletes all seed data but does not delete table structures.`, Run: func(_ *cobra.Command, _ []string) { clearSeeds() }}
+
 var seedRefreshCmd = &cobra.Command{Use: "refresh", Short: "Refresh seed data (clear and re-run)", Long: `Refresh seed data, first clear all seed data, then re-run.
 This command clears existing seed data and then repopulates it.`, Run: func(_ *cobra.Command, _ []string) { refreshSeeds() }}

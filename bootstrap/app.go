@@ -2,8 +2,9 @@
 package bootstrap
 
 import (
-	"fiber-starter/app/Providers"
+	providers "fiber-starter/app/Providers"
 	helpers "fiber-starter/app/Support"
+	supporti18n "fiber-starter/app/Support/i18n"
 	"fiber-starter/config"
 
 	"go.uber.org/zap"
@@ -25,6 +26,10 @@ func App() {
 
 	if err := helpers.Init(); err != nil {
 		helpers.Fatal("failed_to_init_logger", zap.Error(err))
+	}
+
+	if err := container.Invoke(func(*supporti18n.Service) {}); err != nil {
+		helpers.Fatal("failed_to_init_i18n", zap.Error(err))
 	}
 
 	app := createFiberApp(cfg)

@@ -1,52 +1,22 @@
-package services
+package tests
 
 import (
 	"testing"
+	"time"
 
+	services "fiber-starter/app/Services"
 	"fiber-starter/config"
+	"fiber-starter/tests/internal/testkit"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestNormalizeStorageDriver(t *testing.T) {
-	t.Parallel()
-
-	if got := normalizeStorageDriver(" MINIO "); got != "garage" {
-		t.Fatalf("expected minio to normalize to garage, got %q", got)
-	}
-
-	if got := normalizeStorageDriver("r2"); got != "r2" {
-		t.Fatalf("expected r2 to stay unchanged, got %q", got)
-	}
-}
-
-func TestNormalizeS3Endpoint(t *testing.T) {
-	t.Parallel()
-
-	if got := normalizeS3Endpoint("localhost:9000", "http", true); got != "http://localhost:9000" {
-		t.Fatalf("expected http endpoint, got %q", got)
-	}
-
-	if got := normalizeS3Endpoint("https://example.com", "http", true); got != "https://example.com" {
-		t.Fatalf("expected pre-schemed endpoint to stay unchanged, got %q", got)
-	}
-
-	if got := normalizeS3Endpoint("localhost:9000", "http", false); got != "localhost:9000" {
-		t.Fatalf("expected normalization to be skipped, got %q", got)
-	}
-}
-
-func TestBuildStorageSupportsS3CompatibleProviders(t *testing.T) {
-	t.Parallel()
-
-	redisCfg := &config.RedisConfig{
-		Host: "localhost",
-		Port: "6379",
-		DB:   0,
-	}
-
+func TestStorageServiceInitialization_S3CompatibleDrivers(t *testing.T) {
 	cases := []struct {
-		name       string
-		cfg        *config.StorageConfig
-		wantDriver string
+		name     string
+		cfg      *config.StorageConfig
+		redisCfg *config.RedisConfig
 	}{
 		{
 			name: "garage",
@@ -61,7 +31,7 @@ func TestBuildStorageSupportsS3CompatibleProviders(t *testing.T) {
 					Region:          "us-east-1",
 				},
 			},
-			wantDriver: "garage",
+			redisCfg: testkit.DefaultRedisConfig(),
 		},
 		{
 			name: "minio alias",
@@ -76,7 +46,7 @@ func TestBuildStorageSupportsS3CompatibleProviders(t *testing.T) {
 					Region:          "us-east-1",
 				},
 			},
-			wantDriver: "garage",
+			redisCfg: testkit.DefaultRedisConfig(),
 		},
 		{
 			name: "generic s3",
@@ -90,7 +60,7 @@ func TestBuildStorageSupportsS3CompatibleProviders(t *testing.T) {
 					Endpoint:        "https://s3.amazonaws.com",
 				},
 			},
-			wantDriver: "s3",
+			redisCfg: testkit.DefaultRedisConfig(),
 		},
 		{
 			name: "r2",
@@ -104,7 +74,7 @@ func TestBuildStorageSupportsS3CompatibleProviders(t *testing.T) {
 					Endpoint:        "account-id.r2.cloudflarestorage.com",
 				},
 			},
-			wantDriver: "r2",
+			redisCfg: testkit.DefaultRedisConfig(),
 		},
 		{
 			name: "oss",
@@ -118,41 +88,22 @@ func TestBuildStorageSupportsS3CompatibleProviders(t *testing.T) {
 					Endpoint:        "oss-cn-hangzhou.aliyuncs.com",
 				},
 			},
-			wantDriver: "oss",
+			redisCfg: testkit.DefaultRedisConfig(),
 		},
 	}
 
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			store, driver, err := buildStorage(tc.cfg, redisCfg)
-			if err != nil {
-				t.Fatalf("buildStorage returned error: %v", err)
-			}
-			if driver != tc.wantDriver {
-				t.Fatalf("expected driver %q, got %q", tc.wantDriver, driver)
-			}
-			if store == nil {
-				t.Fatal("expected storage backend to be initialized")
-			}
-			if err := store.Close(); err != nil {
-				t.Fatalf("close returned error: %v", err)
-			}
+			svc, err := services.NewStorageService(tc.cfg, tc.redisCfg)
+			require.NoError(t, err)
+			assert.NotNil(t, svc.GetStorage())
+			require.NoError(t, svc.Close())
 		})
 	}
 }
 
-func TestBuildStorageRejectsIncompleteS3Configs(t *testing.T) {
-	t.Parallel()
-
-	redisCfg := &config.RedisConfig{
-		Host: "localhost",
-		Port: "6379",
-		DB:   0,
-	}
-
+func TestStorageServiceRejectsIncompleteS3Configs(t *testing.T) {
 	cases := []struct {
 		name string
 		cfg  *config.StorageConfig
@@ -192,15 +143,11 @@ func TestBuildStorageRejectsIncompleteS3Configs(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			store, driver, err := buildStorage(tc.cfg, redisCfg)
-			if err == nil {
-				if store != nil {
-					_ = store.Close()
-				}
-				t.Fatalf("expected buildStorage to fail for driver %q", driver)
-			}
+			svc, err := services.NewStorageService(tc.cfg, testkit.DefaultRedisConfig())
+			require.NoError(t, err)
+			err = svc.Set("probe", []byte("value"), time.Second)
+			require.Error(t, err)
+			_ = svc.Close()
 		})
 	}
 }

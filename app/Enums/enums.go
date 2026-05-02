@@ -32,8 +32,10 @@ type EnumOperations[T any] interface {
 	GetSortedInfo() []EnumInfo[T]
 }
 
-type StringEnum string
-type IntEnum int
+type (
+	StringEnum string
+	IntEnum    int
+)
 
 func NewStringEnum(value string) StringEnum         { return StringEnum(value) }
 func (e StringEnum) String() string                 { return string(e) }
@@ -183,6 +185,7 @@ func (r AdminRole) Color() string {
 	}
 	return "gray"
 }
+
 func (r AdminRole) Priority() int {
 	if info, exists := adminRoleInfo(r); exists {
 		return info.Priority
@@ -203,6 +206,7 @@ func AdminRoleFromString(value string) (AdminRole, error) {
 	}
 	return "", fmt.Errorf("invalid admin role: %s", value)
 }
+
 func AdminRoleMustFromString(value string) AdminRole {
 	role, err := AdminRoleFromString(value)
 	if err != nil {
@@ -222,6 +226,7 @@ func AdminRoleGetAllInfo() []EnumInfo[AdminRole] { return GetInfosFromMap(adminR
 func AdminRoleGetSortedInfo() []EnumInfo[AdminRole] {
 	return SortByPriority(GetInfosFromMap(adminRoleMap))
 }
+
 func (r AdminRole) HasPermission(permission string) bool {
 	if r == SuperAdmin {
 		return true
@@ -277,6 +282,7 @@ var userStatusLegacyMap = map[string]UserStatus{
 func userStatusInfo(status UserStatus) (EnumInfo[UserStatus], bool) {
 	return FindInMap(status, userStatusMap)
 }
+
 func (s UserStatus) String() string {
 	if info, exists := userStatusInfo(s); exists {
 		return info.Label
@@ -290,6 +296,7 @@ func (s UserStatus) Color() string {
 	}
 	return "gray"
 }
+
 func (s UserStatus) Priority() int {
 	if info, exists := userStatusInfo(s); exists {
 		return info.Priority
@@ -313,6 +320,7 @@ func UserStatusFromString(value string) (UserStatus, error) {
 	}
 	return "", fmt.Errorf("invalid user status: %s", value)
 }
+
 func UserStatusMustFromString(value string) UserStatus {
 	status, err := UserStatusFromString(value)
 	if err != nil {

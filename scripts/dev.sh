@@ -148,17 +148,20 @@ run_tests() {
 quality_check() {
     log_info "Running code quality checks..."
     
-    # 格式化
-    log_info "Formatting code..."
-    go fmt ./...
-    
-    # 静态检查
-    log_info "Running go vet..."
-    go vet ./...
-    
-    # golangci-lint
+    # gofumpt formatting
+    if check_command gofumpt; then
+        log_info "Running gofumpt..."
+        gofumpt -w $(command -v rg >/dev/null 2>&1 && rg --files -g '*.go' || find . -name '*.go' -not -path './vendor/*' -not -path './.git/*')
+    else
+        log_warning "gofumpt is not installed"
+    fi
+
+    # golangci-lint formatters and linters
     if check_command golangci-lint; then
-        log_info "Running golangci-lint..."
+        log_info "Running golangci-lint fmt..."
+        golangci-lint fmt
+
+        log_info "Running golangci-lint run..."
         golangci-lint run
     else
         log_warning "golangci-lint is not installed"

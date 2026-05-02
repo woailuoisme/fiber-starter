@@ -1,19 +1,18 @@
 package tests
 
 import (
-	"bytes"
-	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"strings"
 	"sync"
 	"testing"
 
 	middleware "fiber-starter/app/Http/Middleware"
 	helpers "fiber-starter/app/Support"
+	"fiber-starter/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
@@ -22,36 +21,9 @@ import (
 var stdoutMu sync.Mutex
 
 func captureStdout(t *testing.T, fn func()) string {
-	t.Helper()
-
 	stdoutMu.Lock()
 	defer stdoutMu.Unlock()
-
-	old := os.Stdout
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("Failed to create stdout pipe: %v", err)
-	}
-
-	os.Stdout = w
-	defer func() {
-		os.Stdout = old
-		_ = w.Close()
-	}()
-
-	outCh := make(chan string, 1)
-	go func() {
-		var buf bytes.Buffer
-		_, _ = io.Copy(&buf, r)
-		_ = r.Close()
-		outCh <- buf.String()
-	}()
-
-	fn()
-	os.Stdout = old
-	_ = w.Close()
-
-	return <-outCh
+	return testkit.CaptureOutput(t, "stdout", fn)
 }
 
 func TestRequestID_GeneratedAndLogged(t *testing.T) {
@@ -71,35 +43,25 @@ func TestRequestID_GeneratedAndLogged(t *testing.T) {
 		})
 
 		r, err := app.Test(httptest.NewRequest("GET", "/boom", nil))
-		if err != nil {
-			t.Fatalf("Failed to make request: %v", err)
-		}
+		assert.NoError(t, err)
 		resp = r
 	})
 
 	requestID := resp.Header.Get("X-Request-ID")
-	if requestID == "" {
-		t.Fatalf("Expected response to contain X-Request-ID")
-	}
+	require.NotEmpty(t, requestID)
 
 	var foundError bool
 	for _, entry := range observed.All() {
 		m := entry.ContextMap()
 		if entry.Message == "http_error" {
 			foundError = true
-			if m["request_id"] != requestID {
-				t.Fatalf("error log request_id mismatch: got=%v want=%v", m["request_id"], requestID)
-			}
+			assert.Equal(t, requestID, m["request_id"])
 		}
 	}
 
-	if !foundError {
-		t.Fatalf("Did not capture http_error log")
-	}
+	require.True(t, foundError)
 
-	if !strings.Contains(out, requestID) {
-		t.Fatalf("Access log does not contain request_id: %q", requestID)
-	}
+	assert.Contains(t, out, requestID)
 }
 
 func TestRequestID_PreservedAndLogged(t *testing.T) {
@@ -121,33 +83,23 @@ func TestRequestID_PreservedAndLogged(t *testing.T) {
 		req := httptest.NewRequest("GET", "/boom", nil)
 		req.Header.Set("X-Request-ID", "rid-123")
 		r, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("Failed to make request: %v", err)
-		}
+		assert.NoError(t, err)
 		resp = r
 	})
 
 	requestID := resp.Header.Get("X-Request-ID")
-	if requestID != "rid-123" {
-		t.Fatalf("Expected to preserve X-Request-ID: got=%q want=%q", requestID, "rid-123")
-	}
+	assert.Equal(t, "rid-123", requestID)
 
 	var foundError bool
 	for _, entry := range observed.All() {
 		m := entry.ContextMap()
 		if entry.Message == "http_error" {
 			foundError = true
-			if m["request_id"] != requestID {
-				t.Fatalf("error log request_id mismatch: got=%v want=%v", m["request_id"], requestID)
-			}
+			assert.Equal(t, requestID, m["request_id"])
 		}
 	}
 
-	if !foundError {
-		t.Fatalf("Did not capture http_error log")
-	}
+	require.True(t, foundError)
 
-	if !strings.Contains(out, requestID) {
-		t.Fatalf("Access log does not contain request_id: %q", requestID)
-	}
+	assert.Contains(t, out, requestID)
 }

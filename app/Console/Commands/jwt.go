@@ -54,7 +54,7 @@ func updateEnvFile(newSecret string) error {
 		return fmt.Errorf("JWT_SECRET not found in .env file")
 	}
 
-	if err := os.WriteFile(envFile, []byte(strings.Join(lines, "\n")), 0600); err != nil { //nolint:gosec
+	if err := os.WriteFile(envFile, []byte(strings.Join(lines, "\n")), 0o600); err != nil { //nolint:gosec
 		return fmt.Errorf("failed to write .env file: %w", err)
 	}
 

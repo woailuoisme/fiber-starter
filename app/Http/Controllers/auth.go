@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"fiber-starter/app/Exceptions"
-	"fiber-starter/app/Http/Middleware"
+	exceptions "fiber-starter/app/Exceptions"
+	middleware "fiber-starter/app/Http/Middleware"
 	requests "fiber-starter/app/Http/Requests"
 	services "fiber-starter/app/Http/Services"
 	models "fiber-starter/app/Models"

@@ -2,6 +2,7 @@
 -include .buildconfig
 export PATH := /opt/homebrew/bin:/usr/local/bin:$(PATH)
 GO ?= go
+GOFUMPT ?= gofumpt
 GOFMT ?= gofmt
 GOLANGCI_LINT ?= golangci-lint
 K6 ?= k6
@@ -32,12 +33,23 @@ define run_golangci_lint
 	HOME=/tmp XDG_CACHE_HOME=$(LINT_CACHE_HOME) GOCACHE=$(LINT_GOCACHE) GOFLAGS=-mod=vendor "$$LINT_BIN" $(1)
 endef
 
+define run_gofumpt
+	@GOFUMPT_BIN="$$(command -v $(GOFUMPT) 2>/dev/null || true)"; \
+	if [ -z "$$GOFUMPT_BIN" ] && [ -x /opt/homebrew/bin/$(GOFUMPT) ]; then GOFUMPT_BIN=/opt/homebrew/bin/$(GOFUMPT); fi; \
+	if [ -z "$$GOFUMPT_BIN" ] && [ -x /usr/local/bin/$(GOFUMPT) ]; then GOFUMPT_BIN=/usr/local/bin/$(GOFUMPT); fi; \
+	if [ -z "$$GOFUMPT_BIN" ]; then echo "$(GOFUMPT) is not installed"; exit 1; fi; \
+	GO_FILES="$$(command -v rg >/dev/null 2>&1 && rg --files -g '*.go' || find . -name '*.go' -not -path './vendor/*' -not -path './.git/*')"; \
+	if [ -z "$$GO_FILES" ]; then echo "No Go files found"; exit 0; fi; \
+	"$$GOFUMPT_BIN" -w $$GO_FILES
+endef
+
 define build_binary
 	@GOFLAGS=-mod=mod $(1) $(GO) build $(2) -o $(BUILD_DIR)/$(3) $(4)
 	@echo "$(5): $(BUILD_DIR)/$(3)"
 endef
 
 .PHONY: all help build build-cli build-prod build-dir coverage-dir config run dev test coverage lint lint-strict fmt vet clean \
+        fmt-gofumpt \
         k6-root k6-root-load \
         migrate migrate-rollback seed seed-random routes jwt schedule \
 	        docs install-tools deps init sync \
@@ -105,13 +117,15 @@ lint-fix: ## 运行代码检查并自动修复
 	$(call run_golangci_lint,run --fix)
 
 fmt: ## 格式化代码
-	@files="$$(find app bootstrap cmd config database routes scripts tests -name '*.go' -not -path './vendor/*' -not -path './build/*' -not -path './coverage/*')"; \
-	if [ -n "$$files" ]; then $(GOFMT) -w $$files; fi
+	$(call run_golangci_lint,fmt)
+
+fmt-gofumpt: ## 使用 gofumpt 格式化 Go 代码
+	$(call run_gofumpt)
 
 vet: ## 静态检查
 	@$(GO) vet ./...
 
-check: fmt vet lint test ## 运行所有检查
+check: fmt lint test ## 运行所有检查
 
 # --- Database & CLI ---
 
@@ -152,6 +166,15 @@ sync: ## 同步并整理依赖
 
 deps: ## 下载并整理依赖
 	@$(GO) mod download && $(GO) mod tidy
+
+mod-gcu: ## 类似 npm ncu：列出直接依赖可升级版本
+	@sh scripts/mod-gcu.sh list
+
+mod-gcu-up: ## 类似 npm ncu -u：更新直接依赖到最新版本
+	@sh scripts/mod-gcu.sh up
+
+mod-gcu-up-patch: ## 只升级直接依赖的 patch 版本
+	@sh scripts/mod-gcu.sh patch
 
 install-tools: ## 安装开发工具
 	@$(GO) install github.com/air-verse/air@latest

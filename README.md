@@ -20,6 +20,7 @@
 - **命令行工具**：基于 Cobra，支持迁移、种子、调度等。
 - **Scalar 文档**：自动生成 OpenAPI 3.1，并通过 Scalar 展示。
 - **统一错误处理**：统一异常类型和错误响应格式。
+- **国际化**：基于 Fiber 官方 `contrib/v3/i18n`，支持 `query lang`、Cookie 和 `Accept-Language`。
 
 ## 技术栈
 
@@ -93,11 +94,11 @@ APP_FIBER_READ_BUFFER_SIZE=16384
 │   │   ├── Requests/         # 请求验证对象
 │   │   ├── Resources/        # API 资源转换
 │   │   └── Services/         # HTTP 用例/业务服务
-│   ├── I18n/                 # 国际化
 │   ├── Models/               # 数据模型
 │   ├── Providers/            # 依赖注入服务提供者
 │   ├── Services/             # 基础设施服务（Search、Queue、Storage、Email）
 │   └── Support/              # 日志、缓存、错误响应等支持层
+│       └── i18n/             # 官方 i18n 共享容器与本地化辅助
 ├── bootstrap/                # 启动引导逻辑
 ├── config/                   # 配置加载与结构体
 ├── database/                 # 数据库迁移、工厂与种子
@@ -194,6 +195,7 @@ APP_FIBER_READ_BUFFER_SIZE=16384
 ### 代码质量
 - `make lint`：运行代码检查（golangci-lint）
 - `make fmt`：格式化代码
+- `make fmt-gofumpt`：使用 gofumpt 进行额外格式化
 - `make test`：运行单元测试
 - `make coverage`：生成测试覆盖率报告
 

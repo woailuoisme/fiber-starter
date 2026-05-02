@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"fiber-starter/app/Exceptions"
+	exceptions "fiber-starter/app/Exceptions"
 	models "fiber-starter/app/Models"
 	helpers "fiber-starter/app/Support"
 	"fiber-starter/config"

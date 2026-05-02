@@ -11,16 +11,18 @@ import (
 	"testing"
 	"unicode"
 	"unicode/utf8"
+
+	"fiber-starter/tests/internal/testkit"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestNoHanOutsideComments_GoAndShell(t *testing.T) {
-	repoRoot := filepath.Clean(filepath.Join(".."))
+	repoRoot := testkit.RepoRoot(t)
 
 	t.Run("go", func(t *testing.T) {
 		err := filepath.WalkDir(repoRoot, func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
+			require.NoError(t, err)
 			if d.IsDir() {
 				name := d.Name()
 				if name == ".git" || name == "vendor" || name == "node_modules" {
@@ -38,20 +40,16 @@ func TestNoHanOutsideComments_GoAndShell(t *testing.T) {
 			}
 
 			if err := assertNoHanOutsideGoComments(path, b); err != nil {
-				t.Fatal(err)
+				require.NoError(t, err)
 			}
 			return nil
 		})
-		if err != nil {
-			t.Fatalf("walk failed: %v", err)
-		}
+		require.NoError(t, err)
 	})
 
 	t.Run("sh", func(t *testing.T) {
 		err := filepath.WalkDir(repoRoot, func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
+			require.NoError(t, err)
 			if d.IsDir() {
 				name := d.Name()
 				if name == ".git" || name == "vendor" || name == "node_modules" {
@@ -69,13 +67,11 @@ func TestNoHanOutsideComments_GoAndShell(t *testing.T) {
 			}
 
 			if err := assertNoHanOutsideShellComments(path, b); err != nil {
-				t.Fatal(err)
+				require.NoError(t, err)
 			}
 			return nil
 		})
-		if err != nil {
-			t.Fatalf("walk failed: %v", err)
-		}
+		require.NoError(t, err)
 	})
 }
 

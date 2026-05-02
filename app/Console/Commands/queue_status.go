@@ -6,7 +6,7 @@ import (
 	"sort"
 	"text/tabwriter"
 
-	"fiber-starter/app/Providers"
+	providers "fiber-starter/app/Providers"
 	Services "fiber-starter/app/Services"
 	helpers "fiber-starter/app/Support"
 	"fiber-starter/config"
@@ -19,7 +19,9 @@ var queueStatusCmd = &cobra.Command{
 	Use:   "queue:status",
 	Short: "Show queue health and task counts",
 	Run: func(_ *cobra.Command, _ []string) {
-		runQueueStatus()
+		if err := runQueueStatus(); err != nil {
+			os.Exit(1)
+		}
 	},
 }
 
@@ -27,21 +29,21 @@ func init() {
 	rootCmd.AddCommand(queueStatusCmd)
 }
 
-func runQueueStatus() {
+func runQueueStatus() error {
 	container := providers.NewContainer()
 	if err := container.RegisterProviders(); err != nil {
 		helpers.Logger.Error("queue_status_failed_to_init_container", zap.Error(err))
-		os.Exit(1)
+		return err
 	}
 
 	if err := container.Invoke(func(_ *config.Config) {}); err != nil {
 		helpers.Logger.Error("queue_status_failed_to_load_config", zap.Error(err))
-		os.Exit(1)
+		return err
 	}
 
 	if err := helpers.Init(); err != nil {
 		helpers.Logger.Error("queue_status_failed_to_init_logger", zap.Error(err))
-		os.Exit(1)
+		return err
 	}
 	defer func() {
 		_ = helpers.Sync()
@@ -52,18 +54,18 @@ func runQueueStatus() {
 		queue = q
 	}); err != nil {
 		helpers.Logger.Error("queue_status_failed_to_resolve_queue_service", zap.Error(err))
-		os.Exit(1)
+		return err
 	}
 
 	statuses, err := queue.InspectQueues()
 	if err != nil {
 		helpers.Logger.Error("queue_status_failed", zap.Error(err))
-		os.Exit(1)
+		return err
 	}
 
 	if len(statuses) == 0 {
 		fmt.Println("No queues found")
-		return
+		return nil
 	}
 
 	sort.Slice(statuses, func(i, j int) bool {
@@ -86,4 +88,6 @@ func runQueueStatus() {
 		)
 	}
 	_ = w.Flush()
+
+	return nil
 }
