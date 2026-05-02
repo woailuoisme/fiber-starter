@@ -7,6 +7,13 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-func setupAppRoutes(app *fiber.App, container *providers.Container) error {
-	return routes.SetupApplicationRoutes(app, container)
+func setupAppRoutes(app *fiber.App, runtime *providers.Runtime) error {
+	return routes.SetupApplicationRoutes(
+		app,
+		runtime.Config,
+		runtime.Cache,
+		runtime.AuthController,
+		runtime.UserController,
+		runtime.HealthController,
+	)
 }

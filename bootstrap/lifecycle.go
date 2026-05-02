@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -9,17 +10,14 @@ import (
 	"syscall"
 	"time"
 
-	providers "fiber-starter/app/Providers"
-	services "fiber-starter/app/Services"
 	helpers "fiber-starter/app/Support"
 	"fiber-starter/config"
-	"fiber-starter/database"
 
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"
 )
 
-func runHTTPServer(app *fiber.App, container *providers.Container, cfg *config.Config) {
+func runHTTPServer(app *fiber.App, cfg *config.Config) error {
 	listenAddr := net.JoinHostPort(cfg.App.Host, cfg.App.Port)
 	baseURL := buildPublicURL(cfg.App.Host, cfg.App.Port)
 	docsURL := baseURL + "/docs"
@@ -48,22 +46,12 @@ func runHTTPServer(app *fiber.App, container *providers.Container, cfg *config.C
 	case err := <-listenErr:
 		if err != nil {
 			if isAddressInUse(err) {
-				helpers.Fatal(
-					"server_port_in_use",
-					zap.String("listen_addr", listenAddr),
-					zap.String("port", cfg.App.Port),
-					zap.String("hint", "stop the process using this port or change APP_PORT"),
-					zap.Error(err),
-				)
+				return fmt.Errorf("server_port_in_use: listen_addr=%s port=%s: %w", listenAddr, cfg.App.Port, err)
 			}
 
-			helpers.Fatal(
-				"server_failed_to_start",
-				zap.String("listen_addr", listenAddr),
-				zap.Error(err),
-			)
+			return fmt.Errorf("server_failed_to_start: listen_addr=%s: %w", listenAddr, err)
 		}
-		return
+		return nil
 	case <-sigCh:
 		helpers.Info("shutdown_signal_received")
 	}
@@ -82,13 +70,7 @@ func runHTTPServer(app *fiber.App, container *providers.Container, cfg *config.C
 		helpers.Warn("server_shutdown_timed_out")
 	}
 
-	_ = container.Invoke(func(conn *database.Connection, cache helpers.CacheService, queue services.QueueService, storage *services.StorageService) {
-		_ = storage.Close()
-		_ = queue.Close()
-		_ = cache.Close()
-		_ = conn.Close()
-	})
-	_ = helpers.Sync()
+	return nil
 }
 
 func buildPublicURL(host, port string) string {

@@ -39,19 +39,18 @@ func (q *queueService) StopWorker() error {
 		return fmt.Errorf("worker process is not running")
 	}
 
-	q.getServer().Shutdown()
-	_ = q.getClient().Close()
-	return nil
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	return q.shutdownLocked()
 }
 
 func (q *queueService) Close() error {
-	if q.setRunning(false) {
-		q.getServer().Shutdown()
-	}
-	if q.client != nil {
-		return q.client.Close()
-	}
-	return nil
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	q.isRunning = false
+	return q.shutdownLocked()
 }
 
 func (q *queueService) setRunning(running bool) bool {
@@ -64,4 +63,17 @@ func (q *queueService) setRunning(running bool) bool {
 
 	q.isRunning = running
 	return true
+}
+
+func (q *queueService) shutdownLocked() error {
+	if q.server != nil {
+		q.server.Shutdown()
+		q.server = nil
+	}
+	if q.client != nil {
+		err := q.client.Close()
+		q.client = nil
+		return err
+	}
+	return nil
 }

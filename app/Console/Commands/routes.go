@@ -8,7 +8,6 @@ import (
 
 	providers "fiber-starter/app/Providers"
 	helpers "fiber-starter/app/Support"
-	"fiber-starter/config"
 	"fiber-starter/routes"
 
 	"github.com/fatih/color"
@@ -26,39 +25,41 @@ var routesCmd = &cobra.Command{
 }
 
 func showRoutes() {
-	app, err := setupRouteApp()
+	app, runtime, err := setupRouteApp()
 	if err != nil {
 		return
 	}
+	defer func() {
+		_ = runtime.Close()
+		_ = helpers.Sync()
+	}()
 
 	allRoutes := app.GetRoutes()
 	printRouteTable(allRoutes)
 }
 
-func setupRouteApp() (*fiber.App, error) {
-	container := providers.NewContainer()
-	if err := container.RegisterProviders(); err != nil {
-		_, _ = color.New(color.FgRed).Printf("Failed to register dependencies: %v\n", err)
-		return nil, err
-	}
-
-	if err := container.Invoke(func(_ *config.Config) {}); err != nil {
-		_, _ = color.New(color.FgRed).Printf("Failed to load config: %v\n", err)
-		return nil, err
-	}
-
-	if err := helpers.Init(); err != nil {
-		_, _ = color.New(color.FgRed).Printf("Failed to initialize logger: %v\n", err)
-		return nil, err
+func setupRouteApp() (*fiber.App, *providers.Runtime, error) {
+	runtime, err := buildRuntime()
+	if err != nil {
+		_, _ = color.New(color.FgRed).Printf("Failed to build runtime: %v\n", err)
+		return nil, nil, err
 	}
 
 	app := fiber.New(fiber.Config{})
-	if err := routes.SetupApplicationRoutes(app, container); err != nil {
+	if err := routes.SetupApplicationRoutes(
+		app,
+		runtime.Config,
+		runtime.Cache,
+		runtime.AuthController,
+		runtime.UserController,
+		runtime.HealthController,
+	); err != nil {
 		_, _ = color.New(color.FgRed).Printf("Failed to setup routes: %v\n", err)
-		return nil, err
+		_ = runtime.Close()
+		return nil, nil, err
 	}
 
-	return app, nil
+	return app, runtime, nil
 }
 
 type RouteInfo struct {

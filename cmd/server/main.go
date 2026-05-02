@@ -1,8 +1,15 @@
 // Package main is the entry point for the HTTP server application.
 package main
 
-import bootstrap "fiber-starter/bootstrap"
+import (
+	helpers "fiber-starter/app/Support"
+	bootstrap "fiber-starter/bootstrap"
+
+	"go.uber.org/zap"
+)
 
 func main() {
-	bootstrap.App()
+	if err := bootstrap.App(); err != nil {
+		helpers.Fatal("server_bootstrap_failed", zap.Error(err))
+	}
 }

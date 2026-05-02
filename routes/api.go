@@ -3,7 +3,6 @@ package routes
 import (
 	controllers "fiber-starter/app/Http/Controllers"
 	middleware "fiber-starter/app/Http/Middleware"
-	providers "fiber-starter/app/Providers"
 	helpers "fiber-starter/app/Support"
 	"fiber-starter/config"
 	v1routes "fiber-starter/routes/v1"
@@ -27,21 +26,21 @@ func SetupRoutes(
 }
 
 // SetupApplicationRoutes binds middleware and routes in one place for Laravel-style bootstrapping.
-func SetupApplicationRoutes(app *fiber.App, container *providers.Container) error {
-	return container.Invoke(func(
-		cfg *config.Config,
-		cache helpers.CacheService,
-		authController *controllers.AuthController,
-		userController *controllers.UserController,
-		healthController *controllers.HealthController,
-	) {
-		jwtProtected := middleware.JWTProtected(cfg, cache)
-		middleware.SetupMiddleware(app, cfg)
-		middleware.SetupTimeoutRedirect(app)
-		middleware.SetupAuthMiddleware(app)
-		SetupRoutes(app, cfg, jwtProtected, authController, userController, healthController)
-		if cfg.App.Debug {
-			helpers.Info("registered_route_entries", zap.Int("total", len(app.GetRoutes())))
-		}
-	})
+func SetupApplicationRoutes(
+	app *fiber.App,
+	cfg *config.Config,
+	cache helpers.CacheService,
+	authController *controllers.AuthController,
+	userController *controllers.UserController,
+	healthController *controllers.HealthController,
+) error {
+	jwtProtected := middleware.JWTProtected(cfg, cache)
+	middleware.SetupMiddleware(app, cfg)
+	middleware.SetupTimeoutRedirect(app)
+	middleware.SetupAuthMiddleware(app)
+	SetupRoutes(app, cfg, jwtProtected, authController, userController, healthController)
+	if cfg.App.Debug {
+		helpers.Info("registered_route_entries", zap.Int("total", len(app.GetRoutes())))
+	}
+	return nil
 }

@@ -3,10 +3,7 @@ package command
 import (
 	"os"
 
-	providers "fiber-starter/app/Providers"
-	Services "fiber-starter/app/Services"
 	helpers "fiber-starter/app/Support"
-	"fiber-starter/config"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -27,35 +24,17 @@ func init() {
 }
 
 func runQueueWorker() error {
-	container := providers.NewContainer()
-	if err := container.RegisterProviders(); err != nil {
-		helpers.Logger.Error("queue_worker_failed_to_init_container", zap.Error(err))
-		return err
-	}
-
-	if err := container.Invoke(func(_ *config.Config) {}); err != nil {
-		helpers.Logger.Error("queue_worker_failed_to_load_config", zap.Error(err))
-		return err
-	}
-
-	if err := helpers.Init(); err != nil {
-		helpers.Logger.Error("queue_worker_failed_to_init_logger", zap.Error(err))
+	runtime, err := buildRuntime()
+	if err != nil {
+		helpers.Logger.Error("queue_worker_failed_to_build_runtime", zap.Error(err))
 		return err
 	}
 	defer func() {
+		_ = runtime.Close()
 		_ = helpers.Sync()
 	}()
 
-	var queue Services.QueueService
-	if err := container.Invoke(func(q Services.QueueService) {
-		queue = q
-	}); err != nil {
-		helpers.Logger.Error("queue_worker_failed_to_resolve_queue_service", zap.Error(err))
-		return err
-	}
-	defer func() {
-		_ = queue.Close()
-	}()
+	queue := runtime.QueueService
 
 	errCh := make(chan error, 1)
 	go func() {
