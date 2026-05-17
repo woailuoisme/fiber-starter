@@ -1,0 +1,66 @@
+# yaml-language-server: $schema=https://golangci-lint.run/jsonschema/golangci.jsonschema.json
+# https://golangci-lint.run/
+# Configuration for golangci-lint v2.
+
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  allow-parallel-runners: true
+
+output:
+  sort-order:
+    - file
+    - linter
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - localmodule
+        - default
+      custom-order: true
+      no-inline-comments: true
+      no-prefix-comments: true
+      no-lex-order: true
+    goimports:
+      local-prefixes:
+        - fiber-starter
+  exclusions:
+    generated: strict
+    warn-unused: true
+
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - ineffassign
+    - unused
+    - testifylint
+    - gocritic
+    - gosec
+
+  settings:
+    gosec:
+      excludes:
+        - G104 # unchecked errors are handled by errcheck
+        - G101 # ignore hardcoded credentials false positives for env mappings
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

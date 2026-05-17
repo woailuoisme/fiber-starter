@@ -1,0 +1,7 @@
+business:
+  order:
+    payment_timeout: ${ORDER_PAYMENT_TIMEOUT:30}
+    pickup_timeout: ${ORDER_PICKUP_TIMEOUT:1440}
+  device:
+    channel_count: ${DEVICE_CHANNEL_COUNT:53}
+    channel_max_capacity: ${DEVICE_CHANNEL_MAX_CAPACITY:4}

@@ -1,0 +1,23 @@
+auth:
+  default: ${AUTH_DEFAULT:api}
+  guards:
+    api:
+      driver: jwt
+      provider: users
+    admin:
+      driver: jwt
+      provider: admins
+  providers:
+    users:
+      driver: database
+      table: users
+    admins:
+      driver: database
+      table: admin_users
+
+jwt:
+  secret: ${JWT_SECRET:change-me}
+  expiration_time: ${JWT_EXPIRATION_TIME:86400}
+  refresh_time: ${JWT_REFRESH_TIME:604800}
+  expire_hours: ${JWT_EXPIRE_HOURS:24}
+  issuer: ${JWT_ISSUER:fiber-starter}

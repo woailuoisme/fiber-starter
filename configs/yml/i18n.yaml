@@ -1,0 +1,9 @@
+i18n:
+  enabled: ${I18N_ENABLED:true}
+  default_language: ${I18N_DEFAULT_LANGUAGE:en}
+  supported_languages: 
+    - en
+    - zh-CN
+  language_dir: ${I18N_LANGUAGE_DIR:./lang}
+  cookie_name: ${I18N_COOKIE_NAME:lang}
+  cookie_max_age: ${I18N_COOKIE_MAX_AGE:86400}

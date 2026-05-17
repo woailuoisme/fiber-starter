@@ -1,0 +1,12 @@
+limiter:
+  default: api
+  strategies:
+    api:
+      max: 60
+      window: 60 # 1 minute
+    login:
+      max: 5
+      window: 60
+    uploads:
+      max: 10
+      window: 3600 # 1 hour

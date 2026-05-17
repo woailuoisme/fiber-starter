@@ -1,0 +1,11 @@
+mail:
+  default: ${MAIL_MAILER:resend}
+  from_name: ${MAIL_FROM_NAME:Fiber Starter}
+  from_address: ${MAIL_FROM_ADDRESS:noreply@example.com}
+  reply_to: ${MAIL_REPLY_TO:""}
+  api_key: ${RESEND_API_KEY:""}
+  host: ${MAIL_HOST:localhost}
+  port: ${MAIL_PORT:1025}
+  username: ${MAIL_USERNAME:""}
+  password: ${MAIL_PASSWORD:""}
+  encryption: ${MAIL_ENCRYPTION:""}

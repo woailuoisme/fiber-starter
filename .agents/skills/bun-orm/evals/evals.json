@@ -1,0 +1,56 @@
+{
+  "skill_name": "bun-orm",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Use the official Bun Guide structure to explain when Bun is a good fit for a Go REST API backend, then provide a quick-start style example with a User model, database bootstrap, insert, and select.",
+      "expected_output": "Follows the official Key Features, Quick Start, How Bun Works, and Common Use Cases chapters; keeps Bun SQL-first and shows bootstrap plus basic insert/select code.",
+      "files": [],
+      "assertions": [
+        {
+          "text": "The output explicitly frames Bun as SQL-first and built on database/sql."
+        },
+        {
+          "text": "The output includes a quick-start style model plus NewInsert and NewSelect examples."
+        },
+        {
+          "text": "The output references REST API backend use without putting query-builder code directly in controllers."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Following the official Bun Guide Query Building Examples chapter, show CRUD plus an advanced reporting query with a join or relation, a subquery, aggregation, grouping, and a DTO scan struct.",
+      "expected_output": "Uses official query-building patterns: NewInsert, NewSelect, NewUpdate, NewDelete, Relation or join, subquery, ColumnExpr, Group/Having, and typed scan target.",
+      "files": [],
+      "assertions": [
+        {
+          "text": "The output includes basic CRUD examples using Bun query builders."
+        },
+        {
+          "text": "The output includes an advanced query with relation or join, subquery, aggregation, and grouping."
+        },
+        {
+          "text": "The output uses placeholders for values instead of string-concatenating user input."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Use the official Bun Guide Migration and Schema Management plus Best Practices chapters to review a plan that creates tables automatically on production startup and sends emails inside db.RunInTx.",
+      "expected_output": "Recommends explicit Bun migrations/fixtures and transaction best practices; discourages hidden production schema mutation and external side effects inside transactions.",
+      "files": [],
+      "assertions": [
+        {
+          "text": "The output recommends explicit migrations using Bun's migration concepts instead of hidden production startup schema mutation."
+        },
+        {
+          "text": "The output discusses migration locking or explicit migration execution."
+        },
+        {
+          "text": "The output keeps email or other external side effects outside the transaction boundary."
+        }
+      ]
+    }
+  ]
+}

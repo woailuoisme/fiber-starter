@@ -1,0 +1,21 @@
+-- Create "auth_otps" table
+CREATE TABLE `auth_otps` (
+  `id` integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+  `email` text NOT NULL,
+  `purpose` text NOT NULL,
+  `code_hash` text NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `sent_at` datetime NOT NULL,
+  `attempts` integer NOT NULL DEFAULT 0,
+  `max_attempts` integer NOT NULL DEFAULT 5,
+  `consumed_at` datetime NULL,
+  `created_at` datetime NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+  `updated_at` datetime NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+  CONSTRAINT `ck_auth_otps_purpose` CHECK (purpose IN ('signup','password_reset')),
+  CONSTRAINT `ck_auth_otps_attempts` CHECK (attempts >= 0),
+  CONSTRAINT `ck_auth_otps_max_attempts` CHECK (max_attempts > 0)
+);
+-- Create index "idx_auth_otps_email_purpose_created_at" to table: "auth_otps"
+CREATE INDEX `idx_auth_otps_email_purpose_created_at` ON `auth_otps` (`email`, `purpose`, `created_at` DESC);
+-- Create index "idx_auth_otps_expires_at" to table: "auth_otps"
+CREATE INDEX `idx_auth_otps_expires_at` ON `auth_otps` (`expires_at`);

@@ -1,0 +1,1310 @@
+{
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "# Fiber Starter 生产级 API 规范指南\n\n欢迎使用本项目生成的交互式 API 文档。\n\n## 🚀 快速上手\n\n本项目基于 **Fiber v3** 开发，遵循 RESTful 架构风格。\n\n### 认证流程\n\n大多数接口需要 **Bearer Token** 认证。\n\n1. 调用 `/api/v1/auth/sign-in` 获取令牌。\n2. 在请求头中包含：`Authorization: Bearer <your_token>`。\n\n## 📦 统一响应格式\n\n所有接口均返回统一的 JSON 结构，便于前端处理：\n\n| 字段 | 类型 | 说明 |\n| :--- | :--- | :--- |\n| `success` | bool | 操作是否成功 |\n| `code` | int | 业务或 HTTP 状态码 |\n| `message` | string | 提示信息 |\n| `data` | object | 具体的业务数据内容 |\n| `exception` | object | 调试模式下的异常堆栈（仅 Debug 模式可见） |\n\n## 🛠 开发规范\n\n- **分页参数**：使用 `page` 和 `limit`。\n- **错误处理**：返回非 2xx 状态码时，请检查 `errors` 字段。\n- **时间格式**：统一采用 RFC3339 格式。\n\n---\n\n> 本文档由 Antigravity 自动优化生成。\n",
+    "title": "Fiber Starter API",
+    "termsOfService": "http://swagger.io/terms/",
+    "contact": {
+      "name": "API Support",
+      "email": "support@example.com"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version": "1.0"
+  },
+  "host": "localhost:8080",
+  "basePath": "/",
+  "paths": {
+    "/api/v1/auth/change-password": {
+      "post": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "description": "在用户已登录的情况下，验证旧密码并更新为新密码。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "认证中心"
+        ],
+        "summary": "修改密码",
+        "parameters": [
+          {
+            "description": "修改参数",
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ChangePasswordRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "修改成功",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "description": "使用有效的刷新令牌获取一组新的访问令牌和刷新令牌。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "认证中心"
+        ],
+        "summary": "刷新令牌",
+        "parameters": [
+          {
+            "description": "刷新参数",
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RefreshTokenRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "刷新成功",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/APIResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "access_token": {
+                          "type": "string"
+                        },
+                        "refresh_token": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/reset-password": {
+      "post": {
+        "description": "发送密码重置验证码。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "认证中心"
+        ],
+        "summary": "重置密码",
+        "parameters": [
+          {
+            "description": "重置密码参数",
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ResetPasswordRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/reset-password/confirm": {
+      "post": {
+        "description": "使用重置令牌设置新密码。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "认证中心"
+        ],
+        "summary": "确认重置密码",
+        "parameters": [
+          {
+            "description": "确认重置密码参数",
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ConfirmResetPasswordRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/reset-password/verify": {
+      "post": {
+        "description": "使用邮箱验证码换取一个短期重置令牌。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "认证中心"
+        ],
+        "summary": "验证重置密码验证码",
+        "parameters": [
+          {
+            "description": "验证重置密码参数",
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VerifyResetPasswordRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "验证成功",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/APIResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "reset_token": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/session": {
+      "get": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "description": "根据访问令牌返回当前登录用户的详细个人信息。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "认证中心"
+        ],
+        "summary": "获取当前用户资料",
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/APIResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/definitions/SafeUser"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/sign-in": {
+      "post": {
+        "description": "验证用户凭据，成功后返回 JWT 访问令牌和刷新令牌；未完成邮箱验证的账号会被拒绝。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "认证中心"
+        ],
+        "summary": "用户登录",
+        "parameters": [
+          {
+            "description": "登录参数",
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/LoginRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/APIResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "tokens": {
+                          "type": "object",
+                          "properties": {
+                            "access_token": {
+                              "type": "string"
+                            },
+                            "refresh_token": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "user": {
+                          "$ref": "#/definitions/SafeUser"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/sign-out": {
+      "post": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "description": "撤销当前访问令牌，使用户退出登录状态。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "认证中心"
+        ],
+        "summary": "用户登出",
+        "responses": {
+          "200": {
+            "description": "注销成功",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/sign-up": {
+      "post": {
+        "description": "创建一个新的用户账号并发送邮箱验证码，不直接返回访问令牌。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "认证中心"
+        ],
+        "summary": "用户注册",
+        "parameters": [
+          {
+            "description": "注册参数",
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RegisterRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "注册成功",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/APIResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/definitions/SafeUser"
+                        },
+                        "verification_required": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/sign-up/verify": {
+      "post": {
+        "description": "校验邮箱验证码并激活账号，成功后返回访问令牌和刷新令牌。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "认证中心"
+        ],
+        "summary": "验证注册邮箱",
+        "parameters": [
+          {
+            "description": "验证参数",
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VerifySignUpRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "验证成功",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/APIResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "tokens": {
+                          "type": "object",
+                          "properties": {
+                            "access_token": {
+                              "type": "string"
+                            },
+                            "refresh_token": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "user": {
+                          "$ref": "#/definitions/SafeUser"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "description": "获取分页用户列表（需管理员权限）。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "获取用户列表",
+        "parameters": [
+          {
+            "type": "integer",
+            "default": 1,
+            "description": "页码",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "default": 10,
+            "description": "每页数量",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/APIResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/definitions/SafeUser"
+                          }
+                        },
+                        "meta": {
+                          "$ref": "#/definitions/PaginationMeta"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/export": {
+      "get": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "description": "将系统中的用户列表导出为 Excel 文件下载（需管理员权限）。",
+        "produces": [
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ],
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "导出用户列表",
+        "responses": {
+          "200": {
+            "description": "users_export.xlsx",
+            "schema": {
+              "type": "file"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/import": {
+      "post": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "description": "上传 Excel 文件并批量导入用户信息（需管理员权限）。",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "导入用户列表",
+        "parameters": [
+          {
+            "type": "file",
+            "description": "Excel 文件",
+            "name": "file",
+            "in": "formData",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "导入成功",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/APIResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "description": "根据访问令牌返回当前认证用户的详细信息。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "获取当前登录用户信息",
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/APIResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/definitions/SafeUser"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/profile": {
+      "put": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "description": "更新当前登录用户的个人资料。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "更新个人资料",
+        "parameters": [
+          {
+            "description": "更新参数",
+            "name": "user",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateProfileRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/APIResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/definitions/SafeUser"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/search": {
+      "get": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "description": "根据姓名或邮箱搜索分页用户列表（需管理员权限）。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "搜索用户",
+        "parameters": [
+          {
+            "type": "string",
+            "example": "\"admin\"",
+            "description": "关键词",
+            "name": "q",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "default": 1,
+            "description": "页码",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "default": 10,
+            "description": "每页数量",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "搜索成功",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/APIResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/definitions/SafeUser"
+                          }
+                        },
+                        "meta": {
+                          "$ref": "#/definitions/PaginationMeta"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}": {
+      "get": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "description": "根据 ID 获取用户详情（需管理员权限）。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "获取单个用户",
+        "parameters": [
+          {
+            "type": "integer",
+            "example": 1,
+            "description": "用户 ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/APIResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/definitions/SafeUser"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "put": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "description": "根据 ID 更新指定用户信息（需管理员权限）。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "更新用户信息",
+        "parameters": [
+          {
+            "type": "integer",
+            "example": 1,
+            "description": "用户 ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "更新参数",
+            "name": "user",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateProfileRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/APIResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/definitions/SafeUser"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "description": "根据 ID 永久删除用户账号（需管理员权限）。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "删除用户",
+        "parameters": [
+          {
+            "type": "integer",
+            "example": 1,
+            "description": "用户 ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "检查应用服务是否存活，用于 Kubernetes Liveness Probe。",
+        "produces": [
+          "text/plain"
+        ],
+        "tags": [
+          "系统监控"
+        ],
+        "summary": "基础健康检查",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "description": "检查数据库、Redis 等核心依赖服务是否连接正常，用于 Kubernetes Readiness Probe。",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "系统监控"
+        ],
+        "summary": "服务就绪检查",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "APIResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "example": true
+        },
+        "code": {
+          "type": "integer",
+          "example": 200
+        },
+        "message": {
+          "type": "string",
+          "example": "OK"
+        },
+        "data": {},
+        "errors": {},
+        "exception": {
+          "$ref": "#/definitions/ExceptionInfo"
+        }
+      }
+    },
+    "ChangePasswordRequest": {
+      "type": "object",
+      "required": [
+        "current_password",
+        "new_password"
+      ],
+      "properties": {
+        "current_password": {
+          "type": "string"
+        },
+        "new_password": {
+          "type": "string",
+          "minLength": 8
+        }
+      }
+    },
+    "ConfirmResetPasswordRequest": {
+      "type": "object",
+      "required": [
+        "password",
+        "token"
+      ],
+      "properties": {
+        "password": {
+          "type": "string",
+          "minLength": 8
+        },
+        "token": {
+          "type": "string"
+        }
+      }
+    },
+    "ExceptionInfo": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "memory_usage": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "query_count": {
+          "type": "integer"
+        },
+        "request_time": {
+          "description": "milliseconds",
+          "type": "number"
+        },
+        "trace": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "LoginRequest": {
+      "type": "object",
+      "required": [
+        "email",
+        "password"
+      ],
+      "properties": {
+        "email": {
+          "type": "string",
+          "example": "user@example.com"
+        },
+        "password": {
+          "type": "string",
+          "example": "password123"
+        }
+      }
+    },
+    "PaginationMeta": {
+      "type": "object",
+      "properties": {
+        "current_page": {
+          "type": "integer"
+        },
+        "from": {
+          "type": "integer"
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "last_page": {
+          "type": "integer"
+        },
+        "per_page": {
+          "type": "integer"
+        },
+        "to": {
+          "type": "integer"
+        },
+        "total": {
+          "type": "integer"
+        }
+      }
+    },
+    "RefreshTokenRequest": {
+      "type": "object",
+      "required": [
+        "refresh_token"
+      ],
+      "properties": {
+        "refresh_token": {
+          "type": "string",
+          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        }
+      }
+    },
+    "RegisterRequest": {
+      "type": "object",
+      "required": [
+        "email",
+        "name",
+        "password"
+      ],
+      "properties": {
+        "email": {
+          "type": "string",
+          "example": "user@example.com"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 100,
+          "minLength": 2,
+          "example": "Alice"
+        },
+        "password": {
+          "type": "string",
+          "minLength": 8,
+          "example": "password123"
+        }
+      }
+    },
+    "ResetPasswordRequest": {
+      "type": "object",
+      "required": [
+        "email"
+      ],
+      "properties": {
+        "email": {
+          "type": "string"
+        }
+      }
+    },
+    "SafeUser": {
+      "type": "object",
+      "properties": {
+        "avatar": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "email_verified_at": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/UserStatus"
+        },
+        "updated_at": {
+          "type": "string"
+        }
+      }
+    },
+    "UpdateProfileRequest": {
+      "type": "object",
+      "properties": {
+        "avatar": {
+          "type": "string",
+          "example": "https://example.com/avatar.jpg"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 100,
+          "minLength": 2,
+          "example": "Alice"
+        },
+        "phone": {
+          "type": "string",
+          "example": "+8613800138000"
+        }
+      }
+    },
+    "UserStatus": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "pending",
+        "suspended",
+        "banned",
+        "active",
+        "inactive",
+        "pending",
+        "suspended",
+        "banned"
+      ],
+      "x-enum-varnames": [
+        "UserStatusActive",
+        "UserStatusInactive",
+        "UserStatusPending",
+        "UserStatusSuspended",
+        "UserStatusBanned"
+      ]
+    },
+    "VerifyResetPasswordRequest": {
+      "type": "object",
+      "required": [
+        "code",
+        "email"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        }
+      }
+    },
+    "VerifySignUpRequest": {
+      "type": "object",
+      "required": [
+        "code",
+        "email"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "example": "123456"
+        },
+        "email": {
+          "type": "string",
+          "example": "user@example.com"
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "Bearer": {
+      "description": "Type \"Bearer \" followed by a space and your JWT token. Example: \"Bearer <token>\"",
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
+  },
+  "tags": [
+    {
+      "description": "用户登录、注册、刷新令牌、密码找回等账号安全相关接口",
+      "name": "认证中心"
+    },
+    {
+      "description": "提供用户资料获取、修改、以及管理员级别的用户增删改查、导入导出功能",
+      "name": "用户管理"
+    },
+    {
+      "description": "服务健康检查、就绪检查及运行状态监控",
+      "name": "系统监控"
+    }
+  ]
+}

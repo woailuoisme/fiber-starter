@@ -1,0 +1,12 @@
+websocket:
+  port: ${WEBSOCKET_PORT:3001}
+  path: ${WEBSOCKET_PATH:/ws}
+  auth_path: ${WEBSOCKET_AUTH_PATH:/broadcasting/auth}
+  app_key: ${WEBSOCKET_APP_KEY:fiber-starter}
+  app_secret: ${WEBSOCKET_APP_SECRET:}
+  bus_mode: ${WEBSOCKET_BUS_MODE:redis}
+  redis_prefix: ${WEBSOCKET_REDIS_PREFIX:realtime}
+  write_queue_size: ${WEBSOCKET_WRITE_QUEUE_SIZE:128}
+  max_message_size: ${WEBSOCKET_MAX_MESSAGE_SIZE:65536}
+  heartbeat_interval: ${WEBSOCKET_HEARTBEAT_INTERVAL:30}
+  presence_ttl: ${WEBSOCKET_PRESENCE_TTL:120}

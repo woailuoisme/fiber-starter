@@ -1,0 +1,137 @@
+# Binaries
+# ------------------------------
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+debug
+__debug_bin
+bin/
+fiber-starter
+main
+
+# IDEs
+# ------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.iml
+
+# OS Files
+# ------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Dependency directories
+# ------------------------------
+vendor/
+
+# Go Workspace
+# ------------------------------
+go.work
+
+# Environment Variables
+# ------------------------------
+.env
+.env.local
+.env.dev
+.env.product
+.env.production
+.env.*.local
+# Keep these as templates/defaults
+# !.env.example
+# !.env.dev
+# !.env.production
+
+# Logs
+# ------------------------------
+*.log
+logs/
+storage/logs/
+
+# Database
+# ------------------------------
+*.db
+*.sqlite
+*.sqlite3
+
+# Air (Live Reload)
+# ------------------------------
+tmp/
+
+# Build Output
+# ------------------------------
+dist/
+build/
+
+# Test Coverage
+# ------------------------------
+coverage.txt
+coverage.html
+coverage.out
+test-results/
+
+# Cache
+# ------------------------------
+.cache/
+
+# Local Development
+# ------------------------------
+.local/
+
+# Terraform
+# ------------------------------
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Kubeconfig
+# ------------------------------
+*.kubeconfig
+
+# Storage (Local Uploads)
+# ------------------------------
+storage/app/public/*
+!storage/app/public/.gitkeep
+storage/framework/cache/*
+!storage/framework/cache/.gitkeep
+storage/framework/sessions/*
+!storage/framework/sessions/.gitkeep
+storage/framework/views/*
+!storage/framework/views/.gitkeep
+
+# Project Specific
+# ------------------------------
+.kiro
+.idea
+.vscode
+.claude
+.gemini
+.trae
+specs
+
+# .agents
+!.agents/
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/bun-orm/
+
+# .specify
+!.specify/
+.specify/*
+!.specify/memory/
+.specify/memory/*
+!.specify/memory/constitution.md
+
+.playwright-cli

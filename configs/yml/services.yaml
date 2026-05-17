@@ -1,0 +1,24 @@
+notification:
+  gotify:
+    enabled: ${NOTIFICATION_GOTIFY_ENABLED:false}
+    url: ${NOTIFICATION_GOTIFY_URL:""}
+    token: ${NOTIFICATION_GOTIFY_TOKEN:""}
+    title: ${NOTIFICATION_GOTIFY_TITLE:Fiber Starter}
+    priority: ${NOTIFICATION_GOTIFY_PRIORITY:5}
+  telegram:
+    enabled: ${NOTIFICATION_TELEGRAM_ENABLED:false}
+    api_url: ${NOTIFICATION_TELEGRAM_API_URL:https://api.telegram.org}
+    bot_token: ${NOTIFICATION_TELEGRAM_BOT_TOKEN:""}
+    chat_id: ${NOTIFICATION_TELEGRAM_CHAT_ID:""}
+    parse_mode: ${NOTIFICATION_TELEGRAM_PARSE_MODE:""}
+
+search:
+  default: ${SEARCH_DRIVER:meilisearch}
+  host: ${MEILISEARCH_HOST:http://localhost:7700}
+  api_key: ${MEILISEARCH_API_KEY:""}
+
+otel:
+  enabled: ${OTEL_ENABLED:false}
+  service_name: ${OTEL_SERVICE_NAME:fiber-starter}
+  exporter_type: ${OTEL_EXPORTER_TYPE:stdout}
+  endpoint: ${OTEL_ENDPOINT:localhost:4317}

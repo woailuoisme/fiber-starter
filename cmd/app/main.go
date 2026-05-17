@@ -1,0 +1,37 @@
+// Package main is the single entry point for the fiber-starter application.
+//
+// Usage:
+//
+//	go run . serve              # Start the HTTP server
+//	go run . migrate run        # Run database migrations
+//	go run . routes             # Show all routes
+//	go run . --help             # Show available commands
+//	@title						Fiber Starter API
+//	@version					1.0
+//	@description.markdown		api.md
+//	@termsOfService				http://swagger.io/terms/
+//	@contact.name				API Support
+//	@contact.email				support@example.com
+//	@license.name				Apache 2.0
+//	@license.url				http://www.apache.org/licenses/LICENSE-2.0.html
+//	@host						localhost:8080
+//	@BasePath					/
+//	@schemes					http https
+//	@securityDefinitions.apikey	Bearer
+//	@in							header
+//	@name						Authorization
+//	@description				Type "Bearer " followed by a space and your JWT token. Example: "Bearer <token>"
+
+// @tag.name			认证中心
+// @tag.description	用户登录、注册、刷新令牌、密码找回等账号安全相关接口
+// @tag.name			用户管理
+// @tag.description	提供用户资料获取、修改、以及管理员级别的用户增删改查、导入导出功能
+// @tag.name			系统监控
+// @tag.description	服务健康检查、就绪检查及运行状态监控
+package main
+
+import command "fiber-starter/app/Console/Commands"
+
+func main() {
+	command.CLI()
+}

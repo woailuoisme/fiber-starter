@@ -1,0 +1,248 @@
+# Variables
+-include .buildconfig
+export PATH := /opt/homebrew/bin:/usr/local/bin:$(PATH)
+GO ?= go
+GO_MOD_FLAGS ?= GOFLAGS=-mod=mod
+GOFUMPT ?= gofumpt
+GOFMT ?= gofmt
+GOLANGCI_LINT ?= golangci-lint
+K6 ?= k6
+OPENAPI_GEN ?= $(GO) run ./scripts/openapi
+ATLAS ?= atlas
+BUILD_DIR ?= build
+COVERAGE_DIR ?= coverage
+LINT_CACHE_HOME ?= /tmp/fiber-starter-cache
+LINT_GOCACHE ?= /tmp/fiber-starter-gocache
+SERVER_BINARY_NAME ?= fiber-starter
+CLI_BINARY_NAME ?= fiber-starter-cli
+APP_LOG_DIR ?= storage/logs
+DEPLOY_DIR ?= deploy
+APP_MAIN ?= ./cmd/app
+SERVER_RUN = $(GO_MOD_FLAGS) $(GO) run $(APP_MAIN) serve
+CLI_RUN = $(GO_MOD_FLAGS) $(GO) run $(APP_MAIN)
+
+.DEFAULT_GOAL := help
+
+define run_golangci_lint
+	@LINT_BIN="$$(command -v $(GOLANGCI_LINT) 2>/dev/null || true)"; \
+	if [ -z "$$LINT_BIN" ] && [ -x /opt/homebrew/bin/$(GOLANGCI_LINT) ]; then LINT_BIN=/opt/homebrew/bin/$(GOLANGCI_LINT); fi; \
+	if [ -z "$$LINT_BIN" ] && [ -x /usr/local/bin/$(GOLANGCI_LINT) ]; then LINT_BIN=/usr/local/bin/$(GOLANGCI_LINT); fi; \
+	if [ -z "$$LINT_BIN" ]; then echo "$(GOLANGCI_LINT) is not installed"; exit 1; fi; \
+	mkdir -p $(LINT_GOCACHE) $(LINT_CACHE_HOME); \
+	HOME=/tmp XDG_CACHE_HOME=$(LINT_CACHE_HOME) GOCACHE=$(LINT_GOCACHE) GOFLAGS=-mod=mod "$$LINT_BIN" $(1)
+endef
+
+define run_gofumpt
+	@GOFUMPT_BIN="$$(command -v $(GOFUMPT) 2>/dev/null || true)"; \
+	if [ -z "$$GOFUMPT_BIN" ] && [ -x /opt/homebrew/bin/$(GOFUMPT) ]; then GOFUMPT_BIN=/opt/homebrew/bin/$(GOFUMPT); fi; \
+	if [ -z "$$GOFUMPT_BIN" ] && [ -x /usr/local/bin/$(GOFUMPT) ]; then GOFUMPT_BIN=/usr/local/bin/$(GOFUMPT); fi; \
+	if [ -z "$$GOFUMPT_BIN" ]; then echo "$(GOFUMPT) is not installed"; exit 1; fi; \
+	GO_FILES="$$(command -v rg >/dev/null 2>&1 && rg --files -g '*.go' || find . -name '*.go' -not -path './.git/*')"; \
+	if [ -z "$$GO_FILES" ]; then echo "No Go files found"; exit 0; fi; \
+	"$$GOFUMPT_BIN" -w $$GO_FILES
+endef
+
+define build_binary
+	@GOFLAGS=-mod=mod $(1) $(GO) build $(2) -o $(BUILD_DIR)/$(3) $(4)
+	@echo "$(5): $(BUILD_DIR)/$(3)"
+endef
+
+.PHONY: all help build build-cli build-prod build-dir coverage-dir config run dev test coverage lint lint-strict fmt vet clean \
+        fmt-gofumpt \
+        k6-root k6-root-load \
+        migrate migrate-rollback seed seed-random routes jwt schedule \
+	        docs install-tools deps init sync \
+        atlas-status atlas-history atlas-repair atlas-reset \
+        atlas-hash atlas-hash-postgres atlas-hash-sqlite \
+        atlas-diff atlas-apply atlas-diff-postgres atlas-apply-postgres \
+        atlas-diff-sqlite atlas-apply-sqlite atlas-lint atlas-inspect
+
+# Default target
+all: help
+
+help: ## 显示帮助信息
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+
+# --- Development ---
+
+dev: ## 启动开发服务器 (自动检测 air)
+	@command -v air >/dev/null 2>&1 && air || $(SERVER_RUN)
+
+run: ## 直接运行应用
+	@$(SERVER_RUN)
+
+# --- Build ---
+
+build-dir:
+	@mkdir -p $(BUILD_DIR)
+
+coverage-dir:
+	@mkdir -p $(COVERAGE_DIR)
+
+build: build-dir ## 构建应用
+	$(call build_binary,,,$(SERVER_BINARY_NAME),$(APP_MAIN),Build success)
+
+build-cli: build-dir ## 构建 CLI 工具（同一二进制）
+	$(call build_binary,,,$(CLI_BINARY_NAME),$(APP_MAIN),Build success)
+
+build-prod: build-dir ## 构建生产版本 (压缩体积)
+	$(call build_binary,CGO_ENABLED=0 GOOS=linux GOARCH=amd64,-ldflags="-w -s",$(SERVER_BINARY_NAME),$(APP_MAIN),Production build success)
+
+config: ## 显示当前构建配置
+	@printf "BUILD_DIR=%s\nCOVERAGE_DIR=%s\nSERVER_BINARY_NAME=%s\nCLI_BINARY_NAME=%s\nAPP_LOG_DIR=%s\nDEPLOY_DIR=%s\n" \
+		"$(BUILD_DIR)" "$(COVERAGE_DIR)" "$(SERVER_BINARY_NAME)" "$(CLI_BINARY_NAME)" "$(APP_LOG_DIR)" "$(DEPLOY_DIR)"
+
+clean: ## 清理构建文件
+	@rm -rf $(BUILD_DIR) $(COVERAGE_DIR)
+
+# --- Test & Quality ---
+
+test: ## 运行测试
+	@$(GO_MOD_FLAGS) $(GO) test -v ./...
+
+coverage: coverage-dir ## 生成测试覆盖率报告
+	@$(GO_MOD_FLAGS) $(GO) test -coverpkg=./... -covermode=atomic -coverprofile=$(COVERAGE_DIR)/coverage.out ./...
+	@$(GO) tool cover -func=$(COVERAGE_DIR)/coverage.out | tail -n 1
+	@$(GO) tool cover -html=$(COVERAGE_DIR)/coverage.out -o $(COVERAGE_DIR)/coverage.html
+	@echo "Coverage report: $(COVERAGE_DIR)/coverage.html"
+
+lint: ## 运行代码检查 (golangci-lint)
+	$(call run_golangci_lint,run)
+
+lint-quick: ## 运行代码检查 (只显示常见问题)
+	$(call run_golangci_lint,run | grep -E "nilerr|noctx|staticcheck|gocognit|gocyclo|funlen|errcheck" || true)
+
+lint-strict: lint ## 运行代码检查 (golangci-lint)
+
+lint-fix: ## 运行代码检查并自动修复
+	$(call run_golangci_lint,run --fix)
+
+fmt: ## 格式化代码
+	@$(GO_MOD_FLAGS) $(GO) fmt ./...
+
+fmt-gofumpt: ## 使用 gofumpt 格式化 Go 代码
+	$(call run_gofumpt)
+
+fmt-swag: ## 格式化 Swagger 注释
+	@swag fmt
+
+vet: ## 静态检查
+	@$(GO_MOD_FLAGS) $(GO) vet ./...
+
+check: fmt-gofumpt lint-fix
+
+check-all: fmt-gofumpt lint-fix test ## 运行所有检查
+
+# --- Database & CLI ---
+
+migrate: ## 运行数据库迁移
+	@$(CLI_RUN) migrate run
+
+migrate-rollback: ## 回滚数据库迁移
+	@$(CLI_RUN) migrate rollback
+
+seed: ## 运行数据库填充
+	@$(CLI_RUN) seed run
+
+seed-random: ## 生成随机测试数据 (默认 10 条)
+	@$(CLI_RUN) seed run:random 10
+
+routes: ## 显示所有路由
+	@$(CLI_RUN) routes
+
+jwt: ## 生成新的 JWT 密钥
+	@$(CLI_RUN) jwt:generate
+
+schedule: ## 运行定时任务调度器
+	@$(CLI_RUN) schedule:run
+
+cli: ## 打开命令行工具
+	@$(CLI_RUN) --help
+
+# --- Tools & Setup ---
+
+init: install-tools deps ## 初始化项目
+	@[ -f .env ] || cp .env.example .env
+
+sync: ## 同步并整理依赖
+	@echo "Cleaning and syncing dependencies..."
+	$(GO_MOD_FLAGS) $(GO) mod tidy
+	@echo "Done."
+
+deps: ## 下载并整理依赖
+	@$(GO_MOD_FLAGS) $(GO) mod download
+	@$(GO_MOD_FLAGS) $(GO) mod tidy
+
+mod-gcu: ## 类似 npm ncu：列出直接依赖可升级版本
+	@sh scripts/mod-gcu.sh list
+
+mod-gcu-up: ## 类似 npm ncu -u：更新直接依赖到最新版本
+	@sh scripts/mod-gcu.sh up
+
+mod-gcu-up-patch: ## 只升级直接依赖的 patch 版本
+	@sh scripts/mod-gcu.sh patch
+
+install-tools: ## 安装开发工具
+	@$(GO_MOD_FLAGS) $(GO) install github.com/air-verse/air@latest
+	@$(GO_MOD_FLAGS) $(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@command -v atlas >/dev/null 2>&1 || curl -sSf https://atlasgo.sh | sh -s -- --yes -o /usr/local/bin/atlas
+	@$(GO_MOD_FLAGS) $(GO) install github.com/swaggo/swag/cmd/swag@latest
+
+atlas-diff-postgres: ## 生成 PostgreSQL 迁移（NAME=xxx）
+	@$(ATLAS) migrate diff $(NAME) --env postgres
+
+atlas-apply-postgres: ## 应用 PostgreSQL 迁移（依赖 DATABASE_URL）
+	@$(ATLAS) migrate apply --env postgres
+
+atlas-diff-sqlite: ## 生成 SQLite 迁移（NAME=xxx）
+	@$(ATLAS) migrate diff $(NAME) --env sqlite
+
+atlas-apply-sqlite: ## 应用 SQLite 迁移
+	@$(ATLAS) migrate apply --env sqlite
+
+atlas-status: ## 显示迁移状态（默认 postgres，ENV=sqlite 可切换）
+	@$(ATLAS) migrate status --env $(or $(ENV),postgres)
+
+atlas-history: ## 显示迁移历史（默认 postgres，ENV=sqlite 可切换）
+	@$(ATLAS) migrate history --env $(or $(ENV),postgres)
+
+atlas-repair: ## 修复迁移表（默认 postgres，ENV=sqlite 可切换）
+	@$(ATLAS) migrate repair --env $(or $(ENV),postgres)
+
+atlas-reset: ## 重置数据库并重新应用所有迁移（默认 postgres，ENV=sqlite 可切换）
+	@$(ATLAS) migrate reset --env $(or $(ENV),postgres)
+
+atlas-hash-postgres: ## 重新生成 PostgreSQL 迁移校验文件（atlas.sum）
+	@$(ATLAS) migrate hash --env postgres
+
+atlas-hash-sqlite: ## 重新生成 SQLite 迁移校验文件（atlas.sum）
+	@$(ATLAS) migrate hash --env sqlite
+
+atlas-hash: ## 重新生成迁移校验文件（默认 postgres，ENV=sqlite 可切换）
+	@$(ATLAS) migrate hash --env $(or $(ENV),postgres)
+
+atlas-diff: ## 生成迁移（默认 postgres，NAME=xxx，ENV=sqlite 可切换）
+	@$(ATLAS) migrate diff $(NAME) --env $(or $(ENV),postgres)
+
+atlas-apply: ## 应用迁移（默认 postgres，ENV=sqlite 可切换）
+	@$(ATLAS) migrate apply --env $(or $(ENV),postgres)
+
+atlas-lint: ## 检查数据库 schema（默认 postgres，ENV=sqlite 可切换）
+	@$(ATLAS) schema lint --env $(or $(ENV),postgres)
+
+atlas-inspect: ## 检查当前数据库 schema（默认 postgres，ENV=sqlite 可切换）
+	@$(ATLAS) schema inspect --env $(or $(ENV),postgres)
+
+docs: ## 自动从注释生成文档并由 Scalar 展示
+	@swag init --pd --st --parseInternal --packagePrefix fiber-starter --md docs/md -d cmd/app,app/Http/Controllers -g main.go -o docs --ot json
+	@python3 app/Support/scripts/reorder_swagger.py docs/swagger.json
+	@cp docs/swagger.json docs/openapi.json
+	@echo "Documentation generated at docs/openapi.json"
+
+k6-root: ## 运行根路径 / 的 k6 smoke test
+	@command -v $(K6) >/dev/null 2>&1 || { echo "$(K6) is not installed"; exit 1; }
+	@$(K6) run scripts/k6/scenarios/smoke.js
+
+k6-root-load: ## 运行根路径 / 的 k6 load test
+	@command -v $(K6) >/dev/null 2>&1 || { echo "$(K6) is not installed"; exit 1; }
+	@$(K6) run scripts/k6/scenarios/load.js

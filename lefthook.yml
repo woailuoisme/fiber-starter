@@ -1,0 +1,24 @@
+pre-commit:
+  parallel: false
+  jobs:
+    # 先格式化 Go 代码，保证后续注释格式化基于稳定源码。
+    - name: fmt
+      glob: "**/*.go"
+      stage_fixed: true
+      run: make fmt-gofumpt
+    # 再格式化 Swagger 注释，避免文档生成读取未整理的注释。
+    - name: swag-fmt
+      glob: "**/*.go"
+      stage_fixed: true
+      run: make fmt-swag
+    # 最后生成 OpenAPI 文档，确保 docs 与最终源码注释一致。
+#    - name: docs
+#      glob: "**/*.go"
+#      stage_fixed: true
+#      run: make docs
+
+pre-push:
+  jobs:
+    - name: lint
+      glob: "**/*.go"
+      run: make lint-fix

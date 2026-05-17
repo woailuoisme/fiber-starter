@@ -1,0 +1,13 @@
+payment:
+  wechat:
+    app_id: ${WECHAT_APP_ID:""}
+    mch_id: ${WECHAT_MCH_ID:""}
+    api_key: ${WECHAT_API_KEY:""}
+    cert_path: ${WECHAT_CERT_PATH:""}
+    key_path: ${WECHAT_KEY_PATH:""}
+    notify_url: ${WECHAT_NOTIFY_URL:""}
+  alipay:
+    app_id: ${ALIPAY_APP_ID:""}
+    private_key: ${ALIPAY_PRIVATE_KEY:""}
+    public_key: ${ALIPAY_PUBLIC_KEY:""}
+    notify_url: ${ALIPAY_NOTIFY_URL:""}
