@@ -24,7 +24,7 @@ const (
 	// DefaultMaxAge 默认日志文件最大保存时间 (天)
 	DefaultMaxAge = 90
 	// LogDirPerm 日志目录权限
-	LogDirPerm = 0o755
+	LogDirPerm = 0755
 )
 
 const (

@@ -38,6 +38,15 @@ func NewAuthController(authService AuthService) *AuthController {
 }
 
 // SignUp creates a new account and sends an email verification code.
+//
+//	@Summary		用户注册
+//	@Description	创建一个新的用户账号并发送邮箱验证码，不直接返回访问令牌。
+//	@Tags			认证中心
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		RegisterRequest															true	"注册参数"
+//	@Success		201		{object}	support.APIResponse{data=object{user=user.SafeUser,verification_required=bool}}	"注册成功"
+//	@Router			/api/v1/auth/sign-up [post]
 func (c *AuthController) SignUp(ctx fiber.Ctx) error {
 	var req RegisterRequest
 
@@ -59,6 +68,15 @@ func (c *AuthController) Register(ctx fiber.Ctx) error {
 }
 
 // VerifySignUp verifies the signup OTP and returns a session.
+//
+//	@Summary		验证注册邮箱
+//	@Description	校验邮箱验证码并激活账号，成功后返回访问令牌和刷新令牌。
+//	@Tags			认证中心
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		VerifySignUpRequest																								true	"验证参数"
+//	@Success		200		{object}	support.APIResponse{data=object{user=user.SafeUser,tokens=object{access_token=string,refresh_token=string}}}	"验证成功"
+//	@Router			/api/v1/auth/sign-up/verify [post]
 func (c *AuthController) VerifySignUp(ctx fiber.Ctx) error {
 	var req VerifySignUpRequest
 
@@ -75,6 +93,15 @@ func (c *AuthController) VerifySignUp(ctx fiber.Ctx) error {
 }
 
 // SignIn authenticates a user and returns the session tokens.
+//
+//	@Summary		用户登录
+//	@Description	验证用户凭据，成功后返回 JWT 访问令牌和刷新令牌；未完成邮箱验证的账号会被拒绝。
+//	@Tags			认证中心
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		LoginRequest																									true	"登录参数"
+//	@Success		200		{object}	support.APIResponse{data=object{user=user.SafeUser,tokens=object{access_token=string,refresh_token=string}}}	"登录成功"
+//	@Router			/api/v1/auth/sign-in [post]
 func (c *AuthController) SignIn(ctx fiber.Ctx) error {
 	var req LoginRequest
 
@@ -96,6 +123,15 @@ func (c *AuthController) Login(ctx fiber.Ctx) error {
 }
 
 // RefreshSession refreshes the access and refresh tokens.
+//
+//	@Summary		刷新令牌
+//	@Description	使用有效的刷新令牌获取一组新的访问令牌和刷新令牌。
+//	@Tags			认证中心
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		RefreshTokenRequest														true	"刷新参数"
+//	@Success		200		{object}	support.APIResponse{data=object{access_token=string,refresh_token=string}}	"刷新成功"
+//	@Router			/api/v1/auth/refresh [post]
 func (c *AuthController) RefreshSession(ctx fiber.Ctx) error {
 	var req RefreshTokenRequest
 
@@ -117,6 +153,15 @@ func (c *AuthController) RefreshToken(ctx fiber.Ctx) error {
 }
 
 // SignOut logs the current user out.
+//
+//	@Summary		用户登出
+//	@Description	撤销当前访问令牌，使用户退出登录状态。
+//	@Tags			认证中心
+//	@Accept			json
+//	@Produce		json
+//	@Security		Bearer
+//	@Success		200	{object}	support.APIResponse	"注销成功"
+//	@Router			/api/v1/auth/sign-out [post]
 func (c *AuthController) SignOut(ctx fiber.Ctx) error {
 	user := middleware.GetUserFromContext(ctx)
 	if user == nil {
@@ -141,6 +186,16 @@ func (c *AuthController) Logout(ctx fiber.Ctx) error {
 }
 
 // UpdatePassword changes the current user's password.
+//
+//	@Summary		修改密码
+//	@Description	在用户已登录的情况下，验证旧密码并更新为新密码。
+//	@Tags			认证中心
+//	@Accept			json
+//	@Produce		json
+//	@Security		Bearer
+//	@Param			request	body		ChangePasswordRequest	true	"修改参数"
+//	@Success		200		{object}	support.APIResponse		"修改成功"
+//	@Router			/api/v1/auth/change-password [post]
 func (c *AuthController) UpdatePassword(ctx fiber.Ctx) error {
 	userID := middleware.GetCurrentUserID(ctx)
 	if userID == 0 {
@@ -165,6 +220,15 @@ func (c *AuthController) ChangePassword(ctx fiber.Ctx) error {
 }
 
 // SendPasswordReset sends a reset email to the user.
+//
+//	@Summary		重置密码
+//	@Description	发送密码重置验证码。
+//	@Tags			认证中心
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		ResetPasswordRequest	true	"重置密码参数"
+//	@Success		200		{object}	support.APIResponse		"成功"
+//	@Router			/api/v1/auth/reset-password [post]
 func (c *AuthController) SendPasswordReset(ctx fiber.Ctx) error {
 	var req ResetPasswordRequest
 	if err := req.BindAndValidate(ctx); err != nil {
@@ -184,6 +248,15 @@ func (c *AuthController) ResetPassword(ctx fiber.Ctx) error {
 }
 
 // VerifyPasswordReset verifies the password reset OTP and returns a short-lived reset token.
+//
+//	@Summary		验证重置密码验证码
+//	@Description	使用邮箱验证码换取一个短期重置令牌。
+//	@Tags			认证中心
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		VerifyResetPasswordRequest								true	"验证重置密码参数"
+//	@Success		200		{object}	support.APIResponse{data=object{reset_token=string}}	"验证成功"
+//	@Router			/api/v1/auth/reset-password/verify [post]
 func (c *AuthController) VerifyPasswordReset(ctx fiber.Ctx) error {
 	var req VerifyResetPasswordRequest
 
@@ -202,6 +275,15 @@ func (c *AuthController) VerifyPasswordReset(ctx fiber.Ctx) error {
 }
 
 // ConfirmPasswordReset confirms a password reset token.
+//
+//	@Summary		确认重置密码
+//	@Description	使用重置令牌设置新密码。
+//	@Tags			认证中心
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		ConfirmResetPasswordRequest	true	"确认重置密码参数"
+//	@Success		200		{object}	support.APIResponse			"成功"
+//	@Router			/api/v1/auth/reset-password/confirm [post]
 func (c *AuthController) ConfirmPasswordReset(ctx fiber.Ctx) error {
 	var req ConfirmResetPasswordRequest
 	if err := req.BindAndValidate(ctx); err != nil {
@@ -221,6 +303,15 @@ func (c *AuthController) ConfirmResetPassword(ctx fiber.Ctx) error {
 }
 
 // Session returns the current authenticated user's profile.
+//
+//	@Summary		获取当前用户资料
+//	@Description	根据访问令牌返回当前登录用户的详细个人信息。
+//	@Tags			认证中心
+//	@Accept			json
+//	@Produce		json
+//	@Security		Bearer
+//	@Success		200	{object}	support.APIResponse{data=object{user=user.SafeUser}}	"获取成功"
+//	@Router			/api/v1/auth/session [get]
 func (c *AuthController) Session(ctx fiber.Ctx) error {
 	user := middleware.GetUserFromContext(ctx)
 	if user == nil {

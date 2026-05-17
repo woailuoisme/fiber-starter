@@ -18,11 +18,8 @@ func SetupLogger(app *fiber.App) {
 		start := time.Now()
 
 		err := c.Next()
-
 		if err != nil {
-			if errHandler := c.App().ErrorHandler; errHandler != nil {
-				_ = errHandler(c, err)
-			}
+			_ = c.App().ErrorHandler(c, err)
 			err = nil
 		}
 
@@ -34,8 +31,8 @@ func SetupLogger(app *fiber.App) {
 			zap.String("ip", c.IP()),
 			zap.String("method", c.Method()),
 			zap.String("url", c.OriginalURL()),
-			zap.String("ua", c.Get(fiber.HeaderUserAgent)),
-			zap.Duration("latency", latency),
+			// zap.String("ua", c.Get(fiber.HeaderUserAgent)),
+			zap.String("latency", latency.String()),
 			zap.Int("status", status),
 		}
 

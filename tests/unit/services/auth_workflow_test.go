@@ -12,9 +12,9 @@ import (
 	auth "fiber-starter/internal/features/auth"
 	user "fiber-starter/internal/features/user"
 	"fiber-starter/internal/providers"
+	cacheContracts "fiber-starter/internal/providers/cache/contracts"
 	dbProvider "fiber-starter/internal/providers/database"
 	hash "fiber-starter/internal/providers/hash"
-	cacheContracts "fiber-starter/internal/providers/cache/contracts"
 	mailContracts "fiber-starter/internal/providers/mail/contracts"
 	"fiber-starter/tests/internal/testkit"
 

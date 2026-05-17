@@ -234,8 +234,8 @@ atlas-inspect: ## 检查当前数据库 schema（默认 postgres，ENV=sqlite �
 	@$(ATLAS) schema inspect --env $(or $(ENV),postgres)
 
 docs: ## 自动从注释生成文档并由 Scalar 展示
-	@swag init --pd --st --parseInternal --packagePrefix fiber-starter --md docs/md -d cmd/app,app/Http/Controllers -g main.go -o docs --ot json
-	@python3 app/Support/scripts/reorder_swagger.py docs/swagger.json
+	@swag init --pd --st --parseInternal --packagePrefix fiber-starter --md docs/md -d cmd/app,internal -g main.go -o docs --ot json
+	@python3 internal/support/scripts/reorder_swagger.py docs/swagger.json
 	@cp docs/swagger.json docs/openapi.json
 	@echo "Documentation generated at docs/openapi.json"
 

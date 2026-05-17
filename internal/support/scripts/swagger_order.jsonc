@@ -1,0 +1,41 @@
+[
+  // ==========================================
+  // 认证中心 (Auth Feature) - 账户生命周期
+  // ==========================================
+  
+  // 1. 用户注册与邮箱激活流程
+  "/api/v1/auth/sign-up",          // 用户注册
+  "/api/v1/auth/sign-up/verify",   // 验证注册邮箱
+  
+  // 2. 用户登录、会话获取、令牌刷新与注销
+  "/api/v1/auth/sign-in",          // 用户登录
+  "/api/v1/auth/session",          // 获取当前登录用户会话
+  "/api/v1/auth/refresh",          // 刷新访问令牌
+  "/api/v1/auth/sign-out",         // 用户登出
+  
+  // 3. 安全设置与密码找回
+  "/api/v1/auth/change-password",  // 修改密码 (需登录)
+  "/api/v1/auth/reset-password",   // 申请重置密码 (发送邮箱验证码)
+  "/api/v1/auth/reset-password/verify", // 校验重置验证码并换取短期凭证
+  "/api/v1/auth/reset-password/confirm", // 确认重置并设定新密码
+
+  // ==========================================
+  // 用户管理 (User Feature) - CRUD & 数据交互
+  // ==========================================
+  
+  // 1. 个人资料维护
+  "/api/v1/users/me",              // 获取当前认证用户资料
+  "/api/v1/users/profile",         // 更新个人基础信息
+  
+  // 2. 基础 CRUD、用户搜索及 Excel 导入导出
+  "/api/v1/users/search",          // 搜索用户列表
+  "/api/v1/users/export",          // 导出所有用户到 Excel
+  "/api/v1/users/import",          // 批量从 Excel 导入用户
+  "/api/v1/users",                 // 获取分页用户列表 / 单个用户增删改查
+  
+  // ==========================================
+  // 系统监控 (Monitoring Feature) - 运行健康状况
+  // ==========================================
+  "/health",                       // 系统基本运行状况健康检查 (Liveness)
+  "/ready"                         // 系统就绪检查 (Readiness)
+]

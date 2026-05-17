@@ -1,10 +1,11 @@
 package support
 
 import (
+	"strings"
+
 	logging "fiber-starter/internal/providers/logging"
 	"fiber-starter/internal/providers/logging/contracts"
 	"fiber-starter/internal/support/appctx"
-	"strings"
 
 	"go.uber.org/zap"
 )
