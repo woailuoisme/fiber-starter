@@ -74,7 +74,11 @@ func App() *Runtime {
 
 // SetInstance sets the shared application container instance.
 func SetInstance(rt *Runtime) *Runtime {
-	appctx.Set(rt)
+	if rt == nil {
+		appctx.Set(nil)
+	} else {
+		appctx.Set(rt)
+	}
 	return rt
 }
 

@@ -25,7 +25,7 @@ func TestNoHanOutsideComments_GoAndShell(t *testing.T) {
 			require.NoError(t, err)
 			if d.IsDir() {
 				name := d.Name()
-				if name == ".git" || name == "node_modules" {
+				if name == ".git" || name == "node_modules" || name == ".gopath" || name == ".gocache" || name == ".cache" || name == "tmp" {
 					return filepath.SkipDir
 				}
 				return nil
@@ -52,7 +52,7 @@ func TestNoHanOutsideComments_GoAndShell(t *testing.T) {
 			require.NoError(t, err)
 			if d.IsDir() {
 				name := d.Name()
-				if name == ".git" || name == "node_modules" {
+				if name == ".git" || name == "node_modules" || name == ".gopath" || name == ".gocache" || name == ".cache" || name == "tmp" {
 					return filepath.SkipDir
 				}
 				return nil

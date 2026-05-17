@@ -7,6 +7,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// DefaultLogger is the fallback logger used when the application container isn't initialized.
+var DefaultLogger = zap.NewNop()
+
 // Facade returns the logging service from the application container.
 // This allows for a more Laravel-like "Log::info()" experience if used correctly.
 func Facade() contracts.Logger {
@@ -15,7 +18,7 @@ func Facade() contracts.Logger {
 	rt := appctx.App()
 	if rt == nil {
 		// Fallback for cases where the app container isn't initialized
-		return &Service{default_: zap.NewNop()}
+		return &Service{default_: DefaultLogger}
 	}
 
 	// We assume the Log field exists on the runtime struct (which is duck-typed here via interface)

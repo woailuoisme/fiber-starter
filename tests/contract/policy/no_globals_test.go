@@ -21,11 +21,11 @@ func TestNoKeyGlobalsInCommandAndSeeders(t *testing.T) {
 	}
 
 	rules := []rule{
-		{name: "cli should not use configs.GlobalConfig", rootDir: filepath.Join(repoRoot, "app", "Console", "Commands"), needle: "config.GlobalConfig"},
+		{name: "cli should not use configs.GlobalConfig", rootDir: filepath.Join(repoRoot, "internal", "console", "commands"), needle: "config.GlobalConfig"},
 		{name: "seeders should not use configs.GlobalConfig", rootDir: filepath.Join(repoRoot, "database", "seeders"), needle: "config.GlobalConfig"},
 		{name: "seeders should not use database.GetDB", rootDir: filepath.Join(repoRoot, "database", "seeders"), needle: "database.GetDB("},
-		{name: "cli should not use database.GetDB", rootDir: filepath.Join(repoRoot, "app", "Console", "Commands"), needle: "database.GetDB("},
-		{name: "cli should not use database.DB", rootDir: filepath.Join(repoRoot, "app", "Console", "Commands"), needle: "database.DB"},
+		{name: "cli should not use database.GetDB", rootDir: filepath.Join(repoRoot, "internal", "console", "commands"), needle: "database.GetDB("},
+		{name: "cli should not use database.DB", rootDir: filepath.Join(repoRoot, "internal", "console", "commands"), needle: "database.DB"},
 		{name: "seeders should not use database.DB", rootDir: filepath.Join(repoRoot, "database", "seeders"), needle: "database.DB"},
 	}
 

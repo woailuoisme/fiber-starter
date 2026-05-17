@@ -56,3 +56,10 @@ func (m *Manager) Extend(name string, channel contracts.Channel) {
 	defer m.mu.Unlock()
 	m.channels[name] = channel
 }
+
+// Channel returns the registered channel by name.
+func (m *Manager) Channel(name string) contracts.Channel {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.channels[name]
+}

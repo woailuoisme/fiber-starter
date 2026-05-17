@@ -17,9 +17,14 @@ func SetupLogger(app *fiber.App) {
 	app.Use(func(c fiber.Ctx) error {
 		start := time.Now()
 
-		// 执行后续所有中间件和路由处理器；error 原样返回给 Fiber，
-		// Fiber 的 app.ErrorHandler 负责统一发送错误响应。
 		err := c.Next()
+
+		if err != nil {
+			if errHandler := c.App().ErrorHandler; errHandler != nil {
+				_ = errHandler(c, err)
+			}
+			err = nil
+		}
 
 		latency := time.Since(start)
 		status := c.Response().StatusCode()

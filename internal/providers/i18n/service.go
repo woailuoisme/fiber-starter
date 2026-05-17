@@ -132,19 +132,31 @@ func legacyJSONUnmarshal(data []byte, v interface{}) error {
 }
 
 func normalizeCatalog(value interface{}) interface{} {
+	flat := make(map[string]interface{})
+	flatten(value, "", flat)
+	return flat
+}
+
+func flatten(value interface{}, prefix string, result map[string]interface{}) {
 	switch data := value.(type) {
 	case map[string]interface{}:
-		normalized := make(map[string]interface{}, len(data))
 		for key, item := range data {
-			normalized[key] = normalizeCatalog(item)
+			newPrefix := key
+			if prefix != "" {
+				newPrefix = prefix + "." + key
+			}
+			flatten(item, newPrefix, result)
 		}
-		return normalized
 	case string:
-		return map[string]interface{}{
-			"other": data,
+		if prefix != "" {
+			result[prefix] = map[string]interface{}{
+				"other": data,
+			}
 		}
 	default:
-		return value
+		if prefix != "" {
+			result[prefix] = data
+		}
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	logging "fiber-starter/internal/providers/logging"
 	"fiber-starter/internal/providers/logging/contracts"
 	"fiber-starter/internal/support/appctx"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -86,8 +87,23 @@ func Panic(msg string, fields ...zap.Field) {
 
 // Sync flushes any buffered log entries
 func Sync() error {
+	var err error
 	if appctx.App() == nil {
-		return Logger.Sync()
+		err = Logger.Sync()
+	} else {
+		err = logging.Facade().Sync()
 	}
-	return logging.Facade().Sync()
+
+	if err != nil {
+		msg := err.Error()
+		if strings.Contains(msg, "bad file descriptor") ||
+			strings.Contains(msg, "invalid argument") ||
+			strings.Contains(msg, "inappropriate ioctl for device") ||
+			strings.Contains(msg, "sync /dev/stdout") ||
+			strings.Contains(msg, "sync /dev/stderr") {
+			return nil
+		}
+		return err
+	}
+	return nil
 }

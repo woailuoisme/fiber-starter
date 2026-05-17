@@ -1,16 +1,17 @@
 package providers_test
 
 import (
+	"bytes"
 	"encoding/json"
-	"fmt"
+	"io"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"fiber-starter/configs"
 	channels "fiber-starter/internal/providers/notification/channels"
 	notificationContracts "fiber-starter/internal/providers/notification/contracts"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,6 +50,14 @@ func (unsupportedNotification) Via(notifiable interface{}) []string {
 	return []string{"gotify"}
 }
 
+type mockRoundTripper struct {
+	roundTripFunc func(req *http.Request) (*http.Response, error)
+}
+
+func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return m.roundTripFunc(req)
+}
+
 func TestGotifyChannel_Send(t *testing.T) {
 	t.Parallel()
 
@@ -56,26 +65,33 @@ func TestGotifyChannel_Send(t *testing.T) {
 	var gotToken string
 	var gotPayload notificationContracts.GotifyMessage
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotPath = r.URL.Path
-		gotToken = r.URL.Query().Get("token")
-		if err := json.NewDecoder(r.Body).Decode(&gotPayload); err != nil {
-			t.Error(err)
-		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
-	}))
-	defer server.Close()
+	mockTransport := &mockRoundTripper{
+		roundTripFunc: func(req *http.Request) (*http.Response, error) {
+			gotPath = req.URL.Path
+			gotToken = req.URL.Query().Get("token")
+			if err := json.NewDecoder(req.Body).Decode(&gotPayload); err != nil {
+				t.Error(err)
+			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewBufferString(`{"status":"ok"}`)),
+				Header:     make(http.Header),
+			}, nil
+		},
+	}
 
 	channel, err := channels.NewGotifyChannel(configs.GotifyNotificationConfig{
 		Enabled:  true,
-		URL:      server.URL,
+		URL:      "http://localhost",
 		Token:    "secret-token",
 		Title:    "Fiber Starter",
 		Priority: 5,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, channel)
+
+	mClient := resty.New().SetTransport(mockTransport)
+	channel.SetClient(mClient)
 
 	err = channel.Send(struct{}{}, gotifyNotification{})
 	require.NoError(t, err)
@@ -92,25 +108,32 @@ func TestTelegramChannel_Send(t *testing.T) {
 	var gotPath string
 	var gotPayload notificationContracts.TelegramMessage
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotPath = r.URL.Path
-		if err := json.NewDecoder(r.Body).Decode(&gotPayload); err != nil {
-			t.Error(err)
-		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"ok":true,"result":{}}`))
-	}))
-	defer server.Close()
+	mockTransport := &mockRoundTripper{
+		roundTripFunc: func(req *http.Request) (*http.Response, error) {
+			gotPath = req.URL.Path
+			if err := json.NewDecoder(req.Body).Decode(&gotPayload); err != nil {
+				t.Error(err)
+			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewBufferString(`{"ok":true,"result":{}}`)),
+				Header:     make(http.Header),
+			}, nil
+		},
+	}
 
 	channel, err := channels.NewTelegramChannel(configs.TelegramNotificationConfig{
 		Enabled:   true,
-		APIURL:    server.URL,
+		APIURL:    "http://localhost",
 		BotToken:  "bot-token",
 		ChatID:    "chat-id",
 		ParseMode: "",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, channel)
+
+	mClient := resty.New().SetTransport(mockTransport)
+	channel.SetClient(mClient)
 
 	err = channel.Send(struct{}{}, telegramNotification{})
 	require.NoError(t, err)
@@ -123,19 +146,26 @@ func TestTelegramChannel_Send(t *testing.T) {
 func TestTelegramChannel_RequestRejected(t *testing.T) {
 	t.Parallel()
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"ok":false,"description":"chat not found"}`))
-	}))
-	defer server.Close()
+	mockTransport := &mockRoundTripper{
+		roundTripFunc: func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewBufferString(`{"ok":false,"description":"chat not found"}`)),
+				Header:     make(http.Header),
+			}, nil
+		},
+	}
 
 	channel, err := channels.NewTelegramChannel(configs.TelegramNotificationConfig{
 		Enabled:  true,
-		APIURL:   server.URL,
+		APIURL:   "http://localhost",
 		BotToken: "bot-token",
 		ChatID:   "chat-id",
 	})
 	require.NoError(t, err)
+
+	mClient := resty.New().SetTransport(mockTransport)
+	channel.SetClient(mClient)
 
 	err = channel.Send(struct{}{}, telegramNotification{})
 	require.Error(t, err)
@@ -187,18 +217,25 @@ func TestNotificationChannels_InvalidConfig(t *testing.T) {
 func TestGotifyChannel_RequestFailure(t *testing.T) {
 	t.Parallel()
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = fmt.Fprint(w, `{"error":"boom"}`)
-	}))
-	defer server.Close()
+	mockTransport := &mockRoundTripper{
+		roundTripFunc: func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusInternalServerError,
+				Body:       io.NopCloser(bytes.NewBufferString(`{"error":"boom"}`)),
+				Header:     make(http.Header),
+			}, nil
+		},
+	}
 
 	channel, err := channels.NewGotifyChannel(configs.GotifyNotificationConfig{
 		Enabled: true,
-		URL:     server.URL,
+		URL:     "http://localhost",
 		Token:   "secret-token",
 	})
 	require.NoError(t, err)
+
+	mClient := resty.New().SetTransport(mockTransport)
+	channel.SetClient(mClient)
 
 	err = channel.Send(struct{}{}, gotifyNotification{})
 	require.Error(t, err)

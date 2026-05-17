@@ -39,7 +39,7 @@ func openAPISpecPath() string {
 	_, file, _, ok := runtime.Caller(0)
 	if ok {
 		baseDir := filepath.Dir(file)
-		repoRoot := filepath.Clean(filepath.Join(baseDir, "..", ".."))
+		repoRoot := filepath.Clean(filepath.Join(baseDir, "..", "..", ".."))
 		path := filepath.Join(repoRoot, "docs", "openapi.json")
 		if _, err := os.Stat(path); err == nil {
 			return path

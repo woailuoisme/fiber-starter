@@ -116,5 +116,7 @@ func isIgnorableSyncError(err error) bool {
 	msg := err.Error()
 	return strings.Contains(msg, "sync /dev/stdout") ||
 		strings.Contains(msg, "sync /dev/stderr") ||
-		strings.Contains(msg, "bad file descriptor")
+		strings.Contains(msg, "bad file descriptor") ||
+		strings.Contains(msg, "invalid argument") ||
+		strings.Contains(msg, "inappropriate ioctl for device")
 }

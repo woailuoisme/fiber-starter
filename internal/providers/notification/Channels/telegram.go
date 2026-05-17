@@ -52,6 +52,11 @@ func NewTelegramChannel(cfg configs.TelegramNotificationConfig) (*TelegramChanne
 	return &TelegramChannel{client: client, botToken: botToken, chatID: chatID}, nil
 }
 
+// SetClient replaces the internal resty.Client (primarily for testing).
+func (c *TelegramChannel) SetClient(client *resty.Client) {
+	c.client = client
+}
+
 type telegramResponse struct {
 	OK          bool   `json:"ok"`
 	Description string `json:"description"`

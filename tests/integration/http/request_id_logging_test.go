@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	middleware "fiber-starter/internal/common/middleware"
+	logging "fiber-starter/internal/providers/logging"
 	helpers "fiber-starter/internal/support"
 
 	"github.com/gofiber/fiber/v3"
@@ -18,10 +19,10 @@ import (
 
 func TestRequestID_GeneratedAndLogged(t *testing.T) {
 	core, observed := observer.New(zapcore.DebugLevel)
-	prevLogger := helpers.Logger
-	helpers.Logger = zap.New(core)
+	prevLogger := logging.DefaultLogger
+	logging.DefaultLogger = zap.New(core)
 	t.Cleanup(func() {
-		helpers.Logger = prevLogger
+		logging.DefaultLogger = prevLogger
 	})
 
 	var resp *http.Response
@@ -41,9 +42,11 @@ func TestRequestID_GeneratedAndLogged(t *testing.T) {
 	require.NotEmpty(t, requestID)
 
 	var foundError bool
+	t.Logf("Observed logs: %d", len(observed.All()))
 	for _, entry := range observed.All() {
+		t.Logf("Entry: msg=%s context=%v", entry.Message, entry.ContextMap())
 		m := entry.ContextMap()
-		if entry.Message == "http_error" {
+		if entry.Message == "client_error" || entry.Message == "server_error" {
 			foundError = true
 			assert.Equal(t, requestID, m["request_id"])
 		}
@@ -54,10 +57,10 @@ func TestRequestID_GeneratedAndLogged(t *testing.T) {
 
 func TestRequestID_PreservedAndLogged(t *testing.T) {
 	core, observed := observer.New(zapcore.DebugLevel)
-	prevLogger := helpers.Logger
-	helpers.Logger = zap.New(core)
+	prevLogger := logging.DefaultLogger
+	logging.DefaultLogger = zap.New(core)
 	t.Cleanup(func() {
-		helpers.Logger = prevLogger
+		logging.DefaultLogger = prevLogger
 	})
 
 	var resp *http.Response
@@ -79,9 +82,11 @@ func TestRequestID_PreservedAndLogged(t *testing.T) {
 	assert.Equal(t, "rid-123", requestID)
 
 	var foundError bool
+	t.Logf("Observed logs: %d", len(observed.All()))
 	for _, entry := range observed.All() {
+		t.Logf("Entry: msg=%s context=%v", entry.Message, entry.ContextMap())
 		m := entry.ContextMap()
-		if entry.Message == "http_error" {
+		if entry.Message == "client_error" || entry.Message == "server_error" {
 			foundError = true
 			assert.Equal(t, requestID, m["request_id"])
 		}

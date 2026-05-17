@@ -9,14 +9,17 @@ import (
 	exceptions "fiber-starter/internal/common/exceptions"
 	database "fiber-starter/internal/providers/database/contracts"
 	hashContracts "fiber-starter/internal/providers/hash/contracts"
+
+	"github.com/uptrace/bun"
 )
 
 // AuthUser represents the database schema mapped for user authentication
 type AuthUser struct {
-	ID       int64  `bun:"id,pk,autoincrement"`
-	Name     string `bun:"name"`
-	Email    string `bun:"email,unique"`
-	Password string `bun:"password"`
+	bun.BaseModel `bun:"table:users,alias:u"`
+	ID            int64  `bun:"id,pk,autoincrement"`
+	Name          string `bun:"name"`
+	Email         string `bun:"email,unique"`
+	Password      string `bun:"password"`
 }
 
 // DatabaseUserProvider implements the UserProvider interface using the application database

@@ -8,6 +8,7 @@ import (
 
 	"fiber-starter/configs"
 	requests "fiber-starter/internal/common/requests"
+	"fiber-starter/internal/providers"
 	supporti18n "fiber-starter/internal/providers/i18n"
 	validation "fiber-starter/internal/providers/validation"
 	helpers "fiber-starter/internal/support"
@@ -92,14 +93,25 @@ func initTestI18n(t *testing.T) {
 	v, err := validation.RegisterValidation(&configs.Config{})
 	require.NoError(t, err)
 	requests.InitValidator(v)
-	_, err = supporti18n.Init(&configs.I18nConfig{
-		DefaultLanguage:    "zh-CN",
-		SupportedLanguages: []string{"en", "zh-CN"},
-		LanguageDir:        langDir,
-		CookieName:         "lang",
-		CookieMaxAge:       86400,
+	_, translator, err := supporti18n.RegisterI18n(&configs.Config{
+		I18n: configs.I18nConfig{
+			DefaultLanguage:    "zh-CN",
+			SupportedLanguages: []string{"en", "zh-CN"},
+			LanguageDir:        langDir,
+			CookieName:         "lang",
+			CookieMaxAge:       86400,
+		},
 	})
 	require.NoError(t, err)
+
+	rt := &providers.Runtime{
+		Translator: translator,
+		Validation: v,
+	}
+	providers.SetInstance(rt)
+	t.Cleanup(func() {
+		providers.SetInstance(nil)
+	})
 }
 
 func cookieValue(resp *http.Response, name string) (string, bool) {

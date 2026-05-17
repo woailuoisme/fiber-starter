@@ -16,6 +16,13 @@ import (
 )
 
 func TestRedisStore_BasicPathsWithDockerRedis(t *testing.T) {
+	if _, err := exec.LookPath("docker"); err != nil {
+		t.Skip("docker is not installed")
+	}
+	if err := exec.Command("docker", "info").Run(); err != nil {
+		t.Skip("docker daemon is not running")
+	}
+
 	containerName := fmt.Sprintf("fiber-starter-redis-%d", time.Now().UnixNano())
 
 	run := exec.Command("docker", "run", "-d", "--rm", "-P", "--name", containerName, "redis:7-alpine")

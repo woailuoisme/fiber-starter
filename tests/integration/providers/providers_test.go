@@ -1,16 +1,20 @@
 package providers_test
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
-	"net/http/httptest"
 	"sync/atomic"
 	"testing"
 
 	providers "fiber-starter/internal/providers"
+	notification "fiber-starter/internal/providers/notification"
+	channels "fiber-starter/internal/providers/notification/channels"
 	notificationContracts "fiber-starter/internal/providers/notification/contracts"
 	"fiber-starter/tests/internal/testkit"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,43 +80,6 @@ func TestProvidersBuild_NotificationChannels(t *testing.T) {
 	var gotifyHits atomic.Int32
 	var telegramHits atomic.Int32
 
-	gotifyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, http.MethodPost, r.Method)
-		assert.Equal(t, "/message", r.URL.Path)
-		assert.Equal(t, "secret-token", r.URL.Query().Get("token"))
-
-		var payload notificationContracts.GotifyMessage
-		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-			t.Error(err)
-		}
-		assert.Equal(t, "Build Failed", payload.Title)
-		assert.Equal(t, "deployment failed", payload.Message)
-		assert.Equal(t, 7, payload.Priority)
-
-		gotifyHits.Add(1)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
-	}))
-	defer gotifyServer.Close()
-
-	telegramServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, http.MethodPost, r.Method)
-		assert.Equal(t, "/botbot-token/sendMessage", r.URL.Path)
-
-		var payload notificationContracts.TelegramMessage
-		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-			t.Error(err)
-		}
-		assert.Equal(t, "override-chat", payload.ChatID)
-		assert.Equal(t, "deployment failed", payload.Text)
-		assert.Equal(t, "Markdown", payload.ParseMode)
-
-		telegramHits.Add(1)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"ok":true,"result":{}}`))
-	}))
-	defer telegramServer.Close()
-
 	t.Setenv("DB_CONNECTION", "sqlite")
 	t.Setenv("DB_SQLITE_DATABASE", cfg.Database.Connections["sqlite"].Database)
 	t.Setenv("CACHE_DRIVER", "memory")
@@ -121,10 +88,10 @@ func TestProvidersBuild_NotificationChannels(t *testing.T) {
 	t.Setenv("STORAGE_LOCAL_URL", "/storage")
 	t.Setenv("I18N_LANGUAGE_DIR", testkit.RepoRoot(t)+"/lang")
 	t.Setenv("NOTIFICATION_GOTIFY_ENABLED", "true")
-	t.Setenv("NOTIFICATION_GOTIFY_URL", gotifyServer.URL)
+	t.Setenv("NOTIFICATION_GOTIFY_URL", "http://gotify.test")
 	t.Setenv("NOTIFICATION_GOTIFY_TOKEN", "secret-token")
 	t.Setenv("NOTIFICATION_TELEGRAM_ENABLED", "true")
-	t.Setenv("NOTIFICATION_TELEGRAM_API_URL", telegramServer.URL)
+	t.Setenv("NOTIFICATION_TELEGRAM_API_URL", "http://telegram.test")
 	t.Setenv("NOTIFICATION_TELEGRAM_BOT_TOKEN", "bot-token")
 	t.Setenv("NOTIFICATION_TELEGRAM_CHAT_ID", "chat-id")
 
@@ -135,11 +102,70 @@ func TestProvidersBuild_NotificationChannels(t *testing.T) {
 		_ = runtime.Close()
 	}()
 
+	manager := runtime.Notification.(*notification.Manager)
+	gotifyChan := manager.Channel("gotify").(*channels.GotifyChannel)
+	telegramChan := manager.Channel("telegram").(*channels.TelegramChannel)
+
+	gotifyClient := resty.New().SetTransport(&mockRoundTripper{
+		roundTrip: func(r *http.Request) (*http.Response, error) {
+			assert.Equal(t, http.MethodPost, r.Method)
+			assert.Equal(t, "/message", r.URL.Path)
+			assert.Equal(t, "secret-token", r.URL.Query().Get("token"))
+
+			var payload notificationContracts.GotifyMessage
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Error(err)
+			}
+			assert.Equal(t, "Build Failed", payload.Title)
+			assert.Equal(t, "deployment failed", payload.Message)
+			assert.Equal(t, 7, payload.Priority)
+
+			gotifyHits.Add(1)
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewBufferString(`{"status":"ok"}`)),
+				Header:     make(http.Header),
+			}, nil
+		},
+	})
+	gotifyChan.SetClient(gotifyClient)
+
+	telegramClient := resty.New().SetTransport(&mockRoundTripper{
+		roundTrip: func(r *http.Request) (*http.Response, error) {
+			assert.Equal(t, http.MethodPost, r.Method)
+			assert.Equal(t, "/botbot-token/sendMessage", r.URL.Path)
+
+			var payload notificationContracts.TelegramMessage
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Error(err)
+			}
+			assert.Equal(t, "override-chat", payload.ChatID)
+			assert.Equal(t, "deployment failed", payload.Text)
+			assert.Equal(t, "Markdown", payload.ParseMode)
+
+			telegramHits.Add(1)
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewBufferString(`{"ok":true,"result":{}}`)),
+				Header:     make(http.Header),
+			}, nil
+		},
+	})
+	telegramChan.SetClient(telegramClient)
+
 	err = runtime.Notification.Send(notificationRecipient{}, notificationFanout{})
 	require.NoError(t, err)
 
 	assert.Equal(t, int32(1), gotifyHits.Load())
 	assert.Equal(t, int32(1), telegramHits.Load())
+}
+
+type mockRoundTripper struct {
+	roundTrip func(*http.Request) (*http.Response, error)
+}
+
+func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return m.roundTrip(req)
 }
 
 type notificationRecipient struct{}

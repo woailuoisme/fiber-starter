@@ -46,6 +46,11 @@ func NewGotifyChannel(cfg configs.GotifyNotificationConfig) (*GotifyChannel, err
 	return &GotifyChannel{client: client, token: token}, nil
 }
 
+// SetClient replaces the internal resty.Client (primarily for testing).
+func (c *GotifyChannel) SetClient(client *resty.Client) {
+	c.client = client
+}
+
 // Send sends the notification via Gotify.
 func (c *GotifyChannel) Send(notifiable interface{}, notification contracts.Notification) error {
 	gotifyNotification, ok := notification.(contracts.GotifyNotification)
