@@ -4,10 +4,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	controllers "fiber-starter/app/Http/Controllers"
-	admincontrollers "fiber-starter/app/Http/Controllers/Admin"
-	providers "fiber-starter/app/Providers"
-	"fiber-starter/routes"
+	"fiber-starter/internal/bootstrap"
+	providers "fiber-starter/internal/providers"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
@@ -25,9 +23,8 @@ func TestDocsRoutes_ExposeScalarAndOpenAPISpec(t *testing.T) {
 	}()
 
 	app := fiber.New()
-	routes.SetupRoutes(app, func(c fiber.Ctx) error {
-		return c.Next()
-	}, &controllers.AuthController{}, &admincontrollers.UserController{}, &controllers.HealthController{})
+	err = bootstrap.SetupApplicationRoutes(app)
+	require.NoError(t, err)
 
 	requiredPaths := []string{
 		"/api/v1/auth/sign-up",
@@ -68,6 +65,5 @@ func TestDocsRoutes_ExposeScalarAndOpenAPISpec(t *testing.T) {
 	defer specResp.Body.Close()
 
 	specJSON := testkit.ReadBody(t, specResp)
-	// Current generator (swag) produces Swagger 2.0
 	assert.Contains(t, specJSON, `"swagger": "2.0"`)
 }

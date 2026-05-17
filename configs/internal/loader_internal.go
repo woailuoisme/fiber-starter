@@ -91,8 +91,7 @@ func LoadConfigFiles(k *koanf.Koanf) error {
 		}
 
 		path := filepath.Join(dir, file.Name())
-		// nolint:gosec // path is derived from local configs directory
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) //nolint:gosec // path is derived from local configs directory
 		if err != nil {
 			return err
 		}

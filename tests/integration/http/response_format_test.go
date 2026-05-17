@@ -3,8 +3,8 @@ package tests
 import (
 	"testing"
 
-	exceptions "fiber-starter/app/Exceptions"
-	helpers "fiber-starter/app/Support"
+	exceptions "fiber-starter/internal/common/exceptions"
+	helpers "fiber-starter/internal/support"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"

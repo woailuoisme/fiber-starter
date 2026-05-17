@@ -3,8 +3,8 @@ package providers
 import (
 	"testing"
 
-	config "fiber-starter/app/Providers/Config"
 	configs "fiber-starter/configs"
+	config "fiber-starter/internal/providers/config"
 
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/v2"
@@ -64,8 +64,8 @@ func TestConfigProvider(t *testing.T) {
 	assert.Equal(t, "starter", tags[len(tags)-1])
 	assert.Len(t, tags, 4)
 
-	assert.Equal(t, 0.0, repo.GetFloat64("non.existent.float"))
-	assert.Equal(t, 1.5, repo.GetFloat64("non.existent.float", 1.5))
+	assert.InDelta(t, 0.0, repo.GetFloat64("non.existent.float"), 0.0001)
+	assert.InDelta(t, 1.5, repo.GetFloat64("non.existent.float", 1.5), 0.0001)
 
 	all := repo.All()
 	assert.Contains(t, all, "app.name")

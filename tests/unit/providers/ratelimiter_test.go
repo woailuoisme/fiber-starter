@@ -4,8 +4,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	ratelimiter "fiber-starter/app/Providers/RateLimiter"
 	"fiber-starter/configs"
+	ratelimiter "fiber-starter/internal/providers/ratelimiter"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"

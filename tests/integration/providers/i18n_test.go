@@ -3,8 +3,8 @@ package providers
 import (
 	"testing"
 
-	i18n "fiber-starter/app/Providers/I18n"
 	"fiber-starter/configs"
+	i18n "fiber-starter/internal/providers/i18n"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"

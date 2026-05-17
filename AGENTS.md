@@ -107,3 +107,9 @@ cfg := rt.Config    // 获取配置
 **始终在命令前添加 `rtk` 前缀**。如果 RTK 有专用过滤器，它将使用该过滤器；如果没有，它将原样传递命令。这意味着使用 RTK 始终是安全的。
 
 @RTK.md
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan:
+file:///Users/seaside/Projects/go/fiber-template/specs/001-golang-feature-first/plan.md
+<!-- SPECKIT END -->

@@ -6,11 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	controllers "fiber-starter/app/Http/Controllers"
-	providers "fiber-starter/app/Providers"
-	cache "fiber-starter/app/Providers/Cache"
-	database "fiber-starter/app/Providers/Database"
 	"fiber-starter/configs"
+	monitoring "fiber-starter/internal/features/monitoring"
+	providers "fiber-starter/internal/providers"
+	cache "fiber-starter/internal/providers/cache"
+	database "fiber-starter/internal/providers/database"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
@@ -47,7 +47,7 @@ func TestHealthEndpoints_DoNotRegress(t *testing.T) {
 	}
 	providers.SetInstance(rt)
 
-	hc := controllers.NewHealthController(cfg)
+	hc := monitoring.NewHealthController(cfg)
 
 	app := fiber.New()
 	app.Get("/health", hc.Health)
@@ -109,7 +109,7 @@ func TestHealthEndpoints_HealthIsLightweightReadyProbesDependencies(t *testing.T
 		_ = rt.Close()
 	})
 
-	hc := controllers.NewHealthController(cfg)
+	hc := monitoring.NewHealthController(cfg)
 
 	app := fiber.New()
 	app.Get("/health", hc.Health)

@@ -5,30 +5,30 @@ import (
 	"testing"
 	"time"
 
-	models "fiber-starter/app/Models"
-	auth "fiber-starter/app/Providers/Auth"
-	authContracts "fiber-starter/app/Providers/Auth/Contracts"
-	cache "fiber-starter/app/Providers/Cache"
-	cacheContracts "fiber-starter/app/Providers/Cache/Contracts"
-	configContracts "fiber-starter/app/Providers/Config/Contracts"
-	databaseContracts "fiber-starter/app/Providers/Database/Contracts"
-	hashContracts "fiber-starter/app/Providers/Hash/Contracts"
-	i18nContracts "fiber-starter/app/Providers/I18n/Contracts"
-	loggingContracts "fiber-starter/app/Providers/Logging/Contracts"
-	mail "fiber-starter/app/Providers/Mail"
-	mailContracts "fiber-starter/app/Providers/Mail/Contracts"
-	mailDrivers "fiber-starter/app/Providers/Mail/Drivers"
-	notificationContracts "fiber-starter/app/Providers/Notification/Contracts"
-	queue "fiber-starter/app/Providers/Queue"
-	queueContracts "fiber-starter/app/Providers/Queue/Contracts"
-	ratelimiterContracts "fiber-starter/app/Providers/RateLimiter/Contracts"
-	scheduleContracts "fiber-starter/app/Providers/Schedule/Contracts"
-	searchContracts "fiber-starter/app/Providers/Search/Contracts"
-	storage "fiber-starter/app/Providers/Storage"
-	storageContracts "fiber-starter/app/Providers/Storage/Contracts"
-	validationContracts "fiber-starter/app/Providers/Validation/Contracts"
-	"fiber-starter/app/Support/appctx"
 	"fiber-starter/configs"
+	models "fiber-starter/internal/features/user"
+	auth "fiber-starter/internal/providers/auth"
+	authContracts "fiber-starter/internal/providers/auth/Contracts"
+	cache "fiber-starter/internal/providers/cache"
+	cacheContracts "fiber-starter/internal/providers/cache/Contracts"
+	configContracts "fiber-starter/internal/providers/config/Contracts"
+	databaseContracts "fiber-starter/internal/providers/database/Contracts"
+	hashContracts "fiber-starter/internal/providers/hash/Contracts"
+	i18nContracts "fiber-starter/internal/providers/i18n/Contracts"
+	loggingContracts "fiber-starter/internal/providers/logging/Contracts"
+	mail "fiber-starter/internal/providers/mail"
+	mailContracts "fiber-starter/internal/providers/mail/Contracts"
+	mailDrivers "fiber-starter/internal/providers/mail/Drivers"
+	notificationContracts "fiber-starter/internal/providers/notification/Contracts"
+	queue "fiber-starter/internal/providers/queue"
+	queueContracts "fiber-starter/internal/providers/queue/Contracts"
+	ratelimiterContracts "fiber-starter/internal/providers/ratelimiter/Contracts"
+	scheduleContracts "fiber-starter/internal/providers/schedule/Contracts"
+	searchContracts "fiber-starter/internal/providers/search/Contracts"
+	storage "fiber-starter/internal/providers/storage"
+	storageContracts "fiber-starter/internal/providers/storage/Contracts"
+	validationContracts "fiber-starter/internal/providers/validation/Contracts"
+	"fiber-starter/internal/support/appctx"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
@@ -337,12 +337,12 @@ type fakeAuthGuard struct {
 
 func (g *fakeAuthGuard) Check(fiber.Ctx) bool                      { return g.check }
 func (g *fakeAuthGuard) Guest(fiber.Ctx) bool                      { return g.guest }
-func (g *fakeAuthGuard) User(fiber.Ctx) *models.User               { return g.user }
+func (g *fakeAuthGuard) User(fiber.Ctx) any                        { return g.user }
 func (g *fakeAuthGuard) Id(fiber.Ctx) int64                        { return 42 }
-func (g *fakeAuthGuard) SetUser(fiber.Ctx, *models.User)           { g.setUserCalls++ }
+func (g *fakeAuthGuard) SetUser(c fiber.Ctx, user any)             { g.setUserCalls++ }
 func (g *fakeAuthGuard) Validate(map[string]string) bool           { return g.validate }
 func (g *fakeAuthGuard) Attempt(fiber.Ctx, map[string]string) bool { return g.attempt }
-func (g *fakeAuthGuard) Login(fiber.Ctx, *models.User) error       { return nil }
+func (g *fakeAuthGuard) Login(c fiber.Ctx, user any) error         { return nil }
 func (g *fakeAuthGuard) LoginUsingId(fiber.Ctx, int64) error       { return nil }
 func (g *fakeAuthGuard) Logout(fiber.Ctx) error                    { g.logoutCalls++; return nil }
 
@@ -359,6 +359,8 @@ func (m *fakeAuthManager) Guard(name ...string) authContracts.Guard {
 	}
 	return m.guard
 }
+
+func (m *fakeAuthManager) SetModelCreator(creator func() any) {}
 
 type fakeMailManager struct {
 	mailer        mailContracts.Mailer

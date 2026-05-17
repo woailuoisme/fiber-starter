@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	logging "fiber-starter/app/Providers/Logging"
-	helpers "fiber-starter/app/Support"
 	"fiber-starter/configs"
+	logging "fiber-starter/internal/providers/logging"
+	helpers "fiber-starter/internal/support"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"

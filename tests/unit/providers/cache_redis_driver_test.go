@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	cacheDrivers "fiber-starter/app/Providers/Cache/Drivers"
 	"fiber-starter/configs"
+	cacheDrivers "fiber-starter/internal/providers/cache/Drivers"
 
 	"github.com/stretchr/testify/require"
 )

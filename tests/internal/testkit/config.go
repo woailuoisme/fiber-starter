@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"testing"
 
-	helpers "fiber-starter/app/Support"
 	"fiber-starter/configs"
+	helpers "fiber-starter/internal/support"
 )
 
 // NewSQLiteConfig returns a minimal SQLite-backed application config for tests.

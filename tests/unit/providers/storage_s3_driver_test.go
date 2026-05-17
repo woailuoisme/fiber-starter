@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	storageDrivers "fiber-starter/app/Providers/Storage/Drivers"
 	"fiber-starter/configs"
+	storageDrivers "fiber-starter/internal/providers/storage/Drivers"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

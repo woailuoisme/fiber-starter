@@ -8,9 +8,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	middleware "fiber-starter/app/Http/Middleware"
-	ratelimiter "fiber-starter/app/Providers/RateLimiter"
 	"fiber-starter/configs"
+	middleware "fiber-starter/internal/common/middleware"
+	ratelimiter "fiber-starter/internal/providers/ratelimiter"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"

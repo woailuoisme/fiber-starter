@@ -3,8 +3,8 @@ package providers_test
 import (
 	"testing"
 
-	schedule "fiber-starter/app/Providers/Schedule"
 	"fiber-starter/configs"
+	schedule "fiber-starter/internal/providers/schedule"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

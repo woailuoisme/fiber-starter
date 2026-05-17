@@ -3,10 +3,12 @@ package tests
 import (
 	"testing"
 
-	requests "fiber-starter/app/Http/Requests"
-	supporti18n "fiber-starter/app/Providers/I18n"
-	validation "fiber-starter/app/Providers/Validation"
 	"fiber-starter/configs"
+	requests "fiber-starter/internal/common/requests"
+	"fiber-starter/internal/features/auth"
+	"fiber-starter/internal/features/user"
+	supporti18n "fiber-starter/internal/providers/i18n"
+	validation "fiber-starter/internal/providers/validation"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -55,7 +57,7 @@ func TestRequestStructTags_EnforceAuthAndUserRules(t *testing.T) {
 	factory, err := validation.RegisterValidation(&configs.Config{})
 	require.NoError(t, err)
 
-	registerErr := factory.Make(&requests.RegisterRequest{
+	registerErr := factory.Make(&auth.RegisterRequest{
 		Name:     "A",
 		Email:    "not-an-email",
 		Password: "short",
@@ -66,7 +68,7 @@ func TestRequestStructTags_EnforceAuthAndUserRules(t *testing.T) {
 	assert.Contains(t, registerErrors, "email")
 	assert.Contains(t, registerErrors, "password")
 
-	profileErr := factory.Make(&requests.UpdateProfileRequest{
+	profileErr := factory.Make(&user.UpdateProfileRequest{
 		Name:   "A",
 		Phone:  "not-a-phone",
 		Avatar: "not-a-url",
@@ -77,7 +79,7 @@ func TestRequestStructTags_EnforceAuthAndUserRules(t *testing.T) {
 	assert.Contains(t, profileErrors, "phone")
 	assert.Contains(t, profileErrors, "avatar")
 
-	searchErr := factory.Make(&requests.SearchUsersRequest{
+	searchErr := factory.Make(&user.SearchUsersRequest{
 		Q:     "",
 		Page:  -1,
 		Limit: 101,

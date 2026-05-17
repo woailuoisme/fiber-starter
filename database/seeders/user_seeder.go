@@ -4,9 +4,8 @@ import (
 	"context"
 	"database/sql"
 
-	models "fiber-starter/app/Models"
-	repositories "fiber-starter/app/Repositories"
 	"fiber-starter/database/factories"
+	userPkg "fiber-starter/internal/features/user"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
@@ -99,7 +98,7 @@ func (s *UserSeeder) GenerateTestUsers(db *sql.DB, dialect string, count int) er
 	return s.SeedRandomUsers(db, dialect, count)
 }
 
-func (s *UserSeeder) createSeedUsers(ctx context.Context, repo *repositories.UserRepository, users []models.User) error {
+func (s *UserSeeder) createSeedUsers(ctx context.Context, repo *userPkg.UserRepository, users []userPkg.User) error {
 	for i := range users {
 		user := users[i]
 		if err := repo.Create(ctx, &user); err != nil {
@@ -109,7 +108,7 @@ func (s *UserSeeder) createSeedUsers(ctx context.Context, repo *repositories.Use
 	return nil
 }
 
-func (s *UserSeeder) repo(db *sql.DB, dialect string) *repositories.UserRepository {
+func (s *UserSeeder) repo(db *sql.DB, dialect string) *userPkg.UserRepository {
 	var bunDB *bun.DB
 	switch dialect {
 	case "sqlite":
@@ -117,7 +116,7 @@ func (s *UserSeeder) repo(db *sql.DB, dialect string) *repositories.UserReposito
 	default:
 		bunDB = bun.NewDB(db, pgdialect.New())
 	}
-	return repositories.NewUserRepository(bunDB)
+	return userPkg.NewUserRepository(bunDB)
 }
 
 // Package-level compatibility helpers

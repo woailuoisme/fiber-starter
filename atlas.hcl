@@ -11,7 +11,7 @@ data "external_schema" "bun_postgres" {
     "ariga.io/atlas-provider-bun",
     "load",
     "--path",
-    "./app/Models",
+    "./internal",
     "--dialect",
     "postgres",
   ]
@@ -25,7 +25,7 @@ data "external_schema" "bun_sqlite" {
     "ariga.io/atlas-provider-bun",
     "load",
     "--path",
-    "./app/Models",
+    "./internal",
     "--dialect",
     "sqlite",
   ]

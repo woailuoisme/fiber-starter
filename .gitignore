@@ -135,3 +135,5 @@ specs
 !.specify/memory/constitution.md
 
 .playwright-cli
+.go
+.gocache

@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	httpservices "fiber-starter/app/Http/Services"
-	models "fiber-starter/app/Models"
-	cacheContracts "fiber-starter/app/Providers/Cache/Contracts"
-	dbProvider "fiber-starter/app/Providers/Database"
-	hash "fiber-starter/app/Providers/Hash"
-	mailContracts "fiber-starter/app/Providers/Mail/Contracts"
 	"fiber-starter/configs"
+	auth "fiber-starter/internal/features/auth"
+	user "fiber-starter/internal/features/user"
+	cacheContracts "fiber-starter/internal/providers/cache/Contracts"
+	dbProvider "fiber-starter/internal/providers/database"
+	hash "fiber-starter/internal/providers/hash"
+	mailContracts "fiber-starter/internal/providers/mail/Contracts"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"
@@ -25,33 +25,33 @@ func TestAuthService_SignUpVerifyAndLoginWorkflow(t *testing.T) {
 	svc, mailer, cache := newAuthServiceTestHarness(t)
 	ctx := context.Background()
 
-	signUp, err := svc.Register(ctx, httpservices.RegisterInput{
+	signUp, err := svc.Register(ctx, auth.RegisterInput{
 		Name:     "Alice",
 		Email:    "alice@example.com",
 		Password: "password123",
 	})
 	require.NoError(t, err)
-	user := signUp.User
-	require.NotNil(t, user)
-	assert.Equal(t, models.UserStatusPending, user.Status)
-	assert.Nil(t, user.EmailVerifiedAt)
+	dbUser := signUp.User
+	require.NotNil(t, dbUser)
+	assert.Equal(t, user.UserStatusPending, dbUser.Status)
+	assert.Nil(t, dbUser.EmailVerifiedAt)
 	require.Len(t, mailer.rawCalls, 1)
 
-	_, err = svc.Login(ctx, httpservices.LoginInput{Email: "alice@example.com", Password: "password123"})
+	_, err = svc.Login(ctx, auth.LoginInput{Email: "alice@example.com", Password: "password123"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "email verification required")
 
 	code := extractCode(t, mailer.rawCalls[0].Body)
-	authResult, err := svc.VerifySignUp(ctx, httpservices.VerifyCodeInput{Email: "alice@example.com", Code: code})
+	authResult, err := svc.VerifySignUp(ctx, auth.VerifyCodeInput{Email: "alice@example.com", Code: code})
 	require.NoError(t, err)
 	verifiedUser := authResult.User
 	require.NotNil(t, verifiedUser)
-	assert.Equal(t, models.UserStatusActive, verifiedUser.Status)
+	assert.Equal(t, user.UserStatusActive, verifiedUser.Status)
 	require.NotNil(t, verifiedUser.EmailVerifiedAt)
 	assert.NotEmpty(t, authResult.Tokens.AccessToken)
 	assert.NotEmpty(t, authResult.Tokens.RefreshToken)
 
-	loginResult, err := svc.Login(ctx, httpservices.LoginInput{Email: "alice@example.com", Password: "password123"})
+	loginResult, err := svc.Login(ctx, auth.LoginInput{Email: "alice@example.com", Password: "password123"})
 	require.NoError(t, err)
 	loginUser := loginResult.User
 	assert.Equal(t, verifiedUser.Email, loginUser.Email)
@@ -70,33 +70,33 @@ func TestAuthService_PasswordResetOTPWorkflow(t *testing.T) {
 	seedVerifiedUser(t, svc, mailer)
 	mailer.rawCalls = nil
 
-	require.NoError(t, svc.RequestPasswordReset(ctx, httpservices.PasswordResetRequestInput{Email: "alice@example.com"}))
+	require.NoError(t, svc.RequestPasswordReset(ctx, auth.PasswordResetRequestInput{Email: "alice@example.com"}))
 	require.Len(t, mailer.rawCalls, 1)
 
 	code := extractCode(t, mailer.rawCalls[0].Body)
-	resetToken, err := svc.VerifyPasswordReset(ctx, httpservices.VerifyCodeInput{Email: "alice@example.com", Code: code})
+	resetToken, err := svc.VerifyPasswordReset(ctx, auth.VerifyCodeInput{Email: "alice@example.com", Code: code})
 	require.NoError(t, err)
 	require.NotEmpty(t, resetToken.Token)
 
-	require.NoError(t, svc.ResetPassword(ctx, httpservices.ConfirmPasswordResetInput{Token: resetToken.Token, NewPassword: "new-password-123"}))
-	require.Error(t, svc.ResetPassword(ctx, httpservices.ConfirmPasswordResetInput{Token: resetToken.Token, NewPassword: "new-password-456"}))
+	require.NoError(t, svc.ResetPassword(ctx, auth.ConfirmPasswordResetInput{Token: resetToken.Token, NewPassword: "new-password-123"}))
+	require.Error(t, svc.ResetPassword(ctx, auth.ConfirmPasswordResetInput{Token: resetToken.Token, NewPassword: "new-password-456"}))
 
-	_, err = svc.Login(ctx, httpservices.LoginInput{Email: "alice@example.com", Password: "password123"})
+	_, err = svc.Login(ctx, auth.LoginInput{Email: "alice@example.com", Password: "password123"})
 	require.Error(t, err)
 
-	loginResult, err := svc.Login(ctx, httpservices.LoginInput{Email: "alice@example.com", Password: "new-password-123"})
+	loginResult, err := svc.Login(ctx, auth.LoginInput{Email: "alice@example.com", Password: "new-password-123"})
 	require.NoError(t, err)
-	user := loginResult.User
-	assert.Equal(t, "alice@example.com", user.Email)
+	dbUser := loginResult.User
+	assert.Equal(t, "alice@example.com", dbUser.Email)
 	assert.NotEmpty(t, loginResult.Tokens.AccessToken)
 	assert.NotEmpty(t, loginResult.Tokens.RefreshToken)
 
-	exists, err := cache.Exists("refresh_token:" + fmt.Sprint(user.ID))
+	exists, err := cache.Exists("refresh_token:" + fmt.Sprint(dbUser.ID))
 	require.NoError(t, err)
 	assert.True(t, exists)
 }
 
-func newAuthServiceTestHarness(t *testing.T) (httpservices.AuthService, *fakeMailer, *fakeCache) {
+func newAuthServiceTestHarness(t *testing.T) (auth.AuthService, *fakeMailer, *fakeCache) {
 	t.Helper()
 
 	cfg := &configs.Config{
@@ -127,7 +127,7 @@ func newAuthServiceTestHarness(t *testing.T) (httpservices.AuthService, *fakeMai
 	mailer := &fakeMailer{}
 	hasher, err := hash.RegisterHash(cfg)
 	require.NoError(t, err)
-	svc := httpservices.NewAuthService(conn, cfg, cache, mailer, hasher)
+	svc := auth.NewAuthService(conn, cfg, cache, mailer, hasher)
 
 	return svc, mailer, cache
 }
@@ -168,11 +168,11 @@ func createAuthTables(t *testing.T, db *sql.DB) {
 	require.NoError(t, err)
 }
 
-func seedVerifiedUser(t *testing.T, svc httpservices.AuthService, mailer *fakeMailer) {
+func seedVerifiedUser(t *testing.T, svc auth.AuthService, mailer *fakeMailer) {
 	t.Helper()
 	ctx := context.Background()
 
-	_, err := svc.Register(ctx, httpservices.RegisterInput{
+	_, err := svc.Register(ctx, auth.RegisterInput{
 		Name:     "Alice",
 		Email:    "alice@example.com",
 		Password: "password123",
@@ -181,7 +181,7 @@ func seedVerifiedUser(t *testing.T, svc httpservices.AuthService, mailer *fakeMa
 
 	require.Len(t, mailer.rawCalls, 1)
 	code := extractCode(t, mailer.rawCalls[0].Body)
-	_, err = svc.VerifySignUp(ctx, httpservices.VerifyCodeInput{Email: "alice@example.com", Code: code})
+	_, err = svc.VerifySignUp(ctx, auth.VerifyCodeInput{Email: "alice@example.com", Code: code})
 	require.NoError(t, err)
 }
 

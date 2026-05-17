@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	models "fiber-starter/app/Models"
-	realtime "fiber-starter/app/Providers/Realtime"
 	"fiber-starter/configs"
+	models "fiber-starter/internal/features/user"
+	realtime "fiber-starter/internal/providers/realtime"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"

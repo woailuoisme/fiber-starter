@@ -3,8 +3,8 @@ package providers_test
 import (
 	"testing"
 
-	databaseDrivers "fiber-starter/app/Providers/Database/Drivers"
 	"fiber-starter/configs"
+	databaseDrivers "fiber-starter/internal/providers/database/Drivers"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	cache "fiber-starter/app/Providers/Cache"
 	"fiber-starter/configs"
+	cache "fiber-starter/internal/providers/cache"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"

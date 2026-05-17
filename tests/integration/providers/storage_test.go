@@ -3,10 +3,10 @@ package providers_test
 import (
 	"testing"
 
-	providers "fiber-starter/app/Providers"
-	storage "fiber-starter/app/Providers/Storage"
-	storageContracts "fiber-starter/app/Providers/Storage/Contracts"
 	"fiber-starter/configs"
+	providers "fiber-starter/internal/providers"
+	storage "fiber-starter/internal/providers/storage"
+	storageContracts "fiber-starter/internal/providers/storage/Contracts"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

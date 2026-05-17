@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	middleware "fiber-starter/app/Http/Middleware"
-	helpers "fiber-starter/app/Support"
+	middleware "fiber-starter/internal/common/middleware"
+	helpers "fiber-starter/internal/support"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"

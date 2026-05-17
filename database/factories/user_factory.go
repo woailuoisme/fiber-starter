@@ -4,7 +4,7 @@ import (
 	"math/rand/v2"
 	"time"
 
-	models "fiber-starter/app/Models"
+	userPkg "fiber-starter/internal/features/user"
 
 	"github.com/go-faker/faker/v4"
 	"golang.org/x/crypto/bcrypt"
@@ -19,78 +19,78 @@ func NewUserFactory() *UserFactory {
 }
 
 // Make 生成基础用户数据
-func (f *UserFactory) Make(name, email, password string) (models.User, error) {
+func (f *UserFactory) Make(name, email, password string) (userPkg.User, error) {
 	return f.baseUser(name, email, password)
 }
 
 // Active 标记为已激活状态
-func (f *UserFactory) Active(user models.User) models.User {
-	user.Status = models.UserStatusActive
+func (f *UserFactory) Active(user userPkg.User) userPkg.User {
+	user.Status = userPkg.UserStatusActive
 	return user
 }
 
 // Pending 标记为待激活状态
-func (f *UserFactory) Pending(user models.User) models.User {
-	user.Status = models.UserStatusInactive
+func (f *UserFactory) Pending(user userPkg.User) userPkg.User {
+	user.Status = userPkg.UserStatusInactive
 	return user
 }
 
 // Banned 标记为封禁状态
-func (f *UserFactory) Banned(user models.User) models.User {
-	user.Status = models.UserStatusBanned
+func (f *UserFactory) Banned(user userPkg.User) userPkg.User {
+	user.Status = userPkg.UserStatusBanned
 	return user
 }
 
 // Verified 标记邮箱已验证
-func (f *UserFactory) Verified(user models.User) models.User {
+func (f *UserFactory) Verified(user userPkg.User) userPkg.User {
 	user.EmailVerifiedAt = newTimePtr(time.Now().UTC())
 	return user
 }
 
 // WithPhone 设置手机号
-func (f *UserFactory) WithPhone(user models.User, phone string) models.User {
+func (f *UserFactory) WithPhone(user userPkg.User, phone string) userPkg.User {
 	user.Phone = &phone
 	return user
 }
 
 // WithAvatar 设置头像
-func (f *UserFactory) WithAvatar(user models.User, avatar string) models.User {
+func (f *UserFactory) WithAvatar(user userPkg.User, avatar string) userPkg.User {
 	user.Avatar = &avatar
 	return user
 }
 
 // Admin 生成管理员用户
-func (f *UserFactory) Admin(name, email, password string) (models.User, error) {
+func (f *UserFactory) Admin(name, email, password string) (userPkg.User, error) {
 	user, err := f.Make(name, email, password)
 	if err != nil {
-		return models.User{}, err
+		return userPkg.User{}, err
 	}
 
 	return f.Verified(f.Active(user)), nil
 }
 
 // PendingUser 生成待激活用户
-func (f *UserFactory) PendingUser(name, email, password string) (models.User, error) {
+func (f *UserFactory) PendingUser(name, email, password string) (userPkg.User, error) {
 	user, err := f.Make(name, email, password)
 	if err != nil {
-		return models.User{}, err
+		return userPkg.User{}, err
 	}
 
 	return f.Pending(user), nil
 }
 
 // BannedUser 生成封禁用户
-func (f *UserFactory) BannedUser(name, email, password string) (models.User, error) {
+func (f *UserFactory) BannedUser(name, email, password string) (userPkg.User, error) {
 	user, err := f.Make(name, email, password)
 	if err != nil {
-		return models.User{}, err
+		return userPkg.User{}, err
 	}
 
 	return f.Banned(user), nil
 }
 
 // SeedUsers 生成默认种子用户
-func (f *UserFactory) SeedUsers(password string) ([]models.User, error) {
+func (f *UserFactory) SeedUsers(password string) ([]userPkg.User, error) {
 	admin, err := f.Admin("Admin User", "admin@example.com", password)
 	if err != nil {
 		return nil, err
@@ -116,12 +116,12 @@ func (f *UserFactory) SeedUsers(password string) ([]models.User, error) {
 	pendingUser = f.WithPhone(pendingUser, "13800138002")
 	bannedUser = f.WithPhone(bannedUser, "13800138003")
 
-	return []models.User{admin, testUser, pendingUser, bannedUser}, nil
+	return []userPkg.User{admin, testUser, pendingUser, bannedUser}, nil
 }
 
 // RandomUsers 生成随机用户
-func (f *UserFactory) RandomUsers(count int, password string) ([]models.User, error) {
-	users := make([]models.User, 0, count)
+func (f *UserFactory) RandomUsers(count int, password string) ([]userPkg.User, error) {
+	users := make([]userPkg.User, 0, count)
 	now := time.Now().UTC()
 
 	for i := 0; i < count; i++ {
@@ -154,18 +154,18 @@ func (f *UserFactory) RandomUsers(count int, password string) ([]models.User, er
 	return users, nil
 }
 
-func (f *UserFactory) baseUser(name, email, password string) (models.User, error) {
+func (f *UserFactory) baseUser(name, email, password string) (userPkg.User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return models.User{}, err
+		return userPkg.User{}, err
 	}
 
 	now := time.Now().UTC()
-	return models.User{
+	return userPkg.User{
 		Name:      name,
 		Email:     email,
 		Password:  string(hashedPassword),
-		Status:    models.UserStatusActive,
+		Status:    userPkg.UserStatusActive,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}, nil

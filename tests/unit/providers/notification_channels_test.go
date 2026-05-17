@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	channels "fiber-starter/app/Providers/Notification/Channels"
-	notificationContracts "fiber-starter/app/Providers/Notification/Contracts"
 	"fiber-starter/configs"
+	channels "fiber-starter/internal/providers/notification/Channels"
+	notificationContracts "fiber-starter/internal/providers/notification/Contracts"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -59,7 +59,9 @@ func TestGotifyChannel_Send(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotToken = r.URL.Query().Get("token")
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotPayload))
+		if err := json.NewDecoder(r.Body).Decode(&gotPayload); err != nil {
+			t.Error(err)
+		}
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	}))
@@ -92,7 +94,9 @@ func TestTelegramChannel_Send(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotPayload))
+		if err := json.NewDecoder(r.Body).Decode(&gotPayload); err != nil {
+			t.Error(err)
+		}
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"ok":true,"result":{}}`))
 	}))

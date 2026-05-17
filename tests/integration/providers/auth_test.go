@@ -3,11 +3,11 @@ package providers_test
 import (
 	"testing"
 
-	models "fiber-starter/app/Models"
-	auth "fiber-starter/app/Providers/Auth"
-	database "fiber-starter/app/Providers/Database"
-	hash "fiber-starter/app/Providers/Hash"
 	"fiber-starter/configs"
+	models "fiber-starter/internal/features/user"
+	auth "fiber-starter/internal/providers/auth"
+	database "fiber-starter/internal/providers/database"
+	hash "fiber-starter/internal/providers/hash"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"

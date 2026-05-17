@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	providers "fiber-starter/app/Providers"
-	notificationContracts "fiber-starter/app/Providers/Notification/Contracts"
+	providers "fiber-starter/internal/providers"
+	notificationContracts "fiber-starter/internal/providers/notification/Contracts"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"
@@ -82,7 +82,9 @@ func TestProvidersBuild_NotificationChannels(t *testing.T) {
 		assert.Equal(t, "secret-token", r.URL.Query().Get("token"))
 
 		var payload notificationContracts.GotifyMessage
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&payload))
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Error(err)
+		}
 		assert.Equal(t, "Build Failed", payload.Title)
 		assert.Equal(t, "deployment failed", payload.Message)
 		assert.Equal(t, 7, payload.Priority)
@@ -98,7 +100,9 @@ func TestProvidersBuild_NotificationChannels(t *testing.T) {
 		assert.Equal(t, "/botbot-token/sendMessage", r.URL.Path)
 
 		var payload notificationContracts.TelegramMessage
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&payload))
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Error(err)
+		}
 		assert.Equal(t, "override-chat", payload.ChatID)
 		assert.Equal(t, "deployment failed", payload.Text)
 		assert.Equal(t, "Markdown", payload.ParseMode)

@@ -3,9 +3,9 @@ package providers_test
 import (
 	"testing"
 
-	providers "fiber-starter/app/Providers"
-	mail "fiber-starter/app/Providers/Mail"
 	"fiber-starter/configs"
+	providers "fiber-starter/internal/providers"
+	mail "fiber-starter/internal/providers/mail"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

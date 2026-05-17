@@ -6,26 +6,26 @@ import (
 	"testing"
 	"time"
 
-	auth "fiber-starter/app/Providers/Auth"
-	cache "fiber-starter/app/Providers/Cache"
-	configProvider "fiber-starter/app/Providers/Config"
-	database "fiber-starter/app/Providers/Database"
-	hash "fiber-starter/app/Providers/Hash"
-	i18nProvider "fiber-starter/app/Providers/I18n"
-	logging "fiber-starter/app/Providers/Logging"
-	mail "fiber-starter/app/Providers/Mail"
-	mailContracts "fiber-starter/app/Providers/Mail/Contracts"
-	notification "fiber-starter/app/Providers/Notification"
-	notificationContracts "fiber-starter/app/Providers/Notification/Contracts"
-	queue "fiber-starter/app/Providers/Queue"
-	queueContracts "fiber-starter/app/Providers/Queue/Contracts"
-	ratelimiter "fiber-starter/app/Providers/RateLimiter"
-	schedule "fiber-starter/app/Providers/Schedule"
-	search "fiber-starter/app/Providers/Search"
-	storage "fiber-starter/app/Providers/Storage"
-	storageDrivers "fiber-starter/app/Providers/Storage/Drivers"
-	validation "fiber-starter/app/Providers/Validation"
 	"fiber-starter/configs"
+	auth "fiber-starter/internal/providers/auth"
+	cache "fiber-starter/internal/providers/cache"
+	configProvider "fiber-starter/internal/providers/config"
+	database "fiber-starter/internal/providers/database"
+	hash "fiber-starter/internal/providers/hash"
+	i18nProvider "fiber-starter/internal/providers/i18n"
+	logging "fiber-starter/internal/providers/logging"
+	mail "fiber-starter/internal/providers/mail"
+	mailContracts "fiber-starter/internal/providers/mail/Contracts"
+	notification "fiber-starter/internal/providers/notification"
+	notificationContracts "fiber-starter/internal/providers/notification/Contracts"
+	queue "fiber-starter/internal/providers/queue"
+	queueContracts "fiber-starter/internal/providers/queue/Contracts"
+	ratelimiter "fiber-starter/internal/providers/ratelimiter"
+	schedule "fiber-starter/internal/providers/schedule"
+	search "fiber-starter/internal/providers/search"
+	storage "fiber-starter/internal/providers/storage"
+	storageDrivers "fiber-starter/internal/providers/storage/Drivers"
+	validation "fiber-starter/internal/providers/validation"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/go-playground/validator/v10"
@@ -221,6 +221,7 @@ func TestProviderEntryPoints_RegisterWrappers(t *testing.T) {
 		}
 
 		_, mailer, err := mail.Register(cfg)
+		require.NoError(t, err)
 		_, dispatcher, err := notification.RegisterNotification(mailer)
 		require.NoError(t, err)
 		require.NotNil(t, dispatcher)

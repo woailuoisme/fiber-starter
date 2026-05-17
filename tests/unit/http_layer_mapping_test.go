@@ -4,10 +4,8 @@ import (
 	"testing"
 	"time"
 
-	requests "fiber-starter/app/Http/Requests"
-	resources "fiber-starter/app/Http/Resources"
-	services "fiber-starter/app/Http/Services"
-	models "fiber-starter/app/Models"
+	auth "fiber-starter/internal/features/auth"
+	user "fiber-starter/internal/features/user"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
@@ -15,18 +13,18 @@ import (
 )
 
 func TestRequests_ToServiceInputs(t *testing.T) {
-	register := requests.RegisterRequest{
+	register := auth.RegisterRequest{
 		Name:     "Alice",
 		Email:    "alice@example.com",
 		Password: "password123",
 	}
-	assert.Equal(t, services.RegisterInput{
+	assert.Equal(t, auth.RegisterInput{
 		Name:     "Alice",
 		Email:    "alice@example.com",
 		Password: "password123",
 	}, register.ToInput())
 
-	profile := requests.UpdateProfileRequest{
+	profile := user.UpdateProfileRequest{
 		Name:   "Alice",
 		Phone:  "+8613800138000",
 		Avatar: "https://example.com/avatar.jpg",
@@ -41,32 +39,32 @@ func TestRequests_ToServiceInputs(t *testing.T) {
 }
 
 func TestRequests_ToQueryNormalizesPagination(t *testing.T) {
-	list := requests.UserListRequest{Page: 0, Limit: 0}.ToQuery()
-	assert.Equal(t, services.UserListQuery{Page: 1, Limit: 10}, list)
+	list := user.UserListRequest{Page: 0, Limit: 0}.ToQuery()
+	assert.Equal(t, user.UserListQuery{Page: 1, Limit: 10}, list)
 
-	search := requests.SearchUsersRequest{Q: "alice", Page: 2, Limit: 20}.ToQuery()
-	assert.Equal(t, services.UserListQuery{Search: "alice", Page: 2, Limit: 20}, search)
+	search := user.SearchUsersRequest{Q: "alice", Page: 2, Limit: 20}.ToQuery()
+	assert.Equal(t, user.UserListQuery{Search: "alice", Page: 2, Limit: 20}, search)
 }
 
 func TestResources_KeepUserAndTokenShape(t *testing.T) {
 	createdAt := time.Date(2026, 5, 15, 10, 0, 0, 0, time.UTC)
-	user := &models.User{
+	dbUser := &user.User{
 		ID:        1,
 		Name:      "Alice",
 		Email:     "alice@example.com",
-		Status:    models.UserStatusActive,
+		Status:    user.UserStatusActive,
 		CreatedAt: createdAt,
 		UpdatedAt: createdAt,
 	}
 
-	userResponse := resources.NewUserResource(user).ToResponse()
+	userResponse := user.NewUserResource(dbUser).ToResponse()
 	assert.Equal(t, int64(1), userResponse.ID)
 	assert.Equal(t, "Alice", userResponse.Name)
 	assert.Equal(t, "alice@example.com", userResponse.Email)
 
-	authResponse := resources.NewAuthResultResource(services.AuthResult{
-		User: user,
-		Tokens: services.TokenPair{
+	authResponse := auth.NewAuthResultResource(auth.AuthResult{
+		User: dbUser,
+		Tokens: auth.TokenPair{
 			AccessToken:  "access-token",
 			RefreshToken: "refresh-token",
 		},

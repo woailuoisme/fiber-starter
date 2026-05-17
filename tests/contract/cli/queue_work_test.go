@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	command "fiber-starter/app/Console/Commands"
+	command "fiber-starter/internal/console/commands"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

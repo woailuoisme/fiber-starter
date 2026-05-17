@@ -3,8 +3,8 @@ package providers
 import (
 	"testing"
 
-	hash "fiber-starter/app/Providers/Hash"
 	"fiber-starter/configs"
+	hash "fiber-starter/internal/providers/hash"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

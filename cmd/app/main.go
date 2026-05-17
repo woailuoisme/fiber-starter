@@ -30,7 +30,7 @@
 // @tag.description	服务健康检查、就绪检查及运行状态监控
 package main
 
-import command "fiber-starter/app/Console/Commands"
+import command "fiber-starter/internal/console/commands"
 
 func main() {
 	command.CLI()

@@ -8,10 +8,10 @@ import (
 	"net/textproto"
 	"testing"
 
-	requests "fiber-starter/app/Http/Requests"
-	validation "fiber-starter/app/Providers/Validation"
-	helpers "fiber-starter/app/Support"
 	"fiber-starter/configs"
+	requests "fiber-starter/internal/common/requests"
+	validation "fiber-starter/internal/providers/validation"
+	helpers "fiber-starter/internal/support"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
