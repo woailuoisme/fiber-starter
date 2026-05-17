@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"fiber-starter/configs"
-	"fiber-starter/internal/providers/storage/Contracts"
-	"fiber-starter/internal/providers/storage/Drivers"
+	"fiber-starter/internal/providers/storage/contracts"
+	"fiber-starter/internal/providers/storage/drivers"
 )
 
-func createDisk(name string, cfg *configs.Config) (Contracts.Disk, error) {
+func createDisk(name string, cfg *configs.Config) (contracts.Disk, error) {
 	driver := name
 	if driver == "" {
 		driver = cfg.Storage.Driver
@@ -26,7 +26,7 @@ func createDisk(name string, cfg *configs.Config) (Contracts.Disk, error) {
 				url = cfg.Storage.Local.URL
 			}
 		}
-		return Drivers.NewLocalDriver(root, url), nil
+		return drivers.NewLocalDriver(root, url), nil
 
 	case "public":
 		root := "./storage/app/public"
@@ -39,10 +39,10 @@ func createDisk(name string, cfg *configs.Config) (Contracts.Disk, error) {
 				url = cfg.Storage.Public.URL
 			}
 		}
-		return Drivers.NewLocalDriver(root, url), nil
+		return drivers.NewLocalDriver(root, url), nil
 
 	case "s3", "garage", "minio", "r2", "oss":
-		return Drivers.NewS3Driver(cfg, driver), nil
+		return drivers.NewS3Driver(cfg, driver), nil
 
 	default:
 		return nil, fmt.Errorf("storage driver [%s] is not supported", driver)

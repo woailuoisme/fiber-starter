@@ -1,4 +1,4 @@
-package services
+package queue
 
 // QueueStatus describes the current state of an Asynq queue.
 type QueueStatus struct {

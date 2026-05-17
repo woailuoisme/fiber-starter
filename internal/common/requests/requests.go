@@ -10,17 +10,17 @@ import (
 
 	exceptions "fiber-starter/internal/common/exceptions"
 	supporti18n "fiber-starter/internal/providers/i18n"
-	"fiber-starter/internal/providers/validation/Contracts"
+	"fiber-starter/internal/providers/validation/contracts"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 )
 
 // ValidatorFactory 全局验证工厂实例。
-var ValidatorFactory Contracts.Factory
+var ValidatorFactory contracts.Factory
 
 // InitValidator 初始化验证器。
-func InitValidator(v Contracts.Factory) {
+func InitValidator(v contracts.Factory) {
 	ValidatorFactory = v
 }
 

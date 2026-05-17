@@ -5,14 +5,14 @@ import (
 	"sync"
 
 	"fiber-starter/configs"
-	"fiber-starter/internal/providers/queue/Contracts"
-	"fiber-starter/internal/providers/queue/Drivers"
+	"fiber-starter/internal/providers/queue/contracts"
+	"fiber-starter/internal/providers/queue/drivers"
 )
 
 // Manager handles the lifecycle and selection of queue drivers
 type Manager struct {
 	config  *configs.Config
-	drivers map[string]Contracts.Queue
+	drivers map[string]contracts.Queue
 	mu      sync.Mutex
 }
 
@@ -20,12 +20,12 @@ type Manager struct {
 func NewManager(cfg *configs.Config) *Manager {
 	return &Manager{
 		config:  cfg,
-		drivers: make(map[string]Contracts.Queue),
+		drivers: make(map[string]contracts.Queue),
 	}
 }
 
 // Drive returns a queue driver instance by name, or the default driver if none specified
-func (m *Manager) Drive(name ...string) Contracts.Queue {
+func (m *Manager) Drive(name ...string) contracts.Queue {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -38,12 +38,12 @@ func (m *Manager) Drive(name ...string) Contracts.Queue {
 		return driver
 	}
 
-	var driver Contracts.Queue
+	var driver contracts.Queue
 	switch driverName {
 	case "asynq":
-		driver = Drivers.NewAsynqDriver(m.config)
+		driver = drivers.NewAsynqDriver(m.config)
 	default:
-		driver = Drivers.NewAsynqDriver(m.config)
+		driver = drivers.NewAsynqDriver(m.config)
 	}
 
 	m.drivers[driverName] = driver

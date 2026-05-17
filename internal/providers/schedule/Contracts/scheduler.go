@@ -1,16 +1,16 @@
-package Contracts
+package contracts
 
 import (
 	"fmt"
 	"strings"
 
-	"fiber-starter/internal/providers/queue/Contracts"
+	queueContracts "fiber-starter/internal/providers/queue/contracts"
 )
 
 // Event represents a scheduled task with a cron expression
 type Event struct {
 	Expression     string
-	Job            Contracts.Job
+	Job            queueContracts.Job
 	NameStr        string
 	DescriptionStr string
 }
@@ -237,7 +237,7 @@ func (e *Event) Cron(expression string) *Event {
 // Scheduler defines the contract for task schedulers
 type Scheduler interface {
 	// Job registers a job to be scheduled
-	Job(job Contracts.Job) *Event
+	Job(job queueContracts.Job) *Event
 
 	// Call registers a function to be scheduled
 	Call(fn func() error) *Event

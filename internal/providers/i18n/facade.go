@@ -3,7 +3,7 @@ package i18n
 import (
 	"errors"
 
-	"fiber-starter/internal/providers/i18n/Contracts"
+	"fiber-starter/internal/providers/i18n/contracts"
 	"fiber-starter/internal/support/appctx"
 
 	"github.com/gofiber/fiber/v3"
@@ -12,7 +12,7 @@ import (
 var ErrContainerNotInitialized = errors.New("application container not initialized")
 
 // translator returns the translator instance from the container.
-func translator() Contracts.Translator {
+func translator() contracts.Translator {
 	if app := appctx.App(); app != nil {
 		return app.TranslatorService()
 	}

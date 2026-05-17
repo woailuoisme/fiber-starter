@@ -1,7 +1,7 @@
-package Drivers
+package drivers
 
 import (
-	"fiber-starter/internal/providers/mail/Contracts"
+	"fiber-starter/internal/providers/mail/contracts"
 	helpers "fiber-starter/internal/support"
 
 	"go.uber.org/zap"
@@ -13,11 +13,11 @@ func NewLogDriver() *LogDriver {
 	return &LogDriver{}
 }
 
-func (d *LogDriver) To(to ...string) Contracts.Message {
+func (d *LogDriver) To(to ...string) contracts.Message {
 	return &BaseMessage{ToArr: to}
 }
 
-func (d *LogDriver) Send(m Contracts.Message) error {
+func (d *LogDriver) Send(m contracts.Message) error {
 	helpers.Info("Email sent (logged)",
 		zap.Strings("to", m.GetTo()),
 		zap.Strings("cc", m.GetCc()),

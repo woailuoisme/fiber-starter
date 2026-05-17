@@ -1,14 +1,14 @@
 package validation
 
 import (
-	"fiber-starter/internal/providers/validation/Contracts"
+	"fiber-starter/internal/providers/validation/contracts"
 	"fiber-starter/internal/support/appctx"
 
 	"github.com/go-playground/validator/v10"
 )
 
 // factory returns the validation factory instance from the container.
-func factory() Contracts.Factory {
+func factory() contracts.Factory {
 	if app := appctx.App(); app != nil {
 		return app.ValidationService()
 	}
@@ -16,7 +16,7 @@ func factory() Contracts.Factory {
 }
 
 // Make creates a new validator instance.
-func Make(data any, rules map[string]string, messages map[string]string, attributes map[string]string) Contracts.Validator {
+func Make(data any, rules map[string]string, messages map[string]string, attributes map[string]string) contracts.Validator {
 	if f := factory(); f != nil {
 		return f.Make(data, rules, messages, attributes)
 	}
@@ -40,7 +40,7 @@ func ExtendImplicit(rule string, extension validator.Func, message string) error
 }
 
 // Replacer registers a custom message replacer.
-func Replacer(rule string, replacer Contracts.ReplacerFunc) {
+func Replacer(rule string, replacer contracts.ReplacerFunc) {
 	if f := factory(); f != nil {
 		f.Replacer(rule, replacer)
 	}

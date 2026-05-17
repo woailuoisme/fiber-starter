@@ -17,7 +17,6 @@ require (
 	github.com/gofiber/contrib/v3/otel v1.1.5
 	github.com/gofiber/contrib/v3/socketio v1.2.1
 	github.com/gofiber/contrib/v3/websocket v1.1.5
-	github.com/gofiber/contrib/v3/zap v1.0.6
 	github.com/gofiber/fiber/v3 v3.2.0
 	github.com/gofiber/storage/ristretto/v2 v2.1.4
 	github.com/gofiber/storage/rueidis v1.3.7

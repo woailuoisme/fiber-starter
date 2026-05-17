@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"runtime/debug"
 
-	helpers "fiber-starter/internal/common/support"
+	helpers "fiber-starter/internal/support"
 
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"

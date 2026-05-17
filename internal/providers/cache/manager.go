@@ -4,14 +4,14 @@ import (
 	"sync"
 
 	"fiber-starter/configs"
-	"fiber-starter/internal/providers/cache/Contracts"
-	drivers "fiber-starter/internal/providers/cache/Drivers"
+	"fiber-starter/internal/providers/cache/contracts"
+	drivers "fiber-starter/internal/providers/cache/drivers"
 )
 
 // Manager manages multiple cache stores (similar to Laravel's CacheManager)
 type Manager struct {
 	config *configs.Config
-	stores map[string]Contracts.Store
+	stores map[string]contracts.Store
 	mu     sync.RWMutex
 }
 
@@ -19,12 +19,12 @@ type Manager struct {
 func NewManager(cfg *configs.Config) *Manager {
 	return &Manager{
 		config: cfg,
-		stores: make(map[string]Contracts.Store),
+		stores: make(map[string]contracts.Store),
 	}
 }
 
 // Store returns a cache store by name
-func (m *Manager) Store(name ...string) Contracts.Store {
+func (m *Manager) Store(name ...string) contracts.Store {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -38,7 +38,7 @@ func (m *Manager) Store(name ...string) Contracts.Store {
 	}
 
 	// Create new store if it doesn't exist
-	var store Contracts.Store
+	var store contracts.Store
 	switch target {
 	case "redis":
 		store = drivers.NewRedisStore(m.config)

@@ -1,5 +1,4 @@
 cache:
-  driver: ${CACHE_DRIVER:redis}
-  prefix: "${CACHE_PREFIX:fiber_starter_cache}"
-  default: ${CACHE_DEFAULT:0}
-  ttl: ${CACHE_TTL:3600}
+  store: ${CACHE_STORE:redis}
+  prefix: "${APP_NAME}_cache"
+  ttl: 3600

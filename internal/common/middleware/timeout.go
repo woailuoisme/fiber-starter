@@ -3,7 +3,7 @@ package middleware
 import (
 	"time"
 
-	helpers "fiber-starter/internal/common/support"
+	helpers "fiber-starter/internal/support"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/timeout"

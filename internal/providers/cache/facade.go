@@ -4,14 +4,14 @@ import (
 	"errors"
 	"time"
 
-	"fiber-starter/internal/providers/cache/Contracts"
+	"fiber-starter/internal/providers/cache/contracts"
 	"fiber-starter/internal/support/appctx"
 )
 
 var ErrContainerNotInitialized = errors.New("application container not initialized")
 
 // store returns the default cache store from the container.
-func store() Contracts.Store {
+func store() contracts.Store {
 	if app := appctx.App(); app != nil {
 		return app.CacheStore()
 	}
@@ -19,7 +19,7 @@ func store() Contracts.Store {
 }
 
 // GetStore returns a specific cache store
-func GetStore(name ...string) (Contracts.Store, error) {
+func GetStore(name ...string) (contracts.Store, error) {
 	if app := appctx.App(); app != nil {
 		if manager := app.CacheManagerValue(); manager != nil {
 			return manager.Store(name...), nil

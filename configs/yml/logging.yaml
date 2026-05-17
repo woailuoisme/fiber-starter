@@ -1,8 +1,7 @@
 logger:
-  level: ${LOGGER_LEVEL:info}
-  format: ${LOGGER_FORMAT:json}
-  output: ${LOGGER_OUTPUT:stack}
-  max_size: ${LOGGER_MAX_SIZE:100}
-  max_age: ${LOGGER_MAX_AGE:30}
-  max_backups: ${LOGGER_MAX_BACKUPS:10}
-  compress: ${LOGGER_COMPRESS:true}
+  level: ${LOG_LEVEL:info}
+  channel: ${LOG_CHANNEL:stack}
+  max_size: 100
+  max_age: 30
+  max_backups: 10
+  compress: true

@@ -3,8 +3,8 @@ package channels
 import (
 	"errors"
 
-	mailContracts "fiber-starter/internal/providers/mail/Contracts"
-	contracts "fiber-starter/internal/providers/notification/Contracts"
+	mailContracts "fiber-starter/internal/providers/mail/contracts"
+	contracts "fiber-starter/internal/providers/notification/contracts"
 )
 
 // MailChannel sends notifications via email.

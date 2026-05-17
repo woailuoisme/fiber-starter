@@ -5,27 +5,19 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"runtime/debug"
 	"strings"
-	"time"
 
 	exceptions "fiber-starter/internal/common/exceptions"
 	supporti18n "fiber-starter/internal/providers/i18n"
-	logging "fiber-starter/internal/providers/logging"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/middleware/requestid"
-	"go.uber.org/zap"
 )
 
-// HandleHTTPError 统一处理 HTTP 错误响应与日志。
-// 作用：把已知异常映射成统一响应，并输出结构化日志。
-// 场景：全局 ErrorHandler、timeout 兜底、panic recovery 等 HTTP 错误入口。
-// 使用方式：只在 HTTP 错误入口调用，不建议业务代码直接依赖它。
+// HandleHTTPError 统一处理 HTTP 错误响应。
+// 作用：把已知异常映射成统一的 JSON 响应格式并设置正确的 HTTP 状态码。
+// 日志记录由 logger 中间件在响应完成后统一完成，此处不做任何日志输出。
 func HandleHTTPError(c fiber.Ctx, err error) error {
-	logHTTPError(c, err)
-
 	if apiErr := unwrapAPIException(err); apiErr != nil {
 		return handleAPIException(c, apiErr)
 	}
@@ -126,57 +118,6 @@ func fiberErrorMessage(fiberErr *fiber.Error) string {
 	}
 }
 
-func logHTTPError(c fiber.Ctx, err error) {
-	requestID := getRequestID(c)
-	fields := []zap.Field{
-		zap.String("request_id", requestID),
-		zap.String("method", c.Method()),
-		zap.String("path", c.Path()),
-		zap.String("ip", c.IP()),
-		zap.String("error", err.Error()),
-		zap.String("ua", c.Get(fiber.HeaderUserAgent)),
-	}
-
-	if apiErr := unwrapAPIException(err); apiErr != nil {
-		logHTTPStatus(c, fields, apiErr.Code)
-		return
-	}
-
-	if fiberErr, ok := errors.AsType[*fiber.Error](err); ok {
-		logHTTPStatus(c, fields, fiberErr.Code)
-		return
-	}
-
-	if isDevelopment() {
-		fields = append(fields, zap.String("stack", string(debug.Stack())))
-	}
-
-	logging.Facade().Error("http_error", fields...)
-}
-
-func logHTTPStatus(c fiber.Ctx, fields []zap.Field, code int) {
-	// 如果响应已经写入且状态码一致，说明可能已经被记录过
-	if c.Response().StatusCode() == code && code < 400 {
-		return
-	}
-
-	fields = append(fields, zap.Int("code", code))
-
-	// 添加耗时统计
-	if startTime := c.Locals("start_time"); startTime != nil {
-		if t, ok := startTime.(time.Time); ok {
-			fields = append(fields, zap.Duration("latency", time.Since(t)))
-		}
-	}
-
-	if code >= 500 {
-		logging.Facade().Error("http_error", fields...)
-		return
-	}
-
-	logging.Facade().Warn("http_error", fields...)
-}
-
 func isDevelopment() bool {
 	env := strings.ToLower(strings.TrimSpace(getEnv("APP_ENV", "development")))
 	return env == "development" || env == "dev" || env == "local"
@@ -191,26 +132,4 @@ func getEnv(key, defaultValue string) string {
 
 func getValue(key string) string {
 	return os.Getenv(key)
-}
-
-func getRequestID(c fiber.Ctx) string {
-	if v := requestid.FromContext(c); v != "" {
-		return v
-	}
-
-	if v := c.Get(fiber.HeaderXRequestID); v != "" {
-		return v
-	}
-
-	if v := c.Get("X-Request-ID"); v != "" {
-		return v
-	}
-
-	if v := c.Locals(fiber.HeaderXRequestID); v != nil {
-		if s, ok := v.(string); ok {
-			return s
-		}
-	}
-
-	return ""
 }

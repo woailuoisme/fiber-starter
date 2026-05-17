@@ -5,13 +5,13 @@ import (
 	"sync"
 
 	"fiber-starter/configs"
-	"fiber-starter/internal/providers/storage/Contracts"
+	"fiber-starter/internal/providers/storage/contracts"
 )
 
 // Manager handles multiple storage disks (similar to Laravel's StorageManager)
 type Manager struct {
 	config *configs.Config
-	disks  map[string]Contracts.Disk
+	disks  map[string]contracts.Disk
 	mu     sync.RWMutex
 }
 
@@ -19,12 +19,12 @@ type Manager struct {
 func NewManager(cfg *configs.Config) *Manager {
 	return &Manager{
 		config: cfg,
-		disks:  make(map[string]Contracts.Disk),
+		disks:  make(map[string]contracts.Disk),
 	}
 }
 
 // Disk returns a storage disk by name
-func (m *Manager) Disk(name ...string) Contracts.Disk {
+func (m *Manager) Disk(name ...string) contracts.Disk {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -44,7 +44,7 @@ func (m *Manager) Disk(name ...string) Contracts.Disk {
 }
 
 // createDisk is a factory method to create the appropriate disk driver
-func (m *Manager) createDisk(driver string) Contracts.Disk {
+func (m *Manager) createDisk(driver string) contracts.Disk {
 	disk, err := createDisk(driver, m.config)
 	if err != nil {
 		// In a production app, we might return a NullDriver or error out gracefully

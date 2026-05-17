@@ -1,4 +1,4 @@
-package Drivers
+package drivers
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"fiber-starter/configs"
-	queueContracts "fiber-starter/internal/providers/queue/Contracts"
-	"fiber-starter/internal/providers/schedule/Contracts"
+	queueContracts "fiber-starter/internal/providers/queue/contracts"
+	"fiber-starter/internal/providers/schedule/contracts"
 	helpers "fiber-starter/internal/support"
 
 	"github.com/hibiken/asynq"
@@ -17,7 +17,7 @@ import (
 // AsynqScheduler implements the Scheduler interface using asynq
 type AsynqScheduler struct {
 	scheduler *asynq.Scheduler
-	events    []*Contracts.Event
+	events    []*contracts.Event
 	config    *configs.Config
 }
 
@@ -36,20 +36,20 @@ func NewAsynqScheduler(cfg *configs.Config) *AsynqScheduler {
 }
 
 // Job registers a job to be scheduled
-func (s *AsynqScheduler) Job(job queueContracts.Job) *Contracts.Event {
-	event := &Contracts.Event{Job: job}
+func (s *AsynqScheduler) Job(job queueContracts.Job) *contracts.Event {
+	event := &contracts.Event{Job: job}
 	s.events = append(s.events, event)
 	return event
 }
 
 // Call registers a function to be scheduled
-func (s *AsynqScheduler) Call(fn func() error) *Contracts.Event {
+func (s *AsynqScheduler) Call(fn func() error) *contracts.Event {
 	job := &closureJob{fn: fn}
 	return s.Job(job)
 }
 
 // Command registers a console command to be scheduled
-func (s *AsynqScheduler) Command(command string, args ...string) *Contracts.Event {
+func (s *AsynqScheduler) Command(command string, args ...string) *contracts.Event {
 	job := &commandJob{command: command, args: args}
 	return s.Job(job)
 }
@@ -76,7 +76,7 @@ func (j *commandJob) TaskName() string  { return "schedule:command" }
 func (j *commandJob) QueueName() string { return "default" }
 
 // GetEvents returns all registered scheduled events
-func (s *AsynqScheduler) GetEvents() []*Contracts.Event {
+func (s *AsynqScheduler) GetEvents() []*contracts.Event {
 	return s.events
 }
 

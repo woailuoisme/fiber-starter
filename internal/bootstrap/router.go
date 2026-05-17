@@ -4,11 +4,11 @@ import (
 	"strings"
 
 	middleware "fiber-starter/internal/common/middleware"
-	helpers "fiber-starter/internal/common/support"
 	"fiber-starter/internal/features/auth"
 	"fiber-starter/internal/features/monitoring"
 	"fiber-starter/internal/features/user"
 	providers "fiber-starter/internal/providers"
+	helpers "fiber-starter/internal/support"
 
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"
@@ -52,10 +52,6 @@ func SetupApplicationRoutes(app *fiber.App) error {
 		helpers.Info("registered_route_entries", zap.Int("total", len(app.GetRoutes())))
 	}
 	return nil
-}
-
-func setupAppRoutes(app *fiber.App) error {
-	return SetupApplicationRoutes(app)
 }
 
 func registerRealtimeRoutes(app *fiber.App, jwtProtected fiber.Handler) {

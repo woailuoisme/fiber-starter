@@ -1,4 +1,4 @@
-package Contracts
+package contracts
 
 // SearchRequest represents a generic search request
 type SearchRequest struct {

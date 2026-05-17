@@ -6,7 +6,7 @@ import (
 	"fiber-starter/configs"
 	providers "fiber-starter/internal/providers"
 	storage "fiber-starter/internal/providers/storage"
-	storageContracts "fiber-starter/internal/providers/storage/Contracts"
+	storageContracts "fiber-starter/internal/providers/storage/contracts"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

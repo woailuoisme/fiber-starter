@@ -1,7 +1,7 @@
 package config
 
 import (
-	configContracts "fiber-starter/internal/providers/config/Contracts"
+	configContracts "fiber-starter/internal/providers/config/contracts"
 
 	"github.com/knadh/koanf/v2"
 )

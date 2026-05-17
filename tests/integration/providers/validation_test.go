@@ -8,7 +8,7 @@ import (
 
 	"fiber-starter/configs"
 	validation "fiber-starter/internal/providers/validation"
-	validationContracts "fiber-starter/internal/providers/validation/Contracts"
+	validationContracts "fiber-starter/internal/providers/validation/contracts"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/assert"

@@ -1,4 +1,4 @@
-package Drivers
+package drivers
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"fiber-starter/configs"
-	"fiber-starter/internal/providers/mail/Contracts"
+	"fiber-starter/internal/providers/mail/contracts"
 	helpers "fiber-starter/internal/support"
 
 	"go.uber.org/zap"
@@ -20,11 +20,11 @@ func NewSMTPDriver(cfg *configs.Config) *SMTPDriver {
 	return &SMTPDriver{config: cfg}
 }
 
-func (d *SMTPDriver) To(to ...string) Contracts.Message {
+func (d *SMTPDriver) To(to ...string) contracts.Message {
 	return &BaseMessage{ToArr: to}
 }
 
-func (d *SMTPDriver) Send(m Contracts.Message) error {
+func (d *SMTPDriver) Send(m contracts.Message) error {
 	addr := fmt.Sprintf("%s:%d", d.config.Mail.Host, d.config.Mail.Port)
 	from := d.config.Mail.FromAddress
 

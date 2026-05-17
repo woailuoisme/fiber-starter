@@ -4,13 +4,13 @@ import (
 	"sync"
 
 	"fiber-starter/configs"
-	"fiber-starter/internal/providers/database/Contracts"
+	"fiber-starter/internal/providers/database/contracts"
 )
 
 // Manager handles multiple database connections (similar to Laravel's DatabaseManager)
 type Manager struct {
 	config      *configs.Config
-	connections map[string]Contracts.Connection
+	connections map[string]contracts.Connection
 	mu          sync.RWMutex
 }
 
@@ -18,12 +18,12 @@ type Manager struct {
 func NewManager(cfg *configs.Config) *Manager {
 	return &Manager{
 		config:      cfg,
-		connections: make(map[string]Contracts.Connection),
+		connections: make(map[string]contracts.Connection),
 	}
 }
 
 // Connection returns a database connection by name
-func (m *Manager) Connection(name ...string) Contracts.Connection {
+func (m *Manager) Connection(name ...string) contracts.Connection {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -46,7 +46,7 @@ func (m *Manager) Connection(name ...string) Contracts.Connection {
 }
 
 // Reconnect closes and re-opens the given connection
-func (m *Manager) Reconnect(name ...string) (Contracts.Connection, error) {
+func (m *Manager) Reconnect(name ...string) (contracts.Connection, error) {
 	target := m.GetDefaultConnection()
 	if len(name) > 0 && name[0] != "" {
 		target = name[0]
@@ -110,6 +110,6 @@ func (m *Manager) CloseAll() error {
 	for _, conn := range m.connections {
 		_ = conn.Close()
 	}
-	m.connections = make(map[string]Contracts.Connection)
+	m.connections = make(map[string]contracts.Connection)
 	return nil
 }

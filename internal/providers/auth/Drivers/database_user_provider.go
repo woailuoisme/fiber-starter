@@ -1,4 +1,4 @@
-package Drivers
+package drivers
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	"reflect"
 
 	exceptions "fiber-starter/internal/common/exceptions"
-	database "fiber-starter/internal/providers/database/Contracts"
-	hashContracts "fiber-starter/internal/providers/hash/Contracts"
+	database "fiber-starter/internal/providers/database/contracts"
+	hashContracts "fiber-starter/internal/providers/hash/contracts"
 )
 
 // AuthUser represents the database schema mapped for user authentication

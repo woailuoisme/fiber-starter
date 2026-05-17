@@ -6,7 +6,7 @@ import (
 	"fiber-starter/configs"
 	providers "fiber-starter/internal/providers"
 	search "fiber-starter/internal/providers/search"
-	searchContracts "fiber-starter/internal/providers/search/Contracts"
+	searchContracts "fiber-starter/internal/providers/search/contracts"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

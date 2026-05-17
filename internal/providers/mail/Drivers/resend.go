@@ -1,4 +1,4 @@
-package Drivers
+package drivers
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"fiber-starter/configs"
-	"fiber-starter/internal/providers/mail/Contracts"
+	"fiber-starter/internal/providers/mail/contracts"
 	helpers "fiber-starter/internal/support"
 
 	"github.com/resend/resend-go/v3"
@@ -33,11 +33,11 @@ func NewResendDriver(cfg *configs.Config) *ResendDriver {
 	}
 }
 
-func (d *ResendDriver) To(to ...string) Contracts.Message {
+func (d *ResendDriver) To(to ...string) contracts.Message {
 	return &BaseMessage{ToArr: to}
 }
 
-func (d *ResendDriver) Send(m Contracts.Message) error {
+func (d *ResendDriver) Send(m contracts.Message) error {
 	if d.client == nil {
 		return errors.New("resend client not initialized")
 	}

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"fiber-starter/configs"
-	storageDrivers "fiber-starter/internal/providers/storage/Drivers"
+	storageDrivers "fiber-starter/internal/providers/storage/drivers"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

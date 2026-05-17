@@ -5,10 +5,10 @@ import (
 
 	"fiber-starter/configs"
 	middleware "fiber-starter/internal/common/middleware"
-	cache "fiber-starter/internal/providers/cache/Contracts"
-	database "fiber-starter/internal/providers/database/Contracts"
-	hashContracts "fiber-starter/internal/providers/hash/Contracts"
-	mailContracts "fiber-starter/internal/providers/mail/Contracts"
+	cache "fiber-starter/internal/providers/cache/contracts"
+	database "fiber-starter/internal/providers/database/contracts"
+	hashContracts "fiber-starter/internal/providers/hash/contracts"
+	mailContracts "fiber-starter/internal/providers/mail/contracts"
 
 	"github.com/gofiber/fiber/v3"
 )

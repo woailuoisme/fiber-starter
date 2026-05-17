@@ -2,8 +2,8 @@ package monitoring
 
 import (
 	"fiber-starter/configs"
-	health "fiber-starter/internal/common/support/Health"
 	providers "fiber-starter/internal/providers"
+	health "fiber-starter/internal/support/health"
 
 	"github.com/gofiber/fiber/v3"
 )

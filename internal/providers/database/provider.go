@@ -2,7 +2,7 @@ package database
 
 import (
 	"fiber-starter/configs"
-	databaseContracts "fiber-starter/internal/providers/database/Contracts"
+	databaseContracts "fiber-starter/internal/providers/database/contracts"
 )
 
 // RegisterDatabase handles the database initialization and wiring.

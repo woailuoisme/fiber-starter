@@ -4,14 +4,14 @@ import (
 	"errors"
 	"time"
 
-	"fiber-starter/internal/providers/queue/Contracts"
+	"fiber-starter/internal/providers/queue/contracts"
 	"fiber-starter/internal/support/appctx"
 )
 
 var ErrContainerNotInitialized = errors.New("application container not initialized")
 
 // service returns the default queue service instance from the container.
-func service() Contracts.Queue {
+func service() contracts.Queue {
 	if app := appctx.App(); app != nil {
 		return app.QueueServiceValue()
 	}
@@ -19,7 +19,7 @@ func service() Contracts.Queue {
 }
 
 // manager returns the queue manager instance from the container.
-func manager() Contracts.Manager {
+func manager() contracts.Manager {
 	if app := appctx.App(); app != nil {
 		return app.QueueManagerValue()
 	}
@@ -27,7 +27,7 @@ func manager() Contracts.Manager {
 }
 
 // Drive returns a specific queue driver instance
-func Drive(name ...string) Contracts.Queue {
+func Drive(name ...string) contracts.Queue {
 	if m := manager(); m != nil {
 		return m.Drive(name...)
 	}
@@ -35,7 +35,7 @@ func Drive(name ...string) Contracts.Queue {
 }
 
 // Push adds a job to the default queue for immediate execution
-func Push(job Contracts.Job) error {
+func Push(job contracts.Job) error {
 	if s := service(); s != nil {
 		return s.Push(job)
 	}
@@ -51,7 +51,7 @@ func Size(queueName ...string) (int64, error) {
 }
 
 // PushOn adds a job to a specific queue
-func PushOn(queueName string, job Contracts.Job) error {
+func PushOn(queueName string, job contracts.Job) error {
 	if s := service(); s != nil {
 		return s.PushOn(queueName, job)
 	}
@@ -59,7 +59,7 @@ func PushOn(queueName string, job Contracts.Job) error {
 }
 
 // Later adds a job to the default queue to be executed after a delay
-func Later(delay time.Duration, job Contracts.Job) error {
+func Later(delay time.Duration, job contracts.Job) error {
 	if s := service(); s != nil {
 		return s.Later(delay, job)
 	}
@@ -67,7 +67,7 @@ func Later(delay time.Duration, job Contracts.Job) error {
 }
 
 // LaterOn adds a job to a specific queue to be executed after a delay
-func LaterOn(queueName string, delay time.Duration, job Contracts.Job) error {
+func LaterOn(queueName string, delay time.Duration, job contracts.Job) error {
 	if s := service(); s != nil {
 		return s.LaterOn(queueName, delay, job)
 	}
@@ -75,7 +75,7 @@ func LaterOn(queueName string, delay time.Duration, job Contracts.Job) error {
 }
 
 // Bulk pushes a batch of jobs onto the queue
-func Bulk(jobs []Contracts.Job, queueName ...string) error {
+func Bulk(jobs []contracts.Job, queueName ...string) error {
 	if s := service(); s != nil {
 		return s.Bulk(jobs, queueName...)
 	}
@@ -83,7 +83,7 @@ func Bulk(jobs []Contracts.Job, queueName ...string) error {
 }
 
 // ProcessAt adds a job to the default queue to be executed at a specific time
-func ProcessAt(at time.Time, job Contracts.Job) error {
+func ProcessAt(at time.Time, job contracts.Job) error {
 	if s := service(); s != nil {
 		return s.ProcessAt(at, job)
 	}
@@ -91,7 +91,7 @@ func ProcessAt(at time.Time, job Contracts.Job) error {
 }
 
 // Register registers a job handler for the worker in the default queue
-func Register(job Contracts.Job) {
+func Register(job contracts.Job) {
 	if s := service(); s != nil {
 		s.Register(job)
 	}
@@ -122,7 +122,7 @@ func StopWorker() error {
 }
 
 // InspectQueues returns status information for all queues
-func InspectQueues() ([]Contracts.QueueStatus, error) {
+func InspectQueues() ([]contracts.QueueStatus, error) {
 	if s := service(); s != nil {
 		return s.InspectQueues()
 	}
@@ -130,7 +130,7 @@ func InspectQueues() ([]Contracts.QueueStatus, error) {
 }
 
 // ListFailed returns a list of failed (archived) jobs
-func ListFailed(page, pageSize int) ([]Contracts.FailedJob, error) {
+func ListFailed(page, pageSize int) ([]contracts.FailedJob, error) {
 	if s := service(); s != nil {
 		return s.ListFailed(page, pageSize)
 	}

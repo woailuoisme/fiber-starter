@@ -1,14 +1,14 @@
 package auth
 
 import (
-	"fiber-starter/internal/providers/auth/Contracts"
+	"fiber-starter/internal/providers/auth/contracts"
 	"fiber-starter/internal/support/appctx"
 
 	"github.com/gofiber/fiber/v3"
 )
 
 // manager returns the auth manager instance from the container.
-func manager() Contracts.Manager {
+func manager() contracts.Manager {
 	if app := appctx.App(); app != nil {
 		return app.AuthManager()
 	}
@@ -16,7 +16,7 @@ func manager() Contracts.Manager {
 }
 
 // Guard returns an authentication guard by name
-func Guard(name ...string) Contracts.Guard {
+func Guard(name ...string) contracts.Guard {
 	if m := manager(); m != nil {
 		return m.Guard(name...)
 	}

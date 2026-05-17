@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	"fiber-starter/configs"
-	contracts "fiber-starter/internal/providers/hash/Contracts"
-	drivers "fiber-starter/internal/providers/hash/Drivers"
+	contracts "fiber-starter/internal/providers/hash/contracts"
+	drivers "fiber-starter/internal/providers/hash/drivers"
 )
 
 // Manager handles multiple hashing drivers.

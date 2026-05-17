@@ -5,14 +5,14 @@ import (
 	"sync"
 
 	"fiber-starter/configs"
-	"fiber-starter/internal/providers/mail/Contracts"
-	"fiber-starter/internal/providers/mail/Drivers"
+	"fiber-starter/internal/providers/mail/contracts"
+	"fiber-starter/internal/providers/mail/drivers"
 )
 
 // Manager handles the lifecycle and selection of mail drivers
 type Manager struct {
 	config  *configs.Config
-	mailers map[string]Contracts.Mailer
+	mailers map[string]contracts.Mailer
 	mu      sync.Mutex
 }
 
@@ -20,12 +20,12 @@ type Manager struct {
 func NewManager(cfg *configs.Config) *Manager {
 	return &Manager{
 		config:  cfg,
-		mailers: make(map[string]Contracts.Mailer),
+		mailers: make(map[string]contracts.Mailer),
 	}
 }
 
 // Drive returns a specific mailer instance
-func (m *Manager) Drive(name ...string) Contracts.Mailer {
+func (m *Manager) Drive(name ...string) contracts.Mailer {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -38,16 +38,16 @@ func (m *Manager) Drive(name ...string) Contracts.Mailer {
 		return mailer
 	}
 
-	var mailer Contracts.Mailer
+	var mailer contracts.Mailer
 	switch driver {
 	case "resend":
-		mailer = Drivers.NewResendDriver(m.config)
+		mailer = drivers.NewResendDriver(m.config)
 	case "log":
-		mailer = Drivers.NewLogDriver()
+		mailer = drivers.NewLogDriver()
 	case "smtp":
-		mailer = Drivers.NewSMTPDriver(m.config)
+		mailer = drivers.NewSMTPDriver(m.config)
 	default:
-		mailer = Drivers.NewResendDriver(m.config)
+		mailer = drivers.NewResendDriver(m.config)
 	}
 
 	m.mailers[driver] = mailer

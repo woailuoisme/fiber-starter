@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"fiber-starter/configs"
-	channels "fiber-starter/internal/providers/notification/Channels"
-	notificationContracts "fiber-starter/internal/providers/notification/Contracts"
+	channels "fiber-starter/internal/providers/notification/channels"
+	notificationContracts "fiber-starter/internal/providers/notification/contracts"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

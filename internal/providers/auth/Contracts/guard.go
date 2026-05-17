@@ -1,4 +1,4 @@
-package Contracts
+package contracts
 
 import (
 	fiber "github.com/gofiber/fiber/v3"

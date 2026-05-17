@@ -1,7 +1,7 @@
-package Drivers
+package drivers
 
 import (
-	"fiber-starter/internal/providers/mail/Contracts"
+	"fiber-starter/internal/providers/mail/contracts"
 )
 
 type BaseMessage struct {
@@ -15,44 +15,44 @@ type BaseMessage struct {
 	DataMap     map[string]interface{}
 }
 
-func (m *BaseMessage) To(to ...string) Contracts.Message {
+func (m *BaseMessage) To(to ...string) contracts.Message {
 	m.ToArr = append(m.ToArr, to...)
 	return m
 }
 
-func (m *BaseMessage) Cc(cc ...string) Contracts.Message {
+func (m *BaseMessage) Cc(cc ...string) contracts.Message {
 	m.CcArr = append(m.CcArr, cc...)
 	return m
 }
 
-func (m *BaseMessage) Bcc(bcc ...string) Contracts.Message {
+func (m *BaseMessage) Bcc(bcc ...string) contracts.Message {
 	m.BccArr = append(m.BccArr, bcc...)
 	return m
 }
 
-func (m *BaseMessage) Subject(subject string) Contracts.Message {
+func (m *BaseMessage) Subject(subject string) contracts.Message {
 	m.SubjectStr = subject
 	return m
 }
 
-func (m *BaseMessage) Html(body string) Contracts.Message {
+func (m *BaseMessage) Html(body string) contracts.Message {
 	m.BodyStr = body
 	m.IsHtmlFlag = true
 	return m
 }
 
-func (m *BaseMessage) Plain(body string) Contracts.Message {
+func (m *BaseMessage) Plain(body string) contracts.Message {
 	m.BodyStr = body
 	m.IsHtmlFlag = false
 	return m
 }
 
-func (m *BaseMessage) Attach(filePath string) Contracts.Message {
+func (m *BaseMessage) Attach(filePath string) contracts.Message {
 	m.Attachments = append(m.Attachments, filePath)
 	return m
 }
 
-func (m *BaseMessage) Data(data map[string]interface{}) Contracts.Message {
+func (m *BaseMessage) Data(data map[string]interface{}) contracts.Message {
 	m.DataMap = data
 	return m
 }

@@ -2,7 +2,7 @@ package support
 
 import (
 	logging "fiber-starter/internal/providers/logging"
-	"fiber-starter/internal/providers/logging/Contracts"
+	"fiber-starter/internal/providers/logging/contracts"
 	"fiber-starter/internal/support/appctx"
 
 	"go.uber.org/zap"
@@ -16,12 +16,12 @@ import (
 var Logger = zap.NewNop()
 
 // Init initializes the legacy support logger by setting the provider
-func Init(p Contracts.Logger) {
+func Init(p contracts.Logger) {
 	Logger = p.GetZapLogger()
 }
 
 // Channel returns a logger for the specified channel
-func Channel(name string) Contracts.Logger {
+func Channel(name string) contracts.Logger {
 	return logging.Facade().Channel(name)
 }
 

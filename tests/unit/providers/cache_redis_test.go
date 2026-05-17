@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	cacheDrivers "fiber-starter/internal/providers/cache/Drivers"
+	cacheDrivers "fiber-starter/internal/providers/cache/drivers"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

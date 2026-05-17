@@ -1,7 +1,7 @@
 package config
 
 import (
-	contracts "fiber-starter/internal/providers/config/Contracts"
+	contracts "fiber-starter/internal/providers/config/contracts"
 	"fiber-starter/internal/support/appctx"
 )
 

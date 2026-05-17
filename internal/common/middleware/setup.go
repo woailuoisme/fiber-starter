@@ -16,19 +16,19 @@ func SetupMiddleware(app *fiber.App, cfg *configs.Config) {
 	}
 	// 0. 分布式追踪：OpenTelemetry (最外层，确保捕获所有逻辑)
 	SetupOTEL(app, cfg)
-	// 1. 本地计时器：RequestTimer (确保覆盖后续中间件的耗时)
+	// 1. 访问日志：Logger（次外层，基于最终响应状态码记录，每个请求仅记录一次）
+	SetupLogger(app)
+	// 2. 本地计时器：RequestTimer (确保覆盖后续中间件的耗时)
 	SetupRequestTimer(app)
-	// 2. 快速短路：Favicon（对于图标请求，没必要跑后面的复杂逻辑）
+	// 3. 快速短路：Favicon（对于图标请求，没必要跑后面的复杂逻辑）
 	SetupFavicon(app)
-	// 3. 标识注入：RequestID（确保后续的 Recover、Logger、CORS 都能拿到 ID）
+	// 4. 标识注入：RequestID（确保后续的 Recover、CORS 都能拿到 ID）
 	SetupRequestID(app)
 	SetupLoadShed(app, cfg)
-	// 4. 恐慌捕获：Recover（放在 Logger 之上，这样发生 Panic 时，Logger 依然能记录到 500 状态）
+	// 5. 恐慌捕获：Recover（放在 Logger 内层，panic 转换为 500 后由 Logger 记录）
 	SetupRecover(app)
-	// 5. 跨域处理：CORS（处理 OPTIONS 预检请求，建议放在 Logger 之前或之后，取决于你是否想记录预检日志）
+	// 6. 跨域处理：CORS
 	SetupCORS(app, cfg)
-	// 6. 访问日志：Logger（现在它能拿到完整的 Request ID，也能记录被 Recover 捕获后的错误状态）
-	SetupLogger(app)
 	// 7. 安全与优化：Helmet & ETag
 	SetupHelmet(app)
 	SetupETag(app)

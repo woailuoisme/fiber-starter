@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"fiber-starter/configs"
-	loggingContracts "fiber-starter/internal/providers/logging/Contracts"
+	loggingContracts "fiber-starter/internal/providers/logging/contracts"
 
 	"go.uber.org/zap"
 )

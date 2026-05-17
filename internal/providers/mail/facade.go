@@ -1,12 +1,12 @@
 package mail
 
 import (
-	"fiber-starter/internal/providers/mail/Contracts"
+	"fiber-starter/internal/providers/mail/contracts"
 	"fiber-starter/internal/support/appctx"
 )
 
 // mailer returns the default mailer instance from the container.
-func mailer() Contracts.Mailer {
+func mailer() contracts.Mailer {
 	if app := appctx.App(); app != nil {
 		return app.EmailServiceValue()
 	}
@@ -14,7 +14,7 @@ func mailer() Contracts.Mailer {
 }
 
 // manager returns the mail manager instance from the container.
-func manager() Contracts.Manager {
+func manager() contracts.Manager {
 	if app := appctx.App(); app != nil {
 		return app.MailManagerValue()
 	}
@@ -22,7 +22,7 @@ func manager() Contracts.Manager {
 }
 
 // Drive returns a specific mailer instance
-func Drive(name ...string) Contracts.Mailer {
+func Drive(name ...string) contracts.Mailer {
 	if m := manager(); m != nil {
 		return m.Drive(name...)
 	}
@@ -30,7 +30,7 @@ func Drive(name ...string) Contracts.Mailer {
 }
 
 // To creates a new message with the given recipient
-func To(to ...string) Contracts.Message {
+func To(to ...string) contracts.Message {
 	if m := mailer(); m != nil {
 		return m.To(to...)
 	}
@@ -38,7 +38,7 @@ func To(to ...string) Contracts.Message {
 }
 
 // Send sends a message immediately
-func Send(m Contracts.Message) error {
+func Send(m contracts.Message) error {
 	if mail := mailer(); mail != nil {
 		return mail.Send(m)
 	}

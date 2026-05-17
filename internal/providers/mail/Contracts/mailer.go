@@ -1,4 +1,4 @@
-package Contracts
+package contracts
 
 // Mailer defines the interface for sending emails (similar to Laravel's Mail)
 type Mailer interface {

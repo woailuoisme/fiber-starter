@@ -1,7 +1,7 @@
 package hash
 
 import (
-	contracts "fiber-starter/internal/providers/hash/Contracts"
+	contracts "fiber-starter/internal/providers/hash/contracts"
 	"fiber-starter/internal/support/appctx"
 )
 

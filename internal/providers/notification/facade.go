@@ -1,12 +1,12 @@
 package notification
 
 import (
-	"fiber-starter/internal/providers/notification/Contracts"
+	"fiber-starter/internal/providers/notification/contracts"
 	"fiber-starter/internal/support/appctx"
 )
 
 // dispatcher returns the notification dispatcher instance from the container.
-func dispatcher() Contracts.Dispatcher {
+func dispatcher() contracts.Dispatcher {
 	if app := appctx.App(); app != nil {
 		return app.NotificationService()
 	}
@@ -14,7 +14,7 @@ func dispatcher() Contracts.Dispatcher {
 }
 
 // Send sends the given notification to the given notifiable entities.
-func Send(notifiables interface{}, n Contracts.Notification) error {
+func Send(notifiables interface{}, n contracts.Notification) error {
 	if d := dispatcher(); d != nil {
 		return d.Send(notifiables, n)
 	}

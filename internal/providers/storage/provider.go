@@ -2,7 +2,7 @@ package storage
 
 import (
 	"fiber-starter/configs"
-	storageContracts "fiber-starter/internal/providers/storage/Contracts"
+	storageContracts "fiber-starter/internal/providers/storage/contracts"
 )
 
 // Register initializes the storage manager and returns it

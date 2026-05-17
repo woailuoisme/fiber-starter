@@ -3,9 +3,9 @@ package providers
 import (
 	"testing"
 
-	mailContracts "fiber-starter/internal/providers/mail/Contracts"
+	mailContracts "fiber-starter/internal/providers/mail/contracts"
 	notification "fiber-starter/internal/providers/notification"
-	notificationContracts "fiber-starter/internal/providers/notification/Contracts"
+	notificationContracts "fiber-starter/internal/providers/notification/contracts"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	helpers "fiber-starter/internal/common/support"
+	helpers "fiber-starter/internal/support"
 
 	"github.com/gofiber/contrib/v3/monitor"
 	"github.com/gofiber/fiber/v3"

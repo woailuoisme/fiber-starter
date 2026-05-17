@@ -1,4 +1,4 @@
-package Drivers
+package drivers
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"fiber-starter/configs"
-	"fiber-starter/internal/providers/search/Contracts"
+	"fiber-starter/internal/providers/search/contracts"
 	helpers "fiber-starter/internal/support"
 
 	"github.com/meilisearch/meilisearch-go"
@@ -31,7 +31,7 @@ func NewMeilisearchDriver(cfg *configs.Config) *MeilisearchDriver {
 	return &MeilisearchDriver{client: client}
 }
 
-func (d *MeilisearchDriver) CreateIndex(uid string, primaryKey string) (*Contracts.TaskInfo, error) {
+func (d *MeilisearchDriver) CreateIndex(uid string, primaryKey string) (*contracts.TaskInfo, error) {
 	if d.client == nil {
 		return nil, fmt.Errorf("meilisearch client not initialized")
 	}
@@ -39,10 +39,10 @@ func (d *MeilisearchDriver) CreateIndex(uid string, primaryKey string) (*Contrac
 	if err != nil {
 		return nil, err
 	}
-	return &Contracts.TaskInfo{UID: int64(resp.TaskUID), Status: string(resp.Status)}, nil
+	return &contracts.TaskInfo{UID: int64(resp.TaskUID), Status: string(resp.Status)}, nil
 }
 
-func (d *MeilisearchDriver) DeleteIndex(uid string) (*Contracts.TaskInfo, error) {
+func (d *MeilisearchDriver) DeleteIndex(uid string) (*contracts.TaskInfo, error) {
 	if d.client == nil {
 		return nil, fmt.Errorf("meilisearch client not initialized")
 	}
@@ -50,10 +50,10 @@ func (d *MeilisearchDriver) DeleteIndex(uid string) (*Contracts.TaskInfo, error)
 	if err != nil {
 		return nil, err
 	}
-	return &Contracts.TaskInfo{UID: int64(resp.TaskUID), Status: string(resp.Status)}, nil
+	return &contracts.TaskInfo{UID: int64(resp.TaskUID), Status: string(resp.Status)}, nil
 }
 
-func (d *MeilisearchDriver) AddDocuments(indexUID string, documents interface{}) (*Contracts.TaskInfo, error) {
+func (d *MeilisearchDriver) AddDocuments(indexUID string, documents interface{}) (*contracts.TaskInfo, error) {
 	if d.client == nil {
 		return nil, fmt.Errorf("meilisearch client not initialized")
 	}
@@ -61,10 +61,10 @@ func (d *MeilisearchDriver) AddDocuments(indexUID string, documents interface{})
 	if err != nil {
 		return nil, err
 	}
-	return &Contracts.TaskInfo{UID: int64(resp.TaskUID), Status: string(resp.Status)}, nil
+	return &contracts.TaskInfo{UID: int64(resp.TaskUID), Status: string(resp.Status)}, nil
 }
 
-func (d *MeilisearchDriver) UpdateDocuments(indexUID string, documents interface{}) (*Contracts.TaskInfo, error) {
+func (d *MeilisearchDriver) UpdateDocuments(indexUID string, documents interface{}) (*contracts.TaskInfo, error) {
 	if d.client == nil {
 		return nil, fmt.Errorf("meilisearch client not initialized")
 	}
@@ -72,10 +72,10 @@ func (d *MeilisearchDriver) UpdateDocuments(indexUID string, documents interface
 	if err != nil {
 		return nil, err
 	}
-	return &Contracts.TaskInfo{UID: int64(resp.TaskUID), Status: string(resp.Status)}, nil
+	return &contracts.TaskInfo{UID: int64(resp.TaskUID), Status: string(resp.Status)}, nil
 }
 
-func (d *MeilisearchDriver) DeleteDocuments(indexUID string, ids []string) (*Contracts.TaskInfo, error) {
+func (d *MeilisearchDriver) DeleteDocuments(indexUID string, ids []string) (*contracts.TaskInfo, error) {
 	if d.client == nil {
 		return nil, fmt.Errorf("meilisearch client not initialized")
 	}
@@ -83,10 +83,10 @@ func (d *MeilisearchDriver) DeleteDocuments(indexUID string, ids []string) (*Con
 	if err != nil {
 		return nil, err
 	}
-	return &Contracts.TaskInfo{UID: int64(resp.TaskUID), Status: string(resp.Status)}, nil
+	return &contracts.TaskInfo{UID: int64(resp.TaskUID), Status: string(resp.Status)}, nil
 }
 
-func (d *MeilisearchDriver) DeleteAllDocuments(indexUID string) (*Contracts.TaskInfo, error) {
+func (d *MeilisearchDriver) DeleteAllDocuments(indexUID string) (*contracts.TaskInfo, error) {
 	if d.client == nil {
 		return nil, fmt.Errorf("meilisearch client not initialized")
 	}
@@ -94,15 +94,15 @@ func (d *MeilisearchDriver) DeleteAllDocuments(indexUID string) (*Contracts.Task
 	if err != nil {
 		return nil, err
 	}
-	return &Contracts.TaskInfo{UID: int64(resp.TaskUID), Status: string(resp.Status)}, nil
+	return &contracts.TaskInfo{UID: int64(resp.TaskUID), Status: string(resp.Status)}, nil
 }
 
-func (d *MeilisearchDriver) Search(indexUID string, query string, request *Contracts.SearchRequest) (*Contracts.SearchResponse, error) {
+func (d *MeilisearchDriver) Search(indexUID string, query string, request *contracts.SearchRequest) (*contracts.SearchResponse, error) {
 	if d.client == nil {
 		return nil, fmt.Errorf("meilisearch client not initialized")
 	}
 	if request == nil {
-		request = &Contracts.SearchRequest{}
+		request = &contracts.SearchRequest{}
 	}
 
 	meiliReq := &meilisearch.SearchRequest{
@@ -128,7 +128,7 @@ func (d *MeilisearchDriver) Search(indexUID string, query string, request *Contr
 		hits[i] = hit
 	}
 
-	return &Contracts.SearchResponse{
+	return &contracts.SearchResponse{
 		Hits:             hits,
 		TotalHits:        resp.TotalHits,
 		ProcessingTimeMs: resp.ProcessingTimeMs,

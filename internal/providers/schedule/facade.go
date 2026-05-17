@@ -3,15 +3,15 @@ package schedule
 import (
 	"errors"
 
-	queueContracts "fiber-starter/internal/providers/queue/Contracts"
-	"fiber-starter/internal/providers/schedule/Contracts"
+	queueContracts "fiber-starter/internal/providers/queue/contracts"
+	"fiber-starter/internal/providers/schedule/contracts"
 	"fiber-starter/internal/support/appctx"
 )
 
 var ErrContainerNotInitialized = errors.New("application container not initialized")
 
 // service returns the default scheduler service instance from the container.
-func service() Contracts.Scheduler {
+func service() contracts.Scheduler {
 	if app := appctx.App(); app != nil {
 		return app.ScheduleServiceValue()
 	}
@@ -19,7 +19,7 @@ func service() Contracts.Scheduler {
 }
 
 // manager returns the scheduler manager instance from the container.
-func manager() Contracts.Manager {
+func manager() contracts.Manager {
 	if app := appctx.App(); app != nil {
 		return app.ScheduleManagerValue()
 	}
@@ -27,7 +27,7 @@ func manager() Contracts.Manager {
 }
 
 // Job registers a job to be scheduled using the default scheduler
-func Job(job queueContracts.Job) *Contracts.Event {
+func Job(job queueContracts.Job) *contracts.Event {
 	if s := service(); s != nil {
 		return s.Job(job)
 	}
@@ -35,7 +35,7 @@ func Job(job queueContracts.Job) *Contracts.Event {
 }
 
 // Call registers a function to be scheduled using the default scheduler
-func Call(fn func() error) *Contracts.Event {
+func Call(fn func() error) *contracts.Event {
 	if s := service(); s != nil {
 		return s.Call(fn)
 	}
@@ -43,7 +43,7 @@ func Call(fn func() error) *Contracts.Event {
 }
 
 // Command registers a console command to be scheduled using the default scheduler
-func Command(command string, args ...string) *Contracts.Event {
+func Command(command string, args ...string) *contracts.Event {
 	if s := service(); s != nil {
 		return s.Command(command, args...)
 	}
@@ -51,7 +51,7 @@ func Command(command string, args ...string) *Contracts.Event {
 }
 
 // GetEvents returns all registered scheduled events
-func GetEvents() []*Contracts.Event {
+func GetEvents() []*contracts.Event {
 	if s := service(); s != nil {
 		return s.GetEvents()
 	}

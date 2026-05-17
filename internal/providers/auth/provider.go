@@ -2,9 +2,9 @@ package auth
 
 import (
 	"fiber-starter/configs"
-	authContracts "fiber-starter/internal/providers/auth/Contracts"
-	database "fiber-starter/internal/providers/database/Contracts"
-	hashContracts "fiber-starter/internal/providers/hash/Contracts"
+	authContracts "fiber-starter/internal/providers/auth/contracts"
+	database "fiber-starter/internal/providers/database/contracts"
+	hashContracts "fiber-starter/internal/providers/hash/contracts"
 )
 
 // Register initializes the Auth manager and returns the manager contract.

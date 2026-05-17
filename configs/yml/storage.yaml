@@ -1,18 +1,15 @@
 storage:
-  driver: ${STORAGE_DRIVER:garage}
-  database: ${STORAGE_DATABASE:./database/storage.db}
-  reset: ${STORAGE_RESET:false}
-  gc_interval: ${STORAGE_GC_INTERVAL:3600}
-  garage:
-    endpoint: ${GARAGE_ENDPOINT:""}
-    access_key_id: ${GARAGE_ACCESS_KEY_ID:""}
-    secret_access_key: ${GARAGE_SECRET_ACCESS_KEY:""}
-    use_ssl: ${GARAGE_USE_SSL:false}
-    bucket: ${GARAGE_BUCKET:""}
-    region: ${GARAGE_REGION:""}
+  disk: ${FILESYSTEM_DISK:local}
   local:
-    root: ${STORAGE_LOCAL_ROOT:./storage/app}
-    url: ${STORAGE_LOCAL_URL:/storage}
+    root: ./storage/app
+    url: /storage
   public:
-    root: ${STORAGE_PUBLIC_ROOT:./storage/app/public}
-    url: ${STORAGE_PUBLIC_URL:/storage}
+    root: ./storage/app/public
+    url: /storage/public
+  s3:
+    key: ${AWS_ACCESS_KEY_ID:""}
+    secret: ${AWS_SECRET_ACCESS_KEY:""}
+    region: ${AWS_DEFAULT_REGION:us-east-1}
+    bucket: ${AWS_BUCKET:""}
+    endpoint: ${AWS_ENDPOINT:""}
+    use_path_style: true

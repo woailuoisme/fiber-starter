@@ -2,7 +2,7 @@ package hash
 
 import (
 	"fiber-starter/configs"
-	hashContracts "fiber-starter/internal/providers/hash/Contracts"
+	hashContracts "fiber-starter/internal/providers/hash/contracts"
 )
 
 // RegisterHash initializes and returns the Hash manager as a Hasher contract.

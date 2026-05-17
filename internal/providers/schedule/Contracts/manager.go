@@ -1,4 +1,4 @@
-package Contracts
+package contracts
 
 // Manager defines the schedule manager contract.
 type Manager interface {

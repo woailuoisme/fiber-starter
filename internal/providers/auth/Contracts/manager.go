@@ -1,4 +1,4 @@
-package Contracts
+package contracts
 
 // Manager defines the auth manager contract.
 type Manager interface {

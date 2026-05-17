@@ -1,4 +1,4 @@
-package Contracts
+package contracts
 
 // StorageManager handles multiple storage disks
 type StorageManager interface {

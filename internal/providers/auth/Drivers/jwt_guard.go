@@ -1,20 +1,20 @@
-package Drivers
+package drivers
 
 import (
 	"reflect"
 
-	"fiber-starter/internal/providers/auth/Contracts"
+	"fiber-starter/internal/providers/auth/contracts"
 
 	"github.com/gofiber/fiber/v3"
 )
 
 // JWTGuard implements the Guard interface for JWT-based authentication
 type JWTGuard struct {
-	provider Contracts.UserProvider
+	provider contracts.UserProvider
 }
 
 // NewJWTGuard creates a new JWT guard instance
-func NewJWTGuard(provider Contracts.UserProvider) *JWTGuard {
+func NewJWTGuard(provider contracts.UserProvider) *JWTGuard {
 	return &JWTGuard{provider: provider}
 }
 

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"fiber-starter/configs"
-	cacheDrivers "fiber-starter/internal/providers/cache/Drivers"
+	cacheDrivers "fiber-starter/internal/providers/cache/drivers"
 
 	"github.com/stretchr/testify/require"
 )

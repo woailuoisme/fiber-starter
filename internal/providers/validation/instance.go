@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"fiber-starter/internal/providers/validation/Contracts"
+	"fiber-starter/internal/providers/validation/contracts"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -15,7 +15,7 @@ import (
 type conditionalRule struct {
 	attribute string
 	rules     string
-	callback  Contracts.ConditionFunc
+	callback  contracts.ConditionFunc
 }
 
 type Instance struct {
@@ -24,19 +24,19 @@ type Instance struct {
 	rules      map[string]string
 	messages   map[string]string
 	attributes map[string]string
-	replacers  map[string]Contracts.ReplacerFunc
+	replacers  map[string]contracts.ReplacerFunc
 
 	mu         sync.Mutex
 	ran        bool
 	err        error
 	validated  map[string]any
 	failed     map[string]map[string]any
-	errors     Contracts.MessageBag
+	errors     contracts.MessageBag
 	conditions []conditionalRule
-	after      []Contracts.AfterFunc
+	after      []contracts.AfterFunc
 }
 
-func newInstance(engine *validator.Validate, data any, rules map[string]string, messages map[string]string, attributes map[string]string, replacers map[string]Contracts.ReplacerFunc) *Instance {
+func newInstance(engine *validator.Validate, data any, rules map[string]string, messages map[string]string, attributes map[string]string, replacers map[string]contracts.ReplacerFunc) *Instance {
 	return &Instance{
 		engine:     engine,
 		data:       data,
@@ -56,7 +56,7 @@ func (v *Instance) Validate() error {
 
 	v.validated = nil
 	v.failed = make(map[string]map[string]any)
-	v.errors = make(Contracts.MessageBag)
+	v.errors = make(contracts.MessageBag)
 
 	rules := v.effectiveRules()
 	if len(rules) == 0 {
@@ -77,7 +77,7 @@ func (v *Instance) Validate() error {
 		v.populateErrorState(err)
 	}
 
-	after := append([]Contracts.AfterFunc(nil), v.after...)
+	after := append([]contracts.AfterFunc(nil), v.after...)
 	v.ran = true
 	v.mu.Unlock()
 
@@ -106,7 +106,7 @@ func (v *Instance) Failed() map[string]map[string]any {
 	return cloneNestedMap(v.failed)
 }
 
-func (v *Instance) Sometimes(attribute string, rules string, callback Contracts.ConditionFunc) Contracts.Validator {
+func (v *Instance) Sometimes(attribute string, rules string, callback contracts.ConditionFunc) contracts.Validator {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
@@ -125,7 +125,7 @@ func (v *Instance) Sometimes(attribute string, rules string, callback Contracts.
 	return v
 }
 
-func (v *Instance) After(callback Contracts.AfterFunc) Contracts.Validator {
+func (v *Instance) After(callback contracts.AfterFunc) contracts.Validator {
 	if callback == nil {
 		return v
 	}
@@ -143,7 +143,7 @@ func (v *Instance) After(callback Contracts.AfterFunc) Contracts.Validator {
 	return v
 }
 
-func (v *Instance) Errors() Contracts.MessageBag {
+func (v *Instance) Errors() contracts.MessageBag {
 	_ = v.Validate()
 	return v.errors.Map()
 }
@@ -235,14 +235,14 @@ func (v *Instance) effectiveRules() map[string]string {
 func (v *Instance) populateErrorState(err error) {
 	var validationErrors validator.ValidationErrors
 	if !errors.As(err, &validationErrors) {
-		v.errors = Contracts.MessageBag{
+		v.errors = contracts.MessageBag{
 			"error": []string{err.Error()},
 		}
 		return
 	}
 
 	v.failed = make(map[string]map[string]any, len(validationErrors))
-	v.errors = make(Contracts.MessageBag, len(validationErrors))
+	v.errors = make(contracts.MessageBag, len(validationErrors))
 
 	for _, fe := range validationErrors {
 		field := v.resolveFieldName(fe.Field())
@@ -397,12 +397,12 @@ func cloneNestedMap(input map[string]map[string]any) map[string]map[string]any {
 	return out
 }
 
-func cloneReplacerMap(input map[string]Contracts.ReplacerFunc) map[string]Contracts.ReplacerFunc {
+func cloneReplacerMap(input map[string]contracts.ReplacerFunc) map[string]contracts.ReplacerFunc {
 	if len(input) == 0 {
 		return nil
 	}
 
-	out := make(map[string]Contracts.ReplacerFunc, len(input))
+	out := make(map[string]contracts.ReplacerFunc, len(input))
 	for key, value := range input {
 		out[key] = value
 	}

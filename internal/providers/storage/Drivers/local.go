@@ -1,4 +1,4 @@
-package Drivers
+package drivers
 
 import (
 	"os"

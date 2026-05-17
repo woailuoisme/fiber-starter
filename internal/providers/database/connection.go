@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"fiber-starter/configs"
-	"fiber-starter/internal/providers/database/Contracts"
-	drivers "fiber-starter/internal/providers/database/Drivers"
+	"fiber-starter/internal/providers/database/contracts"
+	drivers "fiber-starter/internal/providers/database/drivers"
 	helpers "fiber-starter/internal/support"
 
 	"github.com/uptrace/bun"
@@ -41,7 +41,7 @@ type Connection struct {
 	openMu   sync.Mutex
 }
 
-var _ Contracts.Connection = (*Connection)(nil)
+var _ contracts.Connection = (*Connection)(nil)
 
 // NewConnection creates a new connection instance (but does not open it immediately)
 func NewConnection(cfg *configs.Config, name ...string) *Connection {

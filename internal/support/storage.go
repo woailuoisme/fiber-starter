@@ -1,23 +1,23 @@
 package support
 
 import (
-	"fiber-starter/internal/providers/storage/Contracts"
+	"fiber-starter/internal/providers/storage/contracts"
 )
 
 // storage is the default storage disk instance
-var storage Contracts.Disk
+var storage contracts.Disk
 
 // manager is the full manager for multi-disk support
-var manager Contracts.StorageManager
+var manager contracts.StorageManager
 
 // InitStorage initializes the storage support with the manager
-func InitStorage(m Contracts.StorageManager) {
+func InitStorage(m contracts.StorageManager) {
 	manager = m
 	storage = m.Disk()
 }
 
 // Disk returns a specific storage disk
-func Disk(name ...string) Contracts.Disk {
+func Disk(name ...string) contracts.Disk {
 	if manager == nil {
 		panic("storage manager not initialized")
 	}

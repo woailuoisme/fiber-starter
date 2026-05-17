@@ -6,8 +6,8 @@ import (
 
 	"fiber-starter/configs"
 	middleware "fiber-starter/internal/common/middleware"
-	support "fiber-starter/internal/common/support"
 	models "fiber-starter/internal/features/user"
+	support "fiber-starter/internal/support"
 	"fiber-starter/tests/internal/testkit/mocks"
 
 	"github.com/gofiber/fiber/v3"

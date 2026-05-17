@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"fiber-starter/configs"
-	ratelimiterContracts "fiber-starter/internal/providers/ratelimiter/Contracts"
+	ratelimiterContracts "fiber-starter/internal/providers/ratelimiter/contracts"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/limiter"

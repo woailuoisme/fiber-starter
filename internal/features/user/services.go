@@ -9,8 +9,8 @@ import (
 	"time"
 
 	exceptions "fiber-starter/internal/common/exceptions"
-	helpers "fiber-starter/internal/common/support"
-	database "fiber-starter/internal/providers/database/Contracts"
+	database "fiber-starter/internal/providers/database/contracts"
+	helpers "fiber-starter/internal/support"
 
 	"github.com/uptrace/bun"
 	"go.uber.org/zap"

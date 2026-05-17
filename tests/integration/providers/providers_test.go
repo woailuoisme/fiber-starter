@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	providers "fiber-starter/internal/providers"
-	notificationContracts "fiber-starter/internal/providers/notification/Contracts"
+	notificationContracts "fiber-starter/internal/providers/notification/contracts"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"

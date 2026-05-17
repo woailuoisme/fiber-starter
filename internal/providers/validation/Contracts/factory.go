@@ -1,4 +1,4 @@
-package Contracts
+package contracts
 
 import validator "github.com/go-playground/validator/v10"
 

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"fiber-starter/configs"
-	databaseDrivers "fiber-starter/internal/providers/database/Drivers"
+	databaseDrivers "fiber-starter/internal/providers/database/drivers"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -1,7 +1,7 @@
 package logging
 
 import (
-	"fiber-starter/internal/providers/logging/Contracts"
+	"fiber-starter/internal/providers/logging/contracts"
 	"fiber-starter/internal/support/appctx"
 
 	"go.uber.org/zap"
@@ -9,7 +9,7 @@ import (
 
 // Facade returns the logging service from the application container.
 // This allows for a more Laravel-like "Log::info()" experience if used correctly.
-func Facade() Contracts.Logger {
+func Facade() contracts.Logger {
 	// We use the raw appctx here to avoid circular dependencies with the providers package
 	// if this were to be called from within other providers.
 	rt := appctx.App()
@@ -20,7 +20,7 @@ func Facade() Contracts.Logger {
 
 	// We assume the Log field exists on the runtime struct (which is duck-typed here via interface)
 	type logProvider interface {
-		LogService() Contracts.Logger
+		LogService() contracts.Logger
 	}
 
 	if lp, ok := rt.(logProvider); ok {
@@ -63,11 +63,11 @@ func Panic(msg string, fields ...zap.Field) {
 }
 
 // Channel is a shortcut for Facade().Channel()
-func Channel(name string) Contracts.Logger {
+func Channel(name string) contracts.Logger {
 	return Facade().Channel(name)
 }
 
 // With is a shortcut for Facade().With()
-func With(fields ...zap.Field) Contracts.Logger {
+func With(fields ...zap.Field) contracts.Logger {
 	return Facade().With(fields...)
 }

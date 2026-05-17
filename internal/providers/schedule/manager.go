@@ -4,14 +4,14 @@ import (
 	"sync"
 
 	"fiber-starter/configs"
-	"fiber-starter/internal/providers/schedule/Contracts"
-	"fiber-starter/internal/providers/schedule/Drivers"
+	"fiber-starter/internal/providers/schedule/contracts"
+	"fiber-starter/internal/providers/schedule/drivers"
 )
 
 // Manager handles the lifecycle of the scheduler
 type Manager struct {
 	config    *configs.Config
-	scheduler Contracts.Scheduler
+	scheduler contracts.Scheduler
 	mu        sync.Mutex
 }
 
@@ -21,7 +21,7 @@ func NewManager(cfg *configs.Config) *Manager {
 }
 
 // Scheduler returns the default scheduler instance
-func (m *Manager) Scheduler() Contracts.Scheduler {
+func (m *Manager) Scheduler() contracts.Scheduler {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -30,7 +30,7 @@ func (m *Manager) Scheduler() Contracts.Scheduler {
 	}
 
 	// Defaulting to Asynq driver
-	m.scheduler = Drivers.NewAsynqScheduler(m.config)
+	m.scheduler = drivers.NewAsynqScheduler(m.config)
 	return m.scheduler
 }
 

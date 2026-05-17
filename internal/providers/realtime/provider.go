@@ -2,7 +2,7 @@ package realtime
 
 import (
 	"fiber-starter/configs"
-	realtimeContracts "fiber-starter/internal/providers/realtime/Contracts"
+	realtimeContracts "fiber-starter/internal/providers/realtime/contracts"
 )
 
 // RegisterRealtime initializes and returns the realtime manager as a contract.

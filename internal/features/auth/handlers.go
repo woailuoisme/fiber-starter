@@ -5,8 +5,8 @@ import (
 
 	exceptions "fiber-starter/internal/common/exceptions"
 	middleware "fiber-starter/internal/common/middleware"
-	helpers "fiber-starter/internal/common/support"
 	userModel "fiber-starter/internal/features/user"
+	helpers "fiber-starter/internal/support"
 
 	"github.com/gofiber/fiber/v3"
 )

@@ -1,7 +1,7 @@
 package mail
 
 import (
-	"fiber-starter/internal/providers/mail/Contracts"
+	"fiber-starter/internal/providers/mail/contracts"
 )
 
 type Message struct {
@@ -19,44 +19,44 @@ func NewMessage() *Message {
 	return &Message{}
 }
 
-func (m *Message) To(to ...string) Contracts.Message {
+func (m *Message) To(to ...string) contracts.Message {
 	m.to = append(m.to, to...)
 	return m
 }
 
-func (m *Message) Cc(cc ...string) Contracts.Message {
+func (m *Message) Cc(cc ...string) contracts.Message {
 	m.cc = append(m.cc, cc...)
 	return m
 }
 
-func (m *Message) Bcc(bcc ...string) Contracts.Message {
+func (m *Message) Bcc(bcc ...string) contracts.Message {
 	m.bcc = append(m.bcc, bcc...)
 	return m
 }
 
-func (m *Message) Subject(subject string) Contracts.Message {
+func (m *Message) Subject(subject string) contracts.Message {
 	m.subject = subject
 	return m
 }
 
-func (m *Message) Html(body string) Contracts.Message {
+func (m *Message) Html(body string) contracts.Message {
 	m.body = body
 	m.isHtml = true
 	return m
 }
 
-func (m *Message) Plain(body string) Contracts.Message {
+func (m *Message) Plain(body string) contracts.Message {
 	m.body = body
 	m.isHtml = false
 	return m
 }
 
-func (m *Message) Attach(filePath string) Contracts.Message {
+func (m *Message) Attach(filePath string) contracts.Message {
 	m.attachments = append(m.attachments, filePath)
 	return m
 }
 
-func (m *Message) Data(data map[string]interface{}) Contracts.Message {
+func (m *Message) Data(data map[string]interface{}) contracts.Message {
 	m.data = data
 	return m
 }

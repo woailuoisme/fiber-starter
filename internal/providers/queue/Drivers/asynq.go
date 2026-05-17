@@ -1,4 +1,4 @@
-package Drivers
+package drivers
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"fiber-starter/configs"
-	"fiber-starter/internal/providers/queue/Contracts"
+	"fiber-starter/internal/providers/queue/contracts"
 	helpers "fiber-starter/internal/support"
 
 	"github.com/hibiken/asynq"
@@ -98,7 +98,7 @@ func (d *AsynqDriver) getServer(queues ...string) *asynq.Server {
 	return d.server
 }
 
-func (d *AsynqDriver) Push(job Contracts.Job) error {
+func (d *AsynqDriver) Push(job contracts.Job) error {
 	return d.enqueue(job, nil, "")
 }
 
@@ -119,19 +119,19 @@ func (d *AsynqDriver) Size(queue ...string) (int64, error) {
 	return int64(info.Pending), nil
 }
 
-func (d *AsynqDriver) PushOn(queue string, job Contracts.Job) error {
+func (d *AsynqDriver) PushOn(queue string, job contracts.Job) error {
 	return d.enqueue(job, nil, queue)
 }
 
-func (d *AsynqDriver) Later(delay time.Duration, job Contracts.Job) error {
+func (d *AsynqDriver) Later(delay time.Duration, job contracts.Job) error {
 	return d.enqueue(job, asynq.ProcessIn(delay), "")
 }
 
-func (d *AsynqDriver) LaterOn(queue string, delay time.Duration, job Contracts.Job) error {
+func (d *AsynqDriver) LaterOn(queue string, delay time.Duration, job contracts.Job) error {
 	return d.enqueue(job, asynq.ProcessIn(delay), queue)
 }
 
-func (d *AsynqDriver) Bulk(jobs []Contracts.Job, queue ...string) error {
+func (d *AsynqDriver) Bulk(jobs []contracts.Job, queue ...string) error {
 	q := ""
 	if len(queue) > 0 {
 		q = queue[0]
@@ -145,11 +145,11 @@ func (d *AsynqDriver) Bulk(jobs []Contracts.Job, queue ...string) error {
 	return nil
 }
 
-func (d *AsynqDriver) ProcessAt(at time.Time, job Contracts.Job) error {
+func (d *AsynqDriver) ProcessAt(at time.Time, job contracts.Job) error {
 	return d.enqueue(job, asynq.ProcessAt(at), "")
 }
 
-func (d *AsynqDriver) enqueue(job Contracts.Job, opt asynq.Option, queue string) error {
+func (d *AsynqDriver) enqueue(job contracts.Job, opt asynq.Option, queue string) error {
 	payload, err := json.Marshal(job)
 	if err != nil {
 		return fmt.Errorf("failed to marshal job payload: %w", err)
@@ -177,7 +177,7 @@ func (d *AsynqDriver) enqueue(job Contracts.Job, opt asynq.Option, queue string)
 	return nil
 }
 
-func (d *AsynqDriver) Register(job Contracts.Job) {
+func (d *AsynqDriver) Register(job contracts.Job) {
 	jobType := reflect.TypeOf(job)
 	if jobType.Kind() == reflect.Pointer {
 		jobType = jobType.Elem()
@@ -185,7 +185,7 @@ func (d *AsynqDriver) Register(job Contracts.Job) {
 
 	d.mux.HandleFunc(job.TaskName(), func(ctx context.Context, t *asynq.Task) error {
 		// Create a new instance of the job
-		newJob := reflect.New(jobType).Interface().(Contracts.Job)
+		newJob := reflect.New(jobType).Interface().(contracts.Job)
 
 		if err := json.Unmarshal(t.Payload(), &newJob); err != nil {
 			return fmt.Errorf("failed to unmarshal job payload: %w", err)
@@ -251,7 +251,7 @@ func (d *AsynqDriver) StopWorker() error {
 	return nil
 }
 
-func (d *AsynqDriver) InspectQueues() ([]Contracts.QueueStatus, error) {
+func (d *AsynqDriver) InspectQueues() ([]contracts.QueueStatus, error) {
 	inspector := asynq.NewInspector(d.getRedisOpt())
 	defer func() { _ = inspector.Close() }()
 
@@ -260,14 +260,14 @@ func (d *AsynqDriver) InspectQueues() ([]Contracts.QueueStatus, error) {
 		return nil, fmt.Errorf("failed to inspect queues: %w", err)
 	}
 
-	var statuses []Contracts.QueueStatus
+	var statuses []contracts.QueueStatus
 	for _, q := range queues {
 		info, err := inspector.GetQueueInfo(q)
 		if err != nil {
 			continue
 		}
 
-		statuses = append(statuses, Contracts.QueueStatus{
+		statuses = append(statuses, contracts.QueueStatus{
 			Name:      q,
 			Pending:   info.Pending,
 			Running:   info.Active,
@@ -283,7 +283,7 @@ func (d *AsynqDriver) InspectQueues() ([]Contracts.QueueStatus, error) {
 	return statuses, nil
 }
 
-func (d *AsynqDriver) ListFailed(page, pageSize int) ([]Contracts.FailedJob, error) {
+func (d *AsynqDriver) ListFailed(page, pageSize int) ([]contracts.FailedJob, error) {
 	inspector := asynq.NewInspector(d.getRedisOpt())
 	defer func() { _ = inspector.Close() }()
 
@@ -293,9 +293,9 @@ func (d *AsynqDriver) ListFailed(page, pageSize int) ([]Contracts.FailedJob, err
 		return nil, fmt.Errorf("failed to list failed tasks: %w", err)
 	}
 
-	var failedJobs []Contracts.FailedJob
+	var failedJobs []contracts.FailedJob
 	for _, t := range tasks {
-		failedJobs = append(failedJobs, Contracts.FailedJob{
+		failedJobs = append(failedJobs, contracts.FailedJob{
 			ID:         t.ID,
 			Payload:    string(t.Payload),
 			Queue:      t.Queue,

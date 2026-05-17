@@ -2,9 +2,9 @@ package notification
 
 import (
 	"fiber-starter/configs"
-	mailContracts "fiber-starter/internal/providers/mail/Contracts"
-	channels "fiber-starter/internal/providers/notification/Channels"
-	notificationContracts "fiber-starter/internal/providers/notification/Contracts"
+	mailContracts "fiber-starter/internal/providers/mail/contracts"
+	channels "fiber-starter/internal/providers/notification/channels"
+	notificationContracts "fiber-starter/internal/providers/notification/contracts"
 )
 
 // RegisterNotification initializes the Notification manager.

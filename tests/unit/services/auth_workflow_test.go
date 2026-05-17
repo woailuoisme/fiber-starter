@@ -11,10 +11,10 @@ import (
 	"fiber-starter/configs"
 	auth "fiber-starter/internal/features/auth"
 	user "fiber-starter/internal/features/user"
-	cacheContracts "fiber-starter/internal/providers/cache/Contracts"
+	cacheContracts "fiber-starter/internal/providers/cache/contracts"
 	dbProvider "fiber-starter/internal/providers/database"
 	hash "fiber-starter/internal/providers/hash"
-	mailContracts "fiber-starter/internal/providers/mail/Contracts"
+	mailContracts "fiber-starter/internal/providers/mail/contracts"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"

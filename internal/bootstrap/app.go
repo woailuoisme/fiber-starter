@@ -24,7 +24,7 @@ func ServeHTTP(kernel *Kernel) error {
 	app := NewHTTPApp(kernel.Runtime.Config)
 
 	// Setup Routes using the global application container
-	if err := setupAppRoutes(app); err != nil {
+	if err := SetupApplicationRoutes(app); err != nil {
 		return fmt.Errorf("failed to setup routes: %w", err)
 	}
 

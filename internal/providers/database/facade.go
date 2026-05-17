@@ -3,14 +3,14 @@ package database
 import (
 	"errors"
 
-	"fiber-starter/internal/providers/database/Contracts"
+	"fiber-starter/internal/providers/database/contracts"
 	"fiber-starter/internal/support/appctx"
 )
 
 var ErrContainerNotInitialized = errors.New("application container not initialized")
 
 // manager returns the database manager instance from the container.
-func manager() Contracts.Manager {
+func manager() contracts.Manager {
 	if app := appctx.App(); app != nil {
 		return app.DatabaseManager()
 	}
@@ -18,7 +18,7 @@ func manager() Contracts.Manager {
 }
 
 // GetConnection returns a database connection by name
-func GetConnection(name ...string) Contracts.Connection {
+func GetConnection(name ...string) contracts.Connection {
 	if m := manager(); m != nil {
 		return m.Connection(name...)
 	}
@@ -26,7 +26,7 @@ func GetConnection(name ...string) Contracts.Connection {
 }
 
 // Reconnect closes and re-opens the given connection
-func Reconnect(name ...string) (Contracts.Connection, error) {
+func Reconnect(name ...string) (contracts.Connection, error) {
 	if m := manager(); m != nil {
 		return m.Reconnect(name...)
 	}

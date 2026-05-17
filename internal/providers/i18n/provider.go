@@ -2,7 +2,7 @@ package i18n
 
 import (
 	"fiber-starter/configs"
-	i18nContracts "fiber-starter/internal/providers/i18n/Contracts"
+	i18nContracts "fiber-starter/internal/providers/i18n/contracts"
 
 	"github.com/gofiber/fiber/v3"
 	goi18n "github.com/nicksnyder/go-i18n/v2/i18n"

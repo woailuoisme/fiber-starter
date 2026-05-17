@@ -4,14 +4,14 @@ import (
 	"errors"
 	"time"
 
-	"fiber-starter/internal/providers/storage/Contracts"
+	"fiber-starter/internal/providers/storage/contracts"
 	"fiber-starter/internal/support/appctx"
 )
 
 var ErrContainerNotInitialized = errors.New("application container not initialized")
 
 // manager returns the storage manager instance from the container.
-func manager() Contracts.StorageManager {
+func manager() contracts.StorageManager {
 	if app := appctx.App(); app != nil {
 		return app.StorageValue()
 	}
@@ -19,7 +19,7 @@ func manager() Contracts.StorageManager {
 }
 
 // disk returns the default storage disk from the container.
-func disk() Contracts.Disk {
+func disk() contracts.Disk {
 	if m := manager(); m != nil {
 		return m.Disk()
 	}
@@ -27,7 +27,7 @@ func disk() Contracts.Disk {
 }
 
 // GetDisk returns a specific storage disk (Facade method)
-func GetDisk(name ...string) (Contracts.Disk, error) {
+func GetDisk(name ...string) (contracts.Disk, error) {
 	if m := manager(); m != nil {
 		return m.Disk(name...), nil
 	}
@@ -35,7 +35,7 @@ func GetDisk(name ...string) (Contracts.Disk, error) {
 }
 
 // Drive returns a specific storage disk
-func Drive(name ...string) Contracts.Disk {
+func Drive(name ...string) contracts.Disk {
 	if m := manager(); m != nil {
 		return m.Disk(name...)
 	}

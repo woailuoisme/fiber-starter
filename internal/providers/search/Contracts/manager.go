@@ -1,4 +1,4 @@
-package Contracts
+package contracts
 
 // Manager defines the search manager contract.
 type Manager interface {

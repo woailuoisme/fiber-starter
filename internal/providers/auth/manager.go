@@ -4,10 +4,10 @@ import (
 	"sync"
 
 	"fiber-starter/configs"
-	"fiber-starter/internal/providers/auth/Contracts"
-	"fiber-starter/internal/providers/auth/Drivers"
-	database "fiber-starter/internal/providers/database/Contracts"
-	hashContracts "fiber-starter/internal/providers/hash/Contracts"
+	"fiber-starter/internal/providers/auth/contracts"
+	"fiber-starter/internal/providers/auth/drivers"
+	database "fiber-starter/internal/providers/database/contracts"
+	hashContracts "fiber-starter/internal/providers/hash/contracts"
 )
 
 // Manager manages authentication guards and user providers
@@ -15,7 +15,7 @@ type Manager struct {
 	cfg          *configs.Config
 	db           database.Connection
 	hasher       hashContracts.Hasher
-	guards       map[string]Contracts.Guard
+	guards       map[string]contracts.Guard
 	modelCreator func() any
 	mu           sync.RWMutex
 }
@@ -26,7 +26,7 @@ func NewManager(cfg *configs.Config, db database.Connection, hasher hashContract
 		cfg:    cfg,
 		db:     db,
 		hasher: hasher,
-		guards: make(map[string]Contracts.Guard),
+		guards: make(map[string]contracts.Guard),
 	}
 }
 
@@ -38,7 +38,7 @@ func (m *Manager) SetModelCreator(creator func() any) {
 }
 
 // Guard returns an authentication guard by name
-func (m *Manager) Guard(name ...string) Contracts.Guard {
+func (m *Manager) Guard(name ...string) contracts.Guard {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -57,26 +57,26 @@ func (m *Manager) Guard(name ...string) Contracts.Guard {
 }
 
 // resolve creates the requested guard instance based on configuration
-func (m *Manager) resolve(name string) Contracts.Guard {
+func (m *Manager) resolve(name string) contracts.Guard {
 	guardCfg, ok := m.cfg.Auth.Guards[name]
 	if !ok {
 		// If not found, use a default configuration or return a basic JWT guard
-		provider := Drivers.NewDatabaseUserProvider(m.db, "users", m.hasher)
+		provider := drivers.NewDatabaseUserProvider(m.db, "users", m.hasher)
 		provider.SetModelCreator(m.modelCreator)
-		return Drivers.NewJWTGuard(provider)
+		return drivers.NewJWTGuard(provider)
 	}
 
 	// Resolve the user provider for this guard
 	providerCfg := m.cfg.Auth.Providers[guardCfg.Provider]
-	var provider Contracts.UserProvider
+	var provider contracts.UserProvider
 
 	switch providerCfg.Driver {
 	case "database":
-		dbProvider := Drivers.NewDatabaseUserProvider(m.db, providerCfg.Table, m.hasher)
+		dbProvider := drivers.NewDatabaseUserProvider(m.db, providerCfg.Table, m.hasher)
 		dbProvider.SetModelCreator(m.modelCreator)
 		provider = dbProvider
 	default:
-		dbProvider := Drivers.NewDatabaseUserProvider(m.db, "users", m.hasher)
+		dbProvider := drivers.NewDatabaseUserProvider(m.db, "users", m.hasher)
 		dbProvider.SetModelCreator(m.modelCreator)
 		provider = dbProvider
 	}
@@ -84,8 +84,8 @@ func (m *Manager) resolve(name string) Contracts.Guard {
 	// Resolve the guard driver
 	switch guardCfg.Driver {
 	case "jwt":
-		return Drivers.NewJWTGuard(provider)
+		return drivers.NewJWTGuard(provider)
 	default:
-		return Drivers.NewJWTGuard(provider)
+		return drivers.NewJWTGuard(provider)
 	}
 }

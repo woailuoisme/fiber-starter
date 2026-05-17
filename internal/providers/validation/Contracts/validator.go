@@ -1,4 +1,4 @@
-package Contracts
+package contracts
 
 // MessageBag mirrors Laravel's MessageBag concept in a Go-friendly form.
 type MessageBag map[string][]string

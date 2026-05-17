@@ -3,14 +3,14 @@ package search
 import (
 	"errors"
 
-	"fiber-starter/internal/providers/search/Contracts"
+	"fiber-starter/internal/providers/search/contracts"
 	"fiber-starter/internal/support/appctx"
 )
 
 var ErrContainerNotInitialized = errors.New("application container not initialized")
 
 // engine returns the default search engine instance from the container.
-func engine() Contracts.Engine {
+func engine() contracts.Engine {
 	if app := appctx.App(); app != nil {
 		return app.SearchServiceValue()
 	}
@@ -18,7 +18,7 @@ func engine() Contracts.Engine {
 }
 
 // manager returns the search manager instance from the container.
-func manager() Contracts.Manager {
+func manager() contracts.Manager {
 	if app := appctx.App(); app != nil {
 		return app.SearchManagerValue()
 	}
@@ -26,7 +26,7 @@ func manager() Contracts.Manager {
 }
 
 // Drive returns a specific search engine instance
-func Drive(name ...string) Contracts.Engine {
+func Drive(name ...string) contracts.Engine {
 	if m := manager(); m != nil {
 		return m.Drive(name...)
 	}
@@ -34,7 +34,7 @@ func Drive(name ...string) Contracts.Engine {
 }
 
 // CreateIndex creates a new search index using the default engine
-func CreateIndex(uid string, primaryKey string) (*Contracts.TaskInfo, error) {
+func CreateIndex(uid string, primaryKey string) (*contracts.TaskInfo, error) {
 	if e := engine(); e != nil {
 		return e.CreateIndex(uid, primaryKey)
 	}
@@ -42,7 +42,7 @@ func CreateIndex(uid string, primaryKey string) (*Contracts.TaskInfo, error) {
 }
 
 // DeleteIndex deletes a search index using the default engine
-func DeleteIndex(uid string) (*Contracts.TaskInfo, error) {
+func DeleteIndex(uid string) (*contracts.TaskInfo, error) {
 	if e := engine(); e != nil {
 		return e.DeleteIndex(uid)
 	}
@@ -50,7 +50,7 @@ func DeleteIndex(uid string) (*Contracts.TaskInfo, error) {
 }
 
 // Search performs a search query using the default engine
-func Search(indexUID string, query string, request *Contracts.SearchRequest) (*Contracts.SearchResponse, error) {
+func Search(indexUID string, query string, request *contracts.SearchRequest) (*contracts.SearchResponse, error) {
 	if e := engine(); e != nil {
 		return e.Search(indexUID, query, request)
 	}
@@ -58,7 +58,7 @@ func Search(indexUID string, query string, request *Contracts.SearchRequest) (*C
 }
 
 // AddDocuments adds documents to a search index using the default engine
-func AddDocuments(indexUID string, documents interface{}) (*Contracts.TaskInfo, error) {
+func AddDocuments(indexUID string, documents interface{}) (*contracts.TaskInfo, error) {
 	if e := engine(); e != nil {
 		return e.AddDocuments(indexUID, documents)
 	}
@@ -66,7 +66,7 @@ func AddDocuments(indexUID string, documents interface{}) (*Contracts.TaskInfo, 
 }
 
 // UpdateDocuments updates documents in a search index using the default engine
-func UpdateDocuments(indexUID string, documents interface{}) (*Contracts.TaskInfo, error) {
+func UpdateDocuments(indexUID string, documents interface{}) (*contracts.TaskInfo, error) {
 	if e := engine(); e != nil {
 		return e.UpdateDocuments(indexUID, documents)
 	}
@@ -74,7 +74,7 @@ func UpdateDocuments(indexUID string, documents interface{}) (*Contracts.TaskInf
 }
 
 // DeleteDocuments deletes documents from a search index using the default engine
-func DeleteDocuments(indexUID string, ids []string) (*Contracts.TaskInfo, error) {
+func DeleteDocuments(indexUID string, ids []string) (*contracts.TaskInfo, error) {
 	if e := engine(); e != nil {
 		return e.DeleteDocuments(indexUID, ids)
 	}
@@ -82,7 +82,7 @@ func DeleteDocuments(indexUID string, ids []string) (*Contracts.TaskInfo, error)
 }
 
 // DeleteAllDocuments deletes all documents from a search index using the default engine
-func DeleteAllDocuments(indexUID string) (*Contracts.TaskInfo, error) {
+func DeleteAllDocuments(indexUID string) (*contracts.TaskInfo, error) {
 	if e := engine(); e != nil {
 		return e.DeleteAllDocuments(indexUID)
 	}

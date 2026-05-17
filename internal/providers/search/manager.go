@@ -5,14 +5,14 @@ import (
 	"sync"
 
 	"fiber-starter/configs"
-	"fiber-starter/internal/providers/search/Contracts"
-	"fiber-starter/internal/providers/search/Drivers"
+	"fiber-starter/internal/providers/search/contracts"
+	"fiber-starter/internal/providers/search/drivers"
 )
 
 // Manager handles the lifecycle and selection of search engines
 type Manager struct {
 	config  *configs.Config
-	engines map[string]Contracts.Engine
+	engines map[string]contracts.Engine
 	mu      sync.Mutex
 }
 
@@ -20,12 +20,12 @@ type Manager struct {
 func NewManager(cfg *configs.Config) *Manager {
 	return &Manager{
 		config:  cfg,
-		engines: make(map[string]Contracts.Engine),
+		engines: make(map[string]contracts.Engine),
 	}
 }
 
 // Drive returns a specific search engine instance
-func (m *Manager) Drive(name ...string) Contracts.Engine {
+func (m *Manager) Drive(name ...string) contracts.Engine {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -38,14 +38,14 @@ func (m *Manager) Drive(name ...string) Contracts.Engine {
 		return engine
 	}
 
-	var engine Contracts.Engine
+	var engine contracts.Engine
 	switch driver {
 	case "meilisearch":
-		engine = Drivers.NewMeilisearchDriver(m.config)
+		engine = drivers.NewMeilisearchDriver(m.config)
 	case "null":
-		engine = Drivers.NewNullDriver()
+		engine = drivers.NewNullDriver()
 	default:
-		engine = Drivers.NewMeilisearchDriver(m.config)
+		engine = drivers.NewMeilisearchDriver(m.config)
 	}
 
 	m.engines[driver] = engine

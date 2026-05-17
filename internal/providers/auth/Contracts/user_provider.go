@@ -1,4 +1,4 @@
-package Contracts
+package contracts
 
 // UserProvider defines the contract for retrieving users for authentication (similar to Laravel's UserProvider)
 type UserProvider interface {

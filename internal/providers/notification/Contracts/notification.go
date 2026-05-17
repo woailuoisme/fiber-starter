@@ -1,4 +1,4 @@
-package Contracts
+package contracts
 
 // Notification defines the interface for a notification.
 type Notification interface {

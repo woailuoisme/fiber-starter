@@ -14,55 +14,34 @@ import (
 func NewHTTPApp(cfg *configs.Config) *fiber.App {
 	fiberCfg := cfg.App.Fiber
 
-	concurrency := fiberCfg.Concurrency
-	if concurrency == 0 {
-		concurrency = 256 * 1024
-	}
-
-	bodyLimit := fiberCfg.BodyLimit
-	if bodyLimit == 0 {
-		bodyLimit = 4 * 1024 * 1024
-	}
-
-	readBufferSize := fiberCfg.ReadBufferSize
-	if readBufferSize == 0 {
-		readBufferSize = 16 * 1024
-	}
-
-	readTimeout := fiberCfg.ReadTimeout
-	if readTimeout <= 0 {
-		readTimeout = 30
-	}
-
-	writeTimeout := fiberCfg.WriteTimeout
-	if writeTimeout <= 0 {
-		writeTimeout = 30
-	}
-
-	idleTimeout := fiberCfg.IdleTimeout
-	if idleTimeout <= 0 {
-		idleTimeout = 120
-	}
-
-	proxyHeader := fiberCfg.ProxyHeader
-	if proxyHeader == "" {
-		proxyHeader = fiber.HeaderXForwardedFor
-	}
-
 	return fiber.New(fiber.Config{
 		ServerHeader:      fiberCfg.ServerHeader,
-		BodyLimit:         bodyLimit,
-		Concurrency:       concurrency,
-		ReadBufferSize:    readBufferSize,
-		ReadTimeout:       time.Duration(readTimeout) * time.Second,
-		WriteTimeout:      time.Duration(writeTimeout) * time.Second,
-		IdleTimeout:       time.Duration(idleTimeout) * time.Second,
+		BodyLimit:         defaultInt(fiberCfg.BodyLimit, 4*1024*1024),
+		Concurrency:       defaultInt(fiberCfg.Concurrency, 256*1024),
+		ReadBufferSize:    defaultInt(fiberCfg.ReadBufferSize, 16*1024),
+		ReadTimeout:       time.Duration(defaultInt(fiberCfg.ReadTimeout, 30)) * time.Second,
+		WriteTimeout:      time.Duration(defaultInt(fiberCfg.WriteTimeout, 30)) * time.Second,
+		IdleTimeout:       time.Duration(defaultInt(fiberCfg.IdleTimeout, 120)) * time.Second,
 		TrustProxy:        fiberCfg.TrustProxy,
-		ProxyHeader:       proxyHeader,
+		ProxyHeader:       defaultStr(fiberCfg.ProxyHeader, fiber.HeaderXForwardedFor),
 		StreamRequestBody: fiberCfg.StreamRequestBody,
 		Immutable:         fiberCfg.Immutable,
 		JSONEncoder:       json.Marshal,
 		JSONDecoder:       json.Unmarshal,
 		ErrorHandler:      helpers.HandleHTTPError,
 	})
+}
+
+func defaultInt(val, def int) int {
+	if val <= 0 {
+		return def
+	}
+	return val
+}
+
+func defaultStr(val, def string) string {
+	if val == "" {
+		return def
+	}
+	return val
 }
