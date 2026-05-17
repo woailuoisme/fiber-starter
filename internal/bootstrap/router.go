@@ -31,20 +31,8 @@ func SetupApplicationRoutes(app *fiber.App) error {
 	v1Group := apiGroup.Group("/v1")
 
 	// Register user and auth routes
-	auth.RegisterRoutes(
-		v1Group,
-		rt.Connection,
-		rt.Config,
-		rt.Cache,
-		rt.EmailService,
-		rt.Hash,
-	)
-	user.RegisterRoutes(
-		v1Group,
-		rt.Connection,
-		rt.Config,
-		rt.Cache,
-	)
+	auth.RegisterRoutes(v1Group)
+	user.RegisterRoutes(v1Group)
 
 	registerRealtimeRoutes(app, middleware.JWTProtected(rt.Config, rt.Cache))
 

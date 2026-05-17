@@ -3,12 +3,8 @@ package auth
 import (
 	"time"
 
-	"fiber-starter/configs"
 	middleware "fiber-starter/internal/common/middleware"
-	cache "fiber-starter/internal/providers/cache/contracts"
-	database "fiber-starter/internal/providers/database/contracts"
-	hashContracts "fiber-starter/internal/providers/hash/contracts"
-	mailContracts "fiber-starter/internal/providers/mail/contracts"
+	"fiber-starter/internal/support/appctx"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -16,23 +12,17 @@ import (
 const routeTimeout = 30 * time.Second
 
 // RegisterRoutes registers auth routes under the provided router group.
-func RegisterRoutes(
-	router fiber.Router,
-	db database.Connection,
-	cfg *configs.Config,
-	cacheStore cache.Store,
-	mailer mailContracts.Mailer,
-	hasher hashContracts.Hasher,
-) {
+func RegisterRoutes(router fiber.Router) {
+	rt := appctx.App()
+
 	authService := NewAuthService(
-		db,
-		cfg,
-		cacheStore,
-		mailer,
-		hasher,
+		rt.ConnectionValue(),
+		rt.AppConfig(),
+		rt.CacheStore(),
+		rt.EmailServiceValue(),
 	)
 	authController := NewAuthController(authService)
-	jwtProtected := middleware.JWTProtected(cfg, cacheStore)
+	jwtProtected := middleware.JWTProtected(rt.AppConfig(), rt.CacheStore())
 
 	authRouter := middleware.NewTimeoutRouter(
 		router.Group("/auth"),

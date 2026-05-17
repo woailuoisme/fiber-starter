@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	providers "fiber-starter/internal/providers"
+	"fiber-starter/internal/support/appctx"
 )
 
 // Status represents the health status of a single provider
@@ -17,12 +17,12 @@ type Status struct {
 
 // Aggregator collects health status from all registered providers
 type Aggregator struct {
-	rt *providers.Runtime
+	app appctx.Application
 }
 
 // NewAggregator creates a new health aggregator
-func NewAggregator(rt *providers.Runtime) *Aggregator {
-	return &Aggregator{rt: rt}
+func NewAggregator(app appctx.Application) *Aggregator {
+	return &Aggregator{app: app}
 }
 
 // CheckAll returns the health status of all enabled providers
@@ -42,60 +42,60 @@ func (a *Aggregator) CheckAll() (map[string]Status, bool) {
 			name:    "database",
 			enabled: true,
 			check: func() error {
-				if a.rt.Connection == nil {
+				if a.app.ConnectionValue() == nil {
 					return fmt.Errorf("database connection not initialized")
 				}
-				return a.rt.Connection.HealthCheck()
+				return a.app.ConnectionValue().HealthCheck()
 			},
 		},
 		{
 			name:    "cache",
-			enabled: a.rt.Config != nil && a.rt.Config.Cache.Enabled,
+			enabled: a.app.AppConfig() != nil && a.app.AppConfig().Cache.Enabled,
 			check: func() error {
-				if a.rt.Cache == nil {
+				if a.app.CacheStore() == nil {
 					return fmt.Errorf("cache store not initialized")
 				}
-				return a.rt.Cache.HealthCheck()
+				return a.app.CacheStore().HealthCheck()
 			},
 		},
 		{
 			name:    "mail",
-			enabled: a.rt.Config != nil && a.rt.Config.Mail.Enabled,
+			enabled: a.app.AppConfig() != nil && a.app.AppConfig().Mail.Enabled,
 			check: func() error {
-				if a.rt.EmailService == nil {
+				if a.app.EmailServiceValue() == nil {
 					return fmt.Errorf("mail service not initialized")
 				}
-				return a.rt.EmailService.HealthCheck()
+				return a.app.EmailServiceValue().HealthCheck()
 			},
 		},
 		{
 			name:    "queue",
-			enabled: a.rt.Config != nil && a.rt.Config.Queue.Enabled,
+			enabled: a.app.AppConfig() != nil && a.app.AppConfig().Queue.Enabled,
 			check: func() error {
-				if a.rt.QueueService == nil {
+				if a.app.QueueServiceValue() == nil {
 					return fmt.Errorf("queue service not initialized")
 				}
-				return a.rt.QueueService.HealthCheck()
+				return a.app.QueueServiceValue().HealthCheck()
 			},
 		},
 		{
 			name:    "search",
-			enabled: a.rt.Config != nil && a.rt.Config.Search.Enabled,
+			enabled: a.app.AppConfig() != nil && a.app.AppConfig().Search.Enabled,
 			check: func() error {
-				if a.rt.SearchService == nil {
+				if a.app.SearchServiceValue() == nil {
 					return fmt.Errorf("search service not initialized")
 				}
-				return a.rt.SearchService.HealthCheck()
+				return a.app.SearchServiceValue().HealthCheck()
 			},
 		},
 		{
 			name:    "storage",
-			enabled: a.rt.Config != nil && a.rt.Config.Storage.Enabled,
+			enabled: a.app.AppConfig() != nil && a.app.AppConfig().Storage.Enabled,
 			check: func() error {
-				if a.rt.Storage == nil {
+				if a.app.StorageValue() == nil {
 					return fmt.Errorf("storage manager not initialized")
 				}
-				return a.rt.Storage.Disk().HealthCheck()
+				return a.app.StorageValue().Disk().HealthCheck()
 			},
 		},
 	}

@@ -318,7 +318,7 @@ func GetExceptionInfo(c fiber.Ctx) *ExceptionInfo {
 
 // GetStackTrace 获取堆栈跟踪。
 func GetStackTrace() []string {
-	var traces []string
+	traces := []string{}
 	for i := 2; i < 10; i++ {
 		pc, file, line, ok := runtime.Caller(i)
 		if !ok {

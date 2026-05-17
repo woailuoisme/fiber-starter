@@ -78,7 +78,7 @@ func (r *UserRepository) List(ctx context.Context, search string, limit, offset 
 		})
 	}
 
-	var users []User
+	users := []User{}
 	if err := sel.OrderExpr("created_at DESC").Limit(limit).Offset(offset).Scan(ctx, &users); err != nil {
 		return nil, err
 	}

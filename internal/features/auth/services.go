@@ -22,7 +22,7 @@ import (
 	userPkg "fiber-starter/internal/features/user"
 	cacheContracts "fiber-starter/internal/providers/cache/contracts"
 	database "fiber-starter/internal/providers/database/contracts"
-	hashContracts "fiber-starter/internal/providers/hash/contracts"
+	hash "fiber-starter/internal/providers/hash"
 	mailContracts "fiber-starter/internal/providers/mail/contracts"
 	helpers "fiber-starter/internal/support"
 
@@ -109,11 +109,10 @@ type authService struct {
 	config *configs.Config
 	cache  cacheContracts.Store
 	mailer mailContracts.Mailer
-	hasher hashContracts.Hasher
 }
 
-func NewAuthService(db database.Connection, cfg *configs.Config, cache cacheContracts.Store, mailer mailContracts.Mailer, hasher hashContracts.Hasher) AuthService {
-	return &authService{db: db, config: cfg, cache: cache, mailer: mailer, hasher: hasher}
+func NewAuthService(db database.Connection, cfg *configs.Config, cache cacheContracts.Store, mailer mailContracts.Mailer) AuthService {
+	return &authService{db: db, config: cfg, cache: cache, mailer: mailer}
 }
 
 func (s *authService) bunDB() (*bun.DB, error) {
@@ -167,13 +166,13 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) (SignUp
 			return fmt.Errorf("failed to query user: %w", queryErr)
 		}
 
-		hashedPassword, err := s.hasher.Make(user.Password)
+		hashedPassword, err := hash.Make(user.Password)
 		if err != nil {
 			return fmt.Errorf("failed to hash password: %w", err)
 		}
 
 		now := helpers.UtcNow()
-		user.Password = string(hashedPassword)
+		user.Password = hashedPassword
 		user.Status = userPkg.UserStatusPending
 		user.EmailVerifiedAt = nil
 		user.UpdatedAt = now
@@ -186,11 +185,12 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) (SignUp
 			return nil
 		}
 
-		if existing.Status == userPkg.UserStatusActive || existing.EmailVerifiedAt != nil {
-			return errors.New("email already registered")
-		}
-
-		if existing.Status == userPkg.UserStatusSuspended || existing.Status == userPkg.UserStatusBanned || existing.Status == userPkg.UserStatusInactive {
+		isRegistered := existing.Status == userPkg.UserStatusActive ||
+			existing.EmailVerifiedAt != nil ||
+			existing.Status == userPkg.UserStatusSuspended ||
+			existing.Status == userPkg.UserStatusBanned ||
+			existing.Status == userPkg.UserStatusInactive
+		if isRegistered {
 			return errors.New("email already registered")
 		}
 
@@ -315,7 +315,7 @@ func (s *authService) Login(ctx context.Context, input LoginInput) (AuthResult, 
 		return AuthResult{}, errors.New("user account has been disabled")
 	}
 
-	if ok := s.hasher.Check(input.Password, user.Password); !ok {
+	if ok := hash.Check(input.Password, user.Password); !ok {
 		return AuthResult{}, errors.New("invalid email or password")
 	}
 
@@ -403,16 +403,16 @@ func (s *authService) ChangePassword(ctx context.Context, input ChangePasswordIn
 		return fmt.Errorf("user not found: %w", err)
 	}
 
-	if ok := s.hasher.Check(input.CurrentPassword, user.Password); !ok {
+	if ok := hash.Check(input.CurrentPassword, user.Password); !ok {
 		return errors.New("incorrect current password")
 	}
 
-	hashedPassword, err := s.hasher.Make(input.NewPassword)
+	hashedPassword, err := hash.Make(input.NewPassword)
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	if err := userRepo.UpdatePassword(ctx, input.UserID, string(hashedPassword), helpers.UtcNow()); err != nil {
+	if err := userRepo.UpdatePassword(ctx, input.UserID, hashedPassword, helpers.UtcNow()); err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
 	}
 
@@ -539,12 +539,12 @@ func (s *authService) ResetPassword(ctx context.Context, input ConfirmPasswordRe
 		return errors.New("invalid reset token")
 	}
 
-	hashedPassword, err := s.hasher.Make(input.NewPassword)
+	hashedPassword, err := hash.Make(input.NewPassword)
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	if err := userRepo.UpdatePassword(ctx, user.ID, string(hashedPassword), helpers.UtcNow()); err != nil {
+	if err := userRepo.UpdatePassword(ctx, user.ID, hashedPassword, helpers.UtcNow()); err != nil {
 		return fmt.Errorf("failed to reset password: %w", err)
 	}
 

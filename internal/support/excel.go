@@ -108,7 +108,7 @@ func (e *Excel) Import(reader io.Reader, importer any) ([]any, error) {
 		return nil, err
 	}
 
-	var results []any
+	results := []any{}
 	if m, ok := importer.(ToModel); ok {
 		// 跳过第一行（假设是表头）
 		for i := 1; i < len(rows); i++ {
@@ -129,7 +129,7 @@ func (e *Excel) structToSlice(item any) []any {
 		v = v.Elem()
 	}
 
-	var res []any
+	res := []any{}
 	if v.Kind() == reflect.Struct {
 		for i := 0; i < v.NumField(); i++ {
 			res = append(res, v.Field(i).Interface())

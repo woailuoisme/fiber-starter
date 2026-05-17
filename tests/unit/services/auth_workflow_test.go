@@ -13,7 +13,6 @@ import (
 	user "fiber-starter/internal/features/user"
 	cacheContracts "fiber-starter/internal/providers/cache/contracts"
 	dbProvider "fiber-starter/internal/providers/database"
-	hash "fiber-starter/internal/providers/hash"
 	mailContracts "fiber-starter/internal/providers/mail/contracts"
 	"fiber-starter/tests/internal/testkit"
 
@@ -125,9 +124,7 @@ func newAuthServiceTestHarness(t *testing.T) (auth.AuthService, *fakeMailer, *fa
 
 	cache := newFakeCache()
 	mailer := &fakeMailer{}
-	hasher, err := hash.RegisterHash(cfg)
-	require.NoError(t, err)
-	svc := auth.NewAuthService(conn, cfg, cache, mailer, hasher)
+	svc := auth.NewAuthService(conn, cfg, cache, mailer)
 
 	return svc, mailer, cache
 }

@@ -29,10 +29,10 @@ func NormalizePagination(page, limit int) (int, int, int) {
 // SplitAndTrim splits a string by a separator and trims each element
 func SplitAndTrim(s, sep string) []string {
 	if s == "" {
-		return nil
+		return []string{}
 	}
 	parts := strings.Split(s, sep)
-	var result []string
+	result := []string{}
 	for _, part := range parts {
 		trimmed := strings.TrimSpace(part)
 		if trimmed != "" {

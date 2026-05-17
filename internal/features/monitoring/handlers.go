@@ -2,7 +2,7 @@ package monitoring
 
 import (
 	"fiber-starter/configs"
-	providers "fiber-starter/internal/providers"
+	"fiber-starter/internal/support/appctx"
 	health "fiber-starter/internal/support/health"
 
 	"github.com/gofiber/fiber/v3"
@@ -11,14 +11,14 @@ import (
 // HealthController 提供健康检查与就绪检查接口
 type HealthController struct {
 	cfg *configs.Config
-	rt  *providers.Runtime
+	app appctx.Application
 }
 
 // NewHealthController 创建健康检查控制器
 func NewHealthController(cfg *configs.Config) *HealthController {
 	return &HealthController{
 		cfg: cfg,
-		rt:  providers.App(),
+		app: appctx.App(),
 	}
 }
 
@@ -29,7 +29,7 @@ func (h *HealthController) Health(c fiber.Ctx) error {
 
 // Ready 返回依赖就绪状态
 func (h *HealthController) Ready(c fiber.Ctx) error {
-	agg := health.NewAggregator(h.rt)
+	agg := health.NewAggregator(h.app)
 	results, allHealthy := agg.CheckAll()
 
 	status := fiber.StatusOK

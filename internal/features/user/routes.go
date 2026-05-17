@@ -3,10 +3,8 @@ package user
 import (
 	"time"
 
-	"fiber-starter/configs"
 	middleware "fiber-starter/internal/common/middleware"
-	cache "fiber-starter/internal/providers/cache/contracts"
-	database "fiber-starter/internal/providers/database/contracts"
+	"fiber-starter/internal/support/appctx"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -14,10 +12,12 @@ import (
 const routeTimeout = 30 * time.Second
 
 // RegisterRoutes registers user routes under the provided router group.
-func RegisterRoutes(router fiber.Router, db database.Connection, cfg *configs.Config, cache cache.Store) {
-	userService := NewUserService(db)
+func RegisterRoutes(router fiber.Router) {
+	rt := appctx.App()
+
+	userService := NewUserService(rt.ConnectionValue())
 	userController := NewUserController(userService)
-	jwtProtected := middleware.JWTProtected(cfg, cache)
+	jwtProtected := middleware.JWTProtected(rt.AppConfig(), rt.CacheStore())
 
 	usersRouter := middleware.NewTimeoutRouter(
 		router.Group("/users", middleware.IdempotencyMiddleware()),
