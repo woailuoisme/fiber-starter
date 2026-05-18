@@ -6,12 +6,18 @@ import (
 	"testing"
 
 	"fiber-starter/internal/bootstrap"
+	middleware "fiber-starter/internal/common/middleware"
 	providers "fiber-starter/internal/providers"
+	logging "fiber-starter/internal/providers/logging"
+	helpers "fiber-starter/internal/support"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestLogger_405EmptyHost(t *testing.T) {
@@ -60,6 +66,7 @@ func TestLogger_405EmptyHost(t *testing.T) {
 	t.Logf("Response code for empty Host: %d", resp2.StatusCode)
 	body := testkit.ReadBody(t, resp2)
 	t.Logf("Response body for empty Host: %s", body)
+	assert.Equal(t, fiber.StatusOK, resp2.StatusCode)
 
 	// 3. POST / to intentionally trigger 405 Method Not Allowed
 	req3 := httptest.NewRequest("POST", "/", nil)
@@ -73,29 +80,69 @@ func TestLogger_405EmptyHost(t *testing.T) {
 	t.Logf("Response body for POST /: %s", body3)
 }
 
-func TestHostHeaderMiddleware(t *testing.T) {
-	app := fiber.New()
-
-	// Register the middleware manually
-	app.Use(func(c fiber.Ctx) error {
-		if len(c.Request().Header.Host()) == 0 {
-			c.Request().Header.SetHost("127.0.0.1")
-		}
-		return c.Next()
+func TestLogger_405DiagnosticFiltersMiddlewareRoutes(t *testing.T) {
+	core, observed := observer.New(zapcore.DebugLevel)
+	prevLogger := logging.DefaultLogger
+	logging.DefaultLogger = zap.New(core)
+	t.Cleanup(func() {
+		logging.DefaultLogger = prevLogger
 	})
 
+	app := fiber.New(fiber.Config{
+		ErrorHandler: helpers.HandleHTTPError,
+	})
+	middleware.SetupMiddleware(app, nil)
 	app.Get("/", func(c fiber.Ctx) error {
-		return c.SendString(c.Hostname())
+		return c.SendStatus(fiber.StatusOK)
 	})
 
-	req := httptest.NewRequest("GET", "/", nil)
-	req.Host = ""
-	req.Header = make(http.Header)
-
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
+	require.Equal(t, fiber.StatusMethodNotAllowed, resp.StatusCode)
 
-	body := testkit.ReadBody(t, resp)
-	assert.Contains(t, []string{"127.0.0.1", "localhost"}, body)
+	var diagnostics map[string]interface{}
+	for _, entry := range observed.All() {
+		if entry.Message == "405_diagnostic_details" {
+			diagnostics = entry.ContextMap()
+			break
+		}
+	}
+
+	require.NotNil(t, diagnostics)
+	assert.Equal(t, "GET, HEAD", diagnostics["allow"])
+	assert.Equal(t, "[GET] / | [HEAD] /", diagnostics["matched_routes"])
+}
+
+func TestLogger_SkipsSyntheticGet405FromMiddlewareTraversal(t *testing.T) {
+	core, observed := observer.New(zapcore.DebugLevel)
+	prevLogger := logging.DefaultLogger
+	logging.DefaultLogger = zap.New(core)
+	t.Cleanup(func() {
+		logging.DefaultLogger = prevLogger
+	})
+
+	app := fiber.New(fiber.Config{
+		ErrorHandler: helpers.HandleHTTPError,
+	})
+	middleware.SetupLogger(app)
+	app.Use(func(c fiber.Ctx) error {
+		c.Set(fiber.HeaderAllow, fiber.MethodHead)
+		return fiber.ErrMethodNotAllowed
+	})
+	app.Get("/", func(c fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, fiber.StatusMethodNotAllowed, resp.StatusCode)
+
+	for _, entry := range observed.All() {
+		assert.NotEqual(t, "405_diagnostic_details", entry.Message)
+		assert.NotEqual(t, "client_error", entry.Message)
+	}
 }

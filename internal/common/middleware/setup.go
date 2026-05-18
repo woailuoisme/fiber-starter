@@ -14,9 +14,7 @@ func SetupMiddleware(app *fiber.App, cfg *configs.Config) {
 	if cfg == nil {
 		cfg = &configs.Config{}
 	}
-	// 0. 基础修正：Host 头补全（防止空 Host 导致 405 路由匹配失败，必须最外层）
-	SetupHostHeader(app)
-	// 1. 访问日志：Logger（次外层，基于最终响应状态码记录，每个请求仅记录一次）
+	// 1. 访问日志：Logger（最外层，基于最终响应状态码记录，每个请求仅记录一次）
 	SetupLogger(app)
 	// 2. 快速短路：Favicon（对于图标请求，没必要跑后面的复杂逻辑）
 	SetupFavicon(app)
