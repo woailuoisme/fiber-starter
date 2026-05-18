@@ -122,14 +122,16 @@
 
 项目严格遵守标准 HTTP 状态码语义：
 
-- `200 OK`：请求成功，且有返回数据。
-- `201 Created`：资源创建成功。
-- `204 No Content`：请求成功执行，无响应内容。
-- `400 Bad Request`：客户端请求格式错误或语义错误。
-- `401 Unauthorized`：未提供身份凭证或凭证已过期。
-- `403 Forbidden`：权限不足，拒绝访问该资源。
-- `404 Not Found`：请求的资源不存在。
-- `405 Method Not Allowed`：请求的 HTTP 方法不被该路由支持。
-- `422 Unprocessable Entity`：请求数据格式正确，但业务或验证规则校验失败。
-- `429 Too Many Requests`：触发接口速率限制（Rate Limiting）。
-- `500 Internal Server Error`：服务端内部异常，请联系系统管理员。
+| 状态码 | 含义 | 说明 |
+| :--- | :--- | :--- |
+| `200 OK` | 请求成功 | 请求成功执行，且有返回数据。 |
+| `201 Created` | 创建成功 | 资源创建成功。 |
+| `204 No Content` | 无内容 | 请求成功执行，无响应内容。 |
+| `400 Bad Request` | 请求错误 | 客户端请求格式错误或语义错误。 |
+| `401 Unauthorized` | 未授权 | 未提供身份凭证或凭证已过期。 |
+| `403 Forbidden` | 拒绝访问 | 权限不足，拒绝访问该资源。 |
+| `404 Not Found` | 未找到 | 请求的资源不存在。 |
+| `405 Method Not Allowed` | 方法不允许 | 请求的 HTTP 方法不被该路由支持。 |
+| `422 Unprocessable Entity` | 实体无法处理 | 请求数据格式正确，但业务或验证规则校验失败。 |
+| `429 Too Many Requests` | 请求过于频繁 | 触发接口速率限制（Rate Limiting）。 |
+| `500 Internal Server Error` | 服务器内部错误 | 服务端内部异常，请联系系统管理员。 |

@@ -84,42 +84,17 @@ const redocHTMLTemplate = `<!doctype html>
   <redoc id="redoc-container"></redoc>
   <script src="https://cdn.jsdelivr.net/npm/redoc@2.5.2/bundles/redoc.standalone.js"></script>
   <script>
-    fetch("{{.SpecURL}}")
-      .then(res => res.json())
-      .then(doc => {
-        const baseUrl = window.location.origin;
-        const paths = doc.paths || {};
-        for (const path in paths) {
-          for (const method in paths[path]) {
-            if (!['get', 'post', 'put', 'delete', 'patch'].includes(method.toLowerCase())) continue;
-            const op = paths[path][method];
-            const hasAuth = op.security || doc.security;
-            const headers = hasAuth ? '  -H "Authorization: Bearer <TOKEN>"\n' : '';
-            const body = ['post', 'put', 'patch'].includes(method.toLowerCase()) ? '  -d \'{"key": "value"}\'\n' : '';
-            
-            const curlSource = 'curl -X ' + method.toUpperCase() + ' "' + baseUrl + path + '" \\\n' + headers + body;
-            const nodeSource = "fetch('" + baseUrl + path + "', {\n  method: '" + method.toUpperCase() + "'\n})";
-            
-            op['x-codeSamples'] = [
-              { lang: 'curl', source: curlSource.trim().replace(/ \\\n$/, '') },
-              { lang: 'Node.js', source: nodeSource }
-            ];
-          }
-        }
-
-        Redoc.init(doc, {
-          sortRequiredPropsFirst: true,
-          expandResponses: "200,201",
-          jsonSamplesExpandLevel: 3,
-          pathInMiddlePanel: true,
-          nativeScrollbars: true,
-          hideHostname: true,
-          lazyRendering: true,
-          hideDownloadButtons: true,
-          sanitize: true
-        }, document.getElementById('redoc-container'));
-      })
-      .catch(err => console.error("Failed to load spec:", err));
+    Redoc.init("{{.SpecURL}}", {
+      sortRequiredPropsFirst: true,
+      expandResponses: "200,201",
+      jsonSamplesExpandLevel: 3,
+      pathInMiddlePanel: true,
+      nativeScrollbars: true,
+      hideHostname: true,
+      lazyRendering: true,
+      hideDownloadButtons: true,
+      sanitize: true
+    }, document.getElementById('redoc-container'));
   </script>
 </body>
 </html>`
