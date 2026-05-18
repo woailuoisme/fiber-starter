@@ -6,7 +6,7 @@
 //	go run . migrate run        # Run database migrations
 //	go run . routes             # Show all routes
 //	go run . --help             # Show available commands
-//	@title						Fiber Template API
+//	@title						Restfull API docs
 //	@version					1.0.0
 //	@description.markdown		api.md
 //	@contact.name				Developer Support
