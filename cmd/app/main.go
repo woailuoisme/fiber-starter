@@ -13,7 +13,6 @@
 //	@contact.email				dev@example.com
 //	@license.name				MIT
 //	@license.url				https://opensource.org/licenses/MIT
-//	@host						localhost:8080
 //	@BasePath					/
 //	@schemes					http https
 //	@securityDefinitions.apikey	Bearer
