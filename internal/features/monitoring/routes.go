@@ -93,7 +93,9 @@ const redocHTMLTemplate = `<!doctype html>
       hideHostname: true,
       lazyRendering: true,
       hideDownloadButtons: true,
-      sanitize: true
+      sanitize: true,
+      disableSearch: false,
+      minCharacterLengthToInitSearch: 2
     }, document.getElementById('redoc-container'));
   </script>
 </body>
