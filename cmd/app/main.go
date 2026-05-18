@@ -6,21 +6,20 @@
 //	go run . migrate run        # Run database migrations
 //	go run . routes             # Show all routes
 //	go run . --help             # Show available commands
-//	@title						Fiber Starter API
-//	@version					1.0
+//	@title						Fiber Template API
+//	@version					1.0.0
 //	@description.markdown		api.md
-//	@termsOfService				http://swagger.io/terms/
-//	@contact.name				API Support
-//	@contact.email				support@example.com
-//	@license.name				Apache 2.0
-//	@license.url				http://www.apache.org/licenses/LICENSE-2.0.html
+//	@contact.name				Developer Support
+//	@contact.email				dev@example.com
+//	@license.name				MIT
+//	@license.url				https://opensource.org/licenses/MIT
 //	@host						localhost:8080
 //	@BasePath					/
 //	@schemes					http https
 //	@securityDefinitions.apikey	Bearer
 //	@in							header
 //	@name						Authorization
-//	@description				Type "Bearer " followed by a space and your JWT token. Example: "Bearer <token>"
+//	@description				JWT 访问令牌。格式: "Bearer <Your_JWT_Token>"
 
 // @tag.name			认证中心
 // @tag.description	用户登录、注册、刷新令牌、密码找回等账号安全相关接口
