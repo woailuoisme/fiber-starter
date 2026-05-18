@@ -11,10 +11,6 @@
       "name": "Developer Support",
       "email": "dev@example.com"
     },
-    "license": {
-      "name": "MIT",
-      "url": "https://opensource.org/licenses/MIT"
-    },
     "version": "1.0.0"
   },
   "basePath": "/",

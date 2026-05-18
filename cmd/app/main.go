@@ -11,8 +11,6 @@
 //	@description.markdown		api.md
 //	@contact.name				Developer Support
 //	@contact.email				dev@example.com
-//	@license.name				MIT
-//	@license.url				https://opensource.org/licenses/MIT
 //	@BasePath					/
 //	@schemes					http https
 //	@securityDefinitions.apikey	Bearer
