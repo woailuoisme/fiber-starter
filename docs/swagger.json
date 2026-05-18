@@ -399,6 +399,40 @@
         }
       }
     },
+    "/api/v1/auth/reset-password/confirm": {
+      "post": {
+        "description": "使用重置令牌设置新密码。",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "认证中心"
+        ],
+        "summary": "确认重置密码",
+        "parameters": [
+          {
+            "description": "确认重置密码参数",
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ConfirmResetPasswordRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/reset-password/verify": {
       "post": {
         "description": "使用邮箱验证码换取一个短期重置令牌。",
@@ -445,40 +479,6 @@
                   }
                 }
               ]
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/reset-password/confirm": {
-      "post": {
-        "description": "使用重置令牌设置新密码。",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "认证中心"
-        ],
-        "summary": "确认重置密码",
-        "parameters": [
-          {
-            "description": "确认重置密码参数",
-            "name": "request",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/ConfirmResetPasswordRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "成功",
-            "schema": {
-              "$ref": "#/definitions/APIResponse"
             }
           }
         }

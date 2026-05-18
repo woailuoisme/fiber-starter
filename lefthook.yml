@@ -1,24 +1,24 @@
+# Lefthook Git 钩子配置
+# 详细指南请参考：https://github.com/evilmartians/lefthook
+
 pre-commit:
-  parallel: false
+  parallel: false  # 串行执行，确保格式化与静态修复的严谨执行顺序
   jobs:
-    # 先格式化 Go 代码，保证后续注释格式化基于稳定源码。
+    # 1. 格式化 Go 代码，规范格式缩进与语法表现
     - name: fmt
       glob: "**/*.go"
       stage_fixed: true
       run: make fmt-gofumpt
-    # 再格式化 Swagger 注释，避免文档生成读取未整理的注释。
+
+    # 2. 格式化 Swagger 注释，规整 API 文档元数据
     - name: swag-fmt
       glob: "**/*.go"
       stage_fixed: true
       run: make fmt-swag
-    # 最后生成 OpenAPI 文档，确保 docs 与最终源码注释一致。
-#    - name: docs
-#      glob: "**/*.go"
-#      stage_fixed: true
-#      run: make docs
 
-pre-push:
-  jobs:
-    - name: lint
+    # 3. 运行静态代码分析并自动修复代码风格与质量缺陷
+    - name: lint-fix
       glob: "**/*.go"
+      stage_fixed: true
       run: make lint-fix
+

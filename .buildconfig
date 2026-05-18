@@ -1,6 +1,12 @@
+# 编译构建输出目录
 BUILD_DIR=build
+# 单测覆盖率报告输出目录
 COVERAGE_DIR=coverage
+# HTTP 服务端编译二进制文件名
 SERVER_BINARY_NAME=fiber-starter
+# CLI 命令行服务端编译二进制文件名
 CLI_BINARY_NAME=fiber-starter-cli
+# 系统日志存储目录
 APP_LOG_DIR=storage/logs
+# 部署包与打包产物目录
 DEPLOY_DIR=deploy

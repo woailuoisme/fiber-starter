@@ -20,7 +20,6 @@ func SetupApplicationRoutes(app *fiber.App) error {
 
 	// 1. Setup middleware
 	middleware.SetupMiddleware(app, rt.Config)
-	middleware.SetupTimeoutRedirect(app)
 	middleware.SetupAuthMiddleware(app)
 
 	// 2. Setup public/system routes

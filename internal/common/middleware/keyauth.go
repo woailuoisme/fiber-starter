@@ -24,9 +24,6 @@ func APIKeyAuth(apiKey string) fiber.Handler {
 			extractors.FromAuthHeader("Bearer"),
 		),
 		Validator: func(_ fiber.Ctx, key string) (bool, error) {
-			if secret == "" {
-				return false, keyauth.ErrMissingOrMalformedAPIKey
-			}
 			if subtle.ConstantTimeCompare([]byte(key), []byte(secret)) == 1 {
 				return true, nil
 			}

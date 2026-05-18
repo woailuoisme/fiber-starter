@@ -27,7 +27,6 @@ func SetupLoadShed(app *fiber.App, cfg *configs.Config) {
 			Getter:         &loadshed.DefaultCPUPercentGetter{},
 		},
 		OnShed: func(c fiber.Ctx) error {
-			// 返回 503 Service Unavailable 异常
 			return exceptions.NewServiceUnavailableException("Server is under heavy load, please try again later")
 		},
 	}))

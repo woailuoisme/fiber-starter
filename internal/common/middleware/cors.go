@@ -14,19 +14,23 @@ import (
 // 场景：前后端分离、浏览器直连 API、WebView 调用。
 // 使用方式：全局注册，通过配置项调整白名单。
 func SetupCORS(app *fiber.App, cfg *configs.Config) {
-	if cfg == nil {
-		cfg = &configs.Config{}
-	}
 	app.Use(cors.New(corsConfig(cfg)))
 }
 
 func corsConfig(cfg *configs.Config) cors.Config {
-	allowedOrigins := splitList(cfg.Security.CORS.AllowedOrigins, []string{
+	var origins, methods, headers string
+	if cfg != nil {
+		origins = cfg.Security.CORS.AllowedOrigins
+		methods = cfg.Security.CORS.AllowedMethods
+		headers = cfg.Security.CORS.AllowedHeaders
+	}
+
+	allowedOrigins := splitList(origins, []string{
 		"http://localhost:3000",
 		"http://127.0.0.1:3000",
 		"https://localhost:3000",
 	})
-	allowedMethods := splitList(cfg.Security.CORS.AllowedMethods, []string{
+	allowedMethods := splitList(methods, []string{
 		fiber.MethodGet,
 		fiber.MethodPost,
 		fiber.MethodHead,
@@ -35,7 +39,7 @@ func corsConfig(cfg *configs.Config) cors.Config {
 		fiber.MethodPatch,
 		fiber.MethodOptions,
 	})
-	allowedHeaders := splitList(cfg.Security.CORS.AllowedHeaders, []string{
+	allowedHeaders := splitList(headers, []string{
 		fiber.HeaderOrigin,
 		fiber.HeaderContentType,
 		fiber.HeaderAccept,
@@ -61,11 +65,13 @@ func corsConfig(cfg *configs.Config) cors.Config {
 }
 
 func splitList(raw string, defaults []string) []string {
+	if raw == "" {
+		return defaults
+	}
 	parts := strings.Split(raw, ",")
 	values := make([]string, 0, len(parts))
 	for _, part := range parts {
-		trimmed := strings.TrimSpace(part)
-		if trimmed != "" {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
 			values = append(values, trimmed)
 		}
 	}

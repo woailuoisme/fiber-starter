@@ -9,12 +9,14 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/timeout"
 )
 
+const defaultTimeout = 30 * time.Second
+
 // TimeoutHandler 返回带超时保护的路由 handler。
 // 作用：限制慢请求占用资源，避免单个请求拖垮服务。
 // 场景：数据库访问、外部 API 调用、长耗时计算等后端接口。
 // 使用方式：在最终业务 handler 外层包裹，不要挂到 app.Use 或中间件链中。
 func TimeoutHandler(handler fiber.Handler) fiber.Handler {
-	return TimeoutHandlerWithDuration(handler, 30*time.Second)
+	return TimeoutHandlerWithDuration(handler, defaultTimeout)
 }
 
 // TimeoutHandlerWithDuration 返回带自定义超时的路由 handler。
@@ -44,7 +46,7 @@ type TimeoutRouter struct {
 // NewTimeoutRouter 创建统一超时的路由包装器。
 func NewTimeoutRouter(router fiber.Router, duration time.Duration) *TimeoutRouter {
 	if duration <= 0 {
-		duration = 30 * time.Second
+		duration = defaultTimeout
 	}
 
 	return &TimeoutRouter{
@@ -60,15 +62,18 @@ func (r *TimeoutRouter) register(register routeRegister, path string, handlers .
 		panic("timeout router requires at least one handler")
 	}
 
-	args := make([]any, 0, len(handlers))
-	for _, handler := range handlers[:len(handlers)-1] {
-		args = append(args, handler)
-	}
-	args = append(args, TimeoutHandlerWithDuration(handlers[len(handlers)-1], r.duration))
+	lastIdx := len(handlers) - 1
+	lastHandler := TimeoutHandlerWithDuration(handlers[lastIdx], r.duration)
 
-	if len(args) == 1 {
-		return register(path, args[0])
+	if len(handlers) == 1 {
+		return register(path, lastHandler)
 	}
+
+	args := make([]any, len(handlers))
+	for i := 0; i < lastIdx; i++ {
+		args[i] = handlers[i]
+	}
+	args[lastIdx] = lastHandler
 
 	return register(path, args[0], args[1:]...)
 }
@@ -103,7 +108,7 @@ func (r *TimeoutRouter) Head(path string, handlers ...fiber.Handler) fiber.Route
 	return r.register(r.router.Head, path, handlers...)
 }
 
-// Options 注册 OPTIONS 路由，最后一个 handler 自动获得超时保护。
+// Options 注册 OPTIONS 路由，最后一个 handler 自动获得超时保护.
 func (r *TimeoutRouter) Options(path string, handlers ...fiber.Handler) fiber.Router {
 	return r.register(r.router.Options, path, handlers...)
 }

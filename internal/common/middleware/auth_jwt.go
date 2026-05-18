@@ -27,12 +27,23 @@ type JWTClaims struct {
 // BearerSchema Bearer 认证前缀
 const BearerSchema = "Bearer"
 
+// JWTOwner interface to avoid reflection for types that implement it
+type JWTOwner interface {
+	GetID() int64
+	GetEmail() string
+	GetName() string
+}
+
 // AuthUser defines the auth user schema in this middleware context
 type AuthUser struct {
 	ID    int64
 	Email string
 	Name  string
 }
+
+func (u *AuthUser) GetID() int64     { return u.ID }
+func (u *AuthUser) GetEmail() string { return u.Email }
+func (u *AuthUser) GetName() string  { return u.Name }
 
 func setUserContext(c fiber.Ctx, claims *JWTClaims) {
 	user := &AuthUser{
@@ -121,19 +132,19 @@ func getInt64Field(obj any, name string) int64 {
 	if obj == nil {
 		return 0
 	}
+	if owner, ok := obj.(JWTOwner); ok {
+		if name == "ID" {
+			return owner.GetID()
+		}
+	}
 	val := reflect.ValueOf(obj)
 	if val.Kind() == reflect.Pointer {
 		val = val.Elem()
 	}
-	if val.Kind() != reflect.Struct {
-		return 0
-	}
-	f := val.FieldByName(name)
-	if !f.IsValid() {
-		return 0
-	}
-	if f.Kind() == reflect.Int64 {
-		return f.Int()
+	if val.Kind() == reflect.Struct {
+		if f := val.FieldByName(name); f.IsValid() && f.Kind() == reflect.Int64 {
+			return f.Int()
+		}
 	}
 	return 0
 }
@@ -142,19 +153,22 @@ func getStringField(obj any, name string) string {
 	if obj == nil {
 		return ""
 	}
+	if owner, ok := obj.(JWTOwner); ok {
+		switch name {
+		case "Email":
+			return owner.GetEmail()
+		case "Name":
+			return owner.GetName()
+		}
+	}
 	val := reflect.ValueOf(obj)
 	if val.Kind() == reflect.Pointer {
 		val = val.Elem()
 	}
-	if val.Kind() != reflect.Struct {
-		return ""
-	}
-	f := val.FieldByName(name)
-	if !f.IsValid() {
-		return ""
-	}
-	if f.Kind() == reflect.String {
-		return f.String()
+	if val.Kind() == reflect.Struct {
+		if f := val.FieldByName(name); f.IsValid() && f.Kind() == reflect.String {
+			return f.String()
+		}
 	}
 	return ""
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDocsRoutes_ExposeScalarAndOpenAPISpec(t *testing.T) {
+func TestDocsRoutes_ExposeRedocAndOpenAPISpec(t *testing.T) {
 	t.Setenv("I18N_LANGUAGE_DIR", testkit.RepoRoot(t)+"/lang")
 
 	runtime, err := providers.Build()
@@ -56,7 +56,8 @@ func TestDocsRoutes_ExposeScalarAndOpenAPISpec(t *testing.T) {
 	defer docsResp.Body.Close()
 	require.Equal(t, fiber.StatusOK, docsResp.StatusCode)
 	docsHTML := testkit.ReadBody(t, docsResp)
-	assert.Contains(t, docsHTML, "@scalar/api-reference")
+	assert.Contains(t, docsHTML, "<redoc")
+	assert.Contains(t, docsHTML, "redoc.standalone.js")
 	assert.Contains(t, docsHTML, "/openapi.json")
 
 	specResp, err := app.Test(httptest.NewRequest("GET", "/openapi.json", nil))

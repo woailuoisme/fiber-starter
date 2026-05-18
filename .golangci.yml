@@ -1,19 +1,20 @@
 # yaml-language-server: $schema=https://golangci-lint.run/jsonschema/golangci.jsonschema.json
-# https://golangci-lint.run/
-# Configuration for golangci-lint v2.
 
 version: "2"
 
+# 运行配置
 run:
-  timeout: 5m
-  tests: true
-  allow-parallel-runners: true
+  timeout: 5m                  # 检查超时时间
+  tests: true                  # 是否检查测试文件
+  allow-parallel-runners: true  # 是否允许并行运行检查
 
+# 输出排序配置
 output:
   sort-order:
     - file
     - linter
 
+# 代码格式化与组织配置
 formatters:
   enable:
     - gci
@@ -36,31 +37,35 @@ formatters:
     generated: strict
     warn-unused: true
 
+# 启用的静态代码分析检查器
 linters:
   default: none
   enable:
-    - govet
-    - staticcheck
-    - errcheck
-    - ineffassign
-    - unused
-    - testifylint
-    - gocritic
-    - gosec
+    - govet        # Go 语言原生静态检查
+    - staticcheck  # 全面且严谨的代码质量检查
+    - errcheck     # 错误处理检查（确保 error 都被妥善处理）
+    - ineffassign  # 无效赋值检查
+    - unused       # 未使用变量、函数及类型检查
+    - testifylint  # testify 测试断言规范检查
+    - gocritic     # 代码风格与重构合理建议
+    - gosec        # 核心安全审计工具
 
   settings:
     gosec:
       excludes:
-        - G104 # unchecked errors are handled by errcheck
-        - G101 # ignore hardcoded credentials false positives for env mappings
+        - G104 # 忽略未检查错误警告（已由 errcheck 覆盖）
+        - G101 # 忽略由于 env mapping 产生的硬编码凭证误报
 
   exclusions:
     rules:
+      # 测试文件内宽容处理部分安全与错误校验
       - path: _test\.go
         linters:
           - errcheck
           - gosec
 
+# 问题聚合配置
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
+

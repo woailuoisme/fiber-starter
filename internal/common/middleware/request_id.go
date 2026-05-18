@@ -12,9 +12,7 @@ const requestIDHeader = fiber.HeaderXRequestID
 // 场景：排查线上问题、串联网关/下游日志、对接 APM。
 // 使用方式：全局注册即可，客户端可选传入 X-Request-ID 参与链路。
 func SetupRequestID(app *fiber.App) {
-	app.Use(requestid.New(requestid.Config{
-		Header: requestIDHeader,
-	}))
+	app.Use(requestid.New())
 }
 
 func getRequestID(c fiber.Ctx) string {
@@ -22,19 +20,5 @@ func getRequestID(c fiber.Ctx) string {
 		return v
 	}
 
-	if v := c.Get(requestIDHeader); v != "" {
-		return v
-	}
-
-	if v := c.Get("X-Request-ID"); v != "" {
-		return v
-	}
-
-	if v := c.Locals(requestIDHeader); v != nil {
-		if s, ok := v.(string); ok {
-			return s
-		}
-	}
-
-	return ""
+	return c.Get(requestIDHeader)
 }

@@ -50,6 +50,21 @@ func (u *User) IsActive() bool {
 	return u.Status == UserStatusActive
 }
 
+// GetID 获取用户ID，用于满足 JWT 令牌生成接口而避免反射
+func (u *User) GetID() int64 {
+	return u.ID
+}
+
+// GetEmail 获取用户邮箱，用于满足 JWT 令牌生成接口而避免反射
+func (u *User) GetEmail() string {
+	return u.Email
+}
+
+// GetName 获取用户姓名，用于满足 JWT 令牌生成接口而避免反射
+func (u *User) GetName() string {
+	return u.Name
+}
+
 // ToSafeUser 转换为安全的用户信息（不包含敏感信息）
 func (u *User) ToSafeUser() SafeUser {
 	return SafeUser{

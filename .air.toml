@@ -3,66 +3,63 @@ testdata_dir = "testdata"
 tmp_dir = "tmp"
 
 [build]
-  # 要监视的命令
+  # 编译命令与二进制输出路径
   cmd = "go build -o ./tmp/main ./cmd/app"
-  # 构建的二进制文件路径
   bin = "tmp/main"
-  # 只监控会影响服务重建的文件类型
+  
+  # 监控的文件类型与忽略的文件后缀
   include_ext = ["go"]
-  # 要忽略的文件扩展名
   exclude_ext = ["_test.go"]
-  # 白名单目录：只监控服务启动和编译真正依赖的源码目录
-  include_dir = ["app", "bootstrap", "config", "routes", "database", "lang" ]
-  # 要忽略的目录
-  exclude_dir = ["assets", "tmp", "vendor", "testdata", "docs", "build", "coverage", "deploy", "storage/logs"]
-  # 要忽略的文件
+  
+  # 监控的源码目录与忽略的非核心目录
+  include_dir = ["internal", "configs", "routes", "database", "lang","docs"]
+  exclude_dir = ["assets", "tmp", "vendor", "testdata", "build", "coverage", "deploy", "storage/logs"]
   exclude_file = []
-  # 仅补充监控 .env 相关文件，避免改环境变量后不重启
+  
+  # 额外监控的环境变量配置文件
   include_file = [".env", ".env.local", ".env.development", ".env.development.local", ".env.production", ".env.production.local", ".env.test", ".env.test.local"]
-  # 延迟时间（毫秒）
+  
+  # 编译防抖延迟（毫秒）与运行配置
   delay = 1000
-  # 停止旧进程后启动新进程前的延迟
   stop_on_root = false
-  # 发送中断信号前先发送 SIGTERM
   send_interrupt = false
-  # 发送中断信号时的延迟
   kill_delay = "0s"
-  # 设置二进制文件的可执行权限
   bin_args = []
-  # 设置环境变量
   env = {}
-  # 运行二进制文件时传递的参数
+  
+  # 二进制启动参数 (运行 serve 子命令)
   args_bin = ["serve"]
-  # 在运行二进制文件前执行的命令
+  
+  # 编译和生命周期钩子
   run_before = []
-  # 在运行二进制文件后执行的命令
   run_after = []
-  # 自定义日志格式
   log = "build-errors.log"
-  # 重新构建的轮询间隔
+  
+  # 轮询模式与热重启延迟
   poll = false
   poll_interval = 0
-  # 重新构建的文件系统监视器
   rerun = false
   rerun_delay = 500
 
 [color]
-  # 自定义每个部分显示的颜色
+  # 控制台各模块日志配色
   main = "magenta"
   watcher = "cyan"
   build = "yellow"
   runner = "green"
 
 [log]
-  # 显示日志时间
+  # 日志时间与显示范围
   time = true
-  # 只显示主要日志（不显示 watcher 日志）
   main_only = false
 
 [misc]
-  # 删除每次构建的中间文件
+  # 退出时是否清理二进制缓存
   clean_on_exit = false
 
 [screen]
+  # 重启时清屏与保留滚动历史
   clear_on_rebuild = false
   keep_scroll = true
+
+
