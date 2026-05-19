@@ -1,3 +1,5 @@
+# 作用：对 Go 代码执行静态检查，确保提交符合 lint 规范。
+# 使用：在 push 和 pull request 到 main 分支时自动运行，用于提交前和合并前校验。
 name: Lint
 
 on:

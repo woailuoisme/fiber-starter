@@ -1,3 +1,5 @@
+# 作用：运行依赖漏洞、代码安全扫描和 CodeQL 分析。
+# 使用：在 push、pull request 到 main 分支时自动运行，并按计划周期执行。
 name: Security
 
 on:

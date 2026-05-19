@@ -1,3 +1,5 @@
+# 作用：构建并推送 Docker 镜像到 GitHub Container Registry。
+# 使用：需要手动发布、验证镜像构建，或在恢复注释后的 push/tag 场景下自动触发。
 name: Docker Build and Push
 
 on:

@@ -1,3 +1,5 @@
+# 作用：运行项目测试、覆盖率采集和依赖一致性校验。
+# 使用：在 push 和 pull request 到 main 分支时自动运行，作为主测试门禁。
 name: Test
 
 on:
