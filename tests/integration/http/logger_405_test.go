@@ -113,6 +113,7 @@ func TestLogger_405DiagnosticFiltersMiddlewareRoutes(t *testing.T) {
 	require.NotNil(t, diagnostics)
 	assert.Equal(t, "GET, HEAD", diagnostics["allow"])
 	assert.Equal(t, "[GET] / | [HEAD] /", diagnostics["matched_routes"])
+	assert.NotContains(t, diagnostics, "Authorization")
 }
 
 func TestLogger_SkipsSyntheticGet405FromMiddlewareTraversal(t *testing.T) {

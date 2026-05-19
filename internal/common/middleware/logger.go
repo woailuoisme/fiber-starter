@@ -7,6 +7,7 @@ import (
 	"time"
 
 	logging "fiber-starter/internal/providers/logging"
+	helpers "fiber-starter/internal/support"
 
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"
@@ -35,7 +36,7 @@ func SetupLogger(app *fiber.App) {
 
 		reqID := getRequestID(c)
 		method := c.Method()
-		url := c.OriginalURL()
+		url := helpers.RedactSensitive(c.OriginalURL())
 
 		fields := []zap.Field{
 			zap.String("request_id", reqID),
@@ -80,7 +81,7 @@ func requestHeaders(c fiber.Ctx) string {
 	headers := make([]string, 0, len(c.GetReqHeaders()))
 	for key, values := range c.GetReqHeaders() {
 		for _, val := range values {
-			headers = append(headers, fmt.Sprintf("%s: %s", key, val))
+			headers = append(headers, fmt.Sprintf("%s: %s", key, helpers.RedactHeaderValue(key, val)))
 		}
 	}
 

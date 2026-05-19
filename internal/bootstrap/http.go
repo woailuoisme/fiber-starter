@@ -10,18 +10,27 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
+const (
+	defaultBodyLimit      = 4 * 1024 * 1024
+	defaultConcurrency    = 256 * 1024
+	defaultReadBufferSize = 16 * 1024
+	defaultReadTimeout    = 30
+	defaultWriteTimeout   = 30
+	defaultIdleTimeout    = 120
+)
+
 // NewHTTPApp creates and configures a new Fiber application instance
 func NewHTTPApp(cfg *configs.Config) *fiber.App {
 	fiberCfg := cfg.App.Fiber
 
 	return fiber.New(fiber.Config{
 		ServerHeader:      fiberCfg.ServerHeader,
-		BodyLimit:         defaultInt(fiberCfg.BodyLimit, 4*1024*1024),
-		Concurrency:       defaultInt(fiberCfg.Concurrency, 256*1024),
-		ReadBufferSize:    defaultInt(fiberCfg.ReadBufferSize, 16*1024),
-		ReadTimeout:       time.Duration(defaultInt(fiberCfg.ReadTimeout, 30)) * time.Second,
-		WriteTimeout:      time.Duration(defaultInt(fiberCfg.WriteTimeout, 30)) * time.Second,
-		IdleTimeout:       time.Duration(defaultInt(fiberCfg.IdleTimeout, 120)) * time.Second,
+		BodyLimit:         defaultInt(fiberCfg.BodyLimit, defaultBodyLimit),
+		Concurrency:       defaultInt(fiberCfg.Concurrency, defaultConcurrency),
+		ReadBufferSize:    defaultInt(fiberCfg.ReadBufferSize, defaultReadBufferSize),
+		ReadTimeout:       time.Duration(defaultInt(fiberCfg.ReadTimeout, defaultReadTimeout)) * time.Second,
+		WriteTimeout:      time.Duration(defaultInt(fiberCfg.WriteTimeout, defaultWriteTimeout)) * time.Second,
+		IdleTimeout:       time.Duration(defaultInt(fiberCfg.IdleTimeout, defaultIdleTimeout)) * time.Second,
 		TrustProxy:        fiberCfg.TrustProxy,
 		ProxyHeader:       defaultStr(fiberCfg.ProxyHeader, fiber.HeaderXForwardedFor),
 		StreamRequestBody: fiberCfg.StreamRequestBody,

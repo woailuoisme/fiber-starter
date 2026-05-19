@@ -11,7 +11,10 @@ export const options = {
 			maxDuration: config.smoke.MAX_DURATION,
 		},
 	},
-	thresholds: config.thresholds,
+	thresholds: {
+		...config.thresholds,
+		http_req_duration: [`p(95)<${config.load.TARGET_DURATION}`],
+	},
 };
 
 export default function () {

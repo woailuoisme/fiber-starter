@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http/httptest"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	providers "fiber-starter/internal/providers"
 	cache "fiber-starter/internal/providers/cache"
 	database "fiber-starter/internal/providers/database"
+	"fiber-starter/internal/support/health"
 	"fiber-starter/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
@@ -122,4 +124,99 @@ func TestHealthEndpoints_HealthIsLightweightReadyProbesDependencies(t *testing.T
 	readyResp, err := app.Test(httptest.NewRequest("GET", "/ready", nil))
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusServiceUnavailable, readyResp.StatusCode)
+}
+
+func TestHealthEndpoints_ReadyReportsDegradedForNonCriticalDependency(t *testing.T) {
+	cfg := testkit.NewSQLiteConfig(t)
+	cfg.Cache.Enabled = true
+	cfg.Mail.Enabled = false
+	cfg.Queue.Enabled = false
+	cfg.Search.Enabled = false
+	cfg.Storage.Enabled = false
+	cfg.Services.Dependencies = map[string]configs.ServiceDependencyConfig{
+		"database": {Critical: true},
+		"cache":    {Critical: false},
+	}
+
+	rt := &providers.Runtime{
+		Config:     cfg,
+		Connection: &testkit.StubConnection{},
+		Degraded: map[string]string{
+			"cache": "redis://default:secret@localhost:6379 unavailable",
+		},
+	}
+	providers.SetInstance(rt)
+	t.Cleanup(func() {
+		_ = rt.Close()
+	})
+
+	hc := monitoring.NewHealthController(cfg)
+
+	app := fiber.New()
+	app.Get("/health", hc.Health)
+	app.Get("/ready", hc.Ready)
+
+	healthResp, err := app.Test(httptest.NewRequest("GET", "/health", nil))
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, healthResp.StatusCode)
+
+	readyResp, err := app.Test(httptest.NewRequest("GET", "/ready", nil))
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, readyResp.StatusCode)
+
+	var payload struct {
+		Status   string `json:"status"`
+		Services map[string]struct {
+			Status   string `json:"status"`
+			Error    string `json:"error"`
+			Critical bool   `json:"critical"`
+		} `json:"services"`
+	}
+	require.NoError(t, json.NewDecoder(readyResp.Body).Decode(&payload))
+	assert.Equal(t, health.OverallDegraded, payload.Status)
+	assert.Equal(t, health.StatusDegraded, payload.Services["cache"].Status)
+	assert.False(t, payload.Services["cache"].Critical)
+	assert.NotContains(t, payload.Services["cache"].Error, "secret@")
+}
+
+func TestHealthEndpoints_ReadyFailsForCriticalDependency(t *testing.T) {
+	cfg := testkit.NewSQLiteConfig(t)
+	cfg.Cache.Enabled = false
+	cfg.Mail.Enabled = false
+	cfg.Queue.Enabled = false
+	cfg.Search.Enabled = false
+	cfg.Storage.Enabled = false
+	cfg.Services.Dependencies = map[string]configs.ServiceDependencyConfig{
+		"database": {Critical: true},
+	}
+
+	rt := &providers.Runtime{
+		Config:     cfg,
+		Connection: &testkit.StubConnection{HealthErr: errors.New("password=topsecret unavailable")},
+	}
+	providers.SetInstance(rt)
+	t.Cleanup(func() {
+		_ = rt.Close()
+	})
+
+	hc := monitoring.NewHealthController(cfg)
+
+	app := fiber.New()
+	app.Get("/ready", hc.Ready)
+
+	readyResp, err := app.Test(httptest.NewRequest("GET", "/ready", nil))
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusServiceUnavailable, readyResp.StatusCode)
+
+	var payload struct {
+		Status   string `json:"status"`
+		Services map[string]struct {
+			Status string `json:"status"`
+			Error  string `json:"error"`
+		} `json:"services"`
+	}
+	require.NoError(t, json.NewDecoder(readyResp.Body).Decode(&payload))
+	assert.Equal(t, health.OverallFail, payload.Status)
+	assert.Equal(t, health.StatusFail, payload.Services["database"].Status)
+	assert.NotContains(t, payload.Services["database"].Error, "topsecret")
 }

@@ -59,6 +59,8 @@ type (
 	BcryptHashConfig           = internal.BcryptHashConfig
 	Argon2HashConfig           = internal.Argon2HashConfig
 	OTELConfig                 = internal.OTELConfig
+	ServicesConfig             = internal.ServicesConfig
+	ServiceDependencyConfig    = internal.ServiceDependencyConfig
 )
 
 // GlobalConfig stores the globally accessible configuration instance.

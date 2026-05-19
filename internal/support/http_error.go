@@ -3,9 +3,7 @@ package support
 import (
 	"errors"
 	"fmt"
-	"os"
 	"runtime"
-	"strings"
 
 	exceptions "fiber-starter/internal/common/exceptions"
 	supporti18n "fiber-starter/internal/providers/i18n"
@@ -20,6 +18,10 @@ import (
 func HandleHTTPError(c fiber.Ctx, err error) error {
 	if apiErr := unwrapAPIException(err); apiErr != nil {
 		return handleAPIException(c, apiErr)
+	}
+
+	if appErr, ok := exceptions.GetAppError(err); ok {
+		return writeDebuggerError(c, appErr.StatusCode, appErr.Message, nil, "AppError", 1)
 	}
 
 	if validationErrors, ok := errors.AsType[validator.ValidationErrors](err); ok {
@@ -80,9 +82,6 @@ func handleFiberError(c fiber.Ctx, fiberErr *fiber.Error) error {
 
 func handleUnknownError(c fiber.Ctx, err error) error {
 	message := "Internal server error"
-	if isDevelopment() {
-		message = fmt.Sprintf("Internal server error: %s", err.Error())
-	}
 
 	return writeDebuggerError(c, 500, message, nil, fmt.Sprintf("%T", err), 1)
 }
@@ -116,20 +115,4 @@ func fiberErrorMessage(fiberErr *fiber.Error) string {
 	default:
 		return fiberErr.Message
 	}
-}
-
-func isDevelopment() bool {
-	env := strings.ToLower(strings.TrimSpace(getEnv("APP_ENV", "development")))
-	return env == "development" || env == "dev" || env == "local"
-}
-
-func getEnv(key, defaultValue string) string {
-	if value := getValue(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-func getValue(key string) string {
-	return os.Getenv(key)
 }

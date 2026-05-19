@@ -10,7 +10,8 @@
 
 - **Laravel 风格目录**：按 Laravel 的命名和职责组织代码。
 - **Fiber v3**：高性能 HTTP 框架。
-- **延迟加载**：S3、Meilisearch、数据库、Redis、队列等按需连接。
+- **稳定启动与降级**：非关键依赖异常时服务可继续启动，并通过 `/ready` 返回 `degraded`。
+- **延迟加载**：S3、Meilisearch、数据库、Redis、队列等按需连接，避免启动期阻塞。
 - **RESTful API**：标准 REST 接口设计，便于前端集成。
 - **JWT 认证**：支持 token 刷新、注销和黑名单。
 - **数据库访问**：通过 Bun ORM 访问 PostgreSQL 和 SQLite，Atlas 负责 schema diff 与迁移生成。
@@ -23,7 +24,15 @@
 - **命令行工具**：基于 Cobra，支持迁移、种子、调度等。
 - **Scalar 文档**：自动生成 OpenAPI 3.1，并通过 Scalar 展示。
 - **统一错误处理**：统一异常类型和错误响应格式。
+- **安全默认值**：默认关闭 Debug，源码不提供 JWT secret，日志和 readiness 错误会脱敏。
 - **国际化**：基于 Fiber 官方 `contrib/v3/i18n`，支持 `query lang`、Cookie 和 `Accept-Language`。
+
+## 项目治理
+
+项目章程位于 `.specify/memory/constitution.md`，它定义了代码质量、测试标准、
+API 一致性、性能与高可用、安全运维等不可协商规则。所有 spec-kit 的
+`plan.md` 和 `tasks.md` 都必须显式通过这些门禁；实现完成后需说明已运行的
+`rtk` 验证命令，以及任何无法运行检查的原因和风险。
 
 ## 技术栈
 
@@ -37,10 +46,9 @@
 
 ### 数据库与缓存
 
-- **MySQL / PostgreSQL**：主数据库
+- **PostgreSQL / SQLite**：主数据库与本地开发/测试数据库
 - **Rueidis + Redis**：高性能缓存、会话、队列后端
 - **Ristretto**：高性能本地 L1 缓存
-- **SQLite**：本地开发/测试数据库
 
 ### 搜索与存储
 
@@ -83,40 +91,67 @@ Fiber 的启动参数统一通过配置文件和环境变量管理，当前可�
 APP_FIBER_PREFORK=true
 APP_FIBER_READ_TIMEOUT=30
 APP_FIBER_WRITE_TIMEOUT=30
-APP_FIBER_IDLE_TIMEOUT=30
+APP_FIBER_IDLE_TIMEOUT=120
 APP_FIBER_READ_BUFFER_SIZE=16384
 ```
+
+## 健康检查与降级策略
+
+- `/health`：只表示进程存活，适合容器 liveness probe。
+- `/ready`：聚合数据库、缓存、邮件、队列、搜索、存储等依赖状态，适合 readiness probe。
+- 默认数据库为关键依赖；缓存、邮件、队列、搜索、存储和实时通信为可降级依赖。
+- `/ready` 返回 `ok` 或 `degraded` 时 HTTP 状态码为 `200`；关键依赖失败时返回 `fail` 和 `503`。
+- 可通过 `SERVICE_DATABASE_CRITICAL`、`SERVICE_CACHE_CRITICAL`、`SERVICE_MAIL_CRITICAL`、`SERVICE_QUEUE_CRITICAL`、`SERVICE_SEARCH_CRITICAL`、`SERVICE_STORAGE_CRITICAL`、`SERVICE_REALTIME_CRITICAL` 调整依赖关键性。
+
+示例：
+
+```env
+SERVICE_DATABASE_CRITICAL=true
+SERVICE_CACHE_CRITICAL=false
+SERVICE_MAIL_CRITICAL=false
+SERVICE_QUEUE_CRITICAL=false
+SERVICE_SEARCH_CRITICAL=false
+SERVICE_STORAGE_CRITICAL=false
+SERVICE_REALTIME_CRITICAL=false
+```
+
+## 安全配置
+
+- 生产环境必须保持 `APP_DEBUG=false`。
+- `JWT_SECRET`、邮件 API key、对象存储密钥、支付密钥、数据库密码等必须通过环境变量或密钥管理系统注入。
+- 源码配置中的 secret 默认值应为空字符串，不允许提交真实 token、password、API key 或连接串。
+- HTTP 访问日志、405 诊断日志和 readiness 依赖错误会对 token、password、API key、Authorization、Cookie 和连接串做脱敏。
+- 默认请求体限制为 4 MiB，读超时 30 秒，写超时 30 秒，空闲超时 120 秒，默认不信任代理。
 
 ## 架构设计
 
 ### 目录结构
 
-本项目代码采用受 Laravel 启发的设计架构：
+本项目代码采用受 Laravel 启发的 Feature-First 架构：
 
-- **`app/`**: 核心应用逻辑。
-  - `Http/`: 控制器 (Controllers)、中间件 (Middleware)、请求 (Requests) 和 API 服务。
-  - `Console/`: CLI 命令和计划任务。
-  - `Models/`: 数据库领域模型和实体。
-  - `Providers/`: 基础设施初始化（数据库、Redis、邮件、搜索等）。
-  - `Services/`: 业务逻辑层。
-  - `Support/`: 共享助手函数和工具。
-- **`bootstrap/`**: 应用启动引导和依赖注入。
+- **`cmd/app/`**: 单一入口点，HTTP 服务通过 `serve` 子命令启动。
+- **`internal/features/`**: 业务特性切片，每个特性自包含路由、请求 DTO、控制器/handler、服务、仓储和模型。
+- **`internal/providers/`**: 基础设施 provider，管理数据库、缓存、邮件、队列、搜索、存储、日志、验证、限流等生命周期。
+- **`internal/bootstrap/`**: 应用启动引导、HTTP app 创建、路由注册和运行器。
+- **`internal/common/`**: 共享异常、请求绑定、全局中间件和队列基础设施。
+- **`internal/support/`**: 无状态辅助函数、Facade、响应信封、错误映射、脱敏和健康聚合。
+- **`internal/console/`**: Cobra CLI 命令和计划任务。
 - **`configs/`**: 配置管理。
   - `yml/`: 包含实际配置数据的模块化 YAML 文件。
   - `internal/`: 用于加载、默认值和环境映射的 Go 实现。
   - `config.go`: 提供类型和加载方法的公共门面。
 - **`database/`**: 迁移、种子和工厂数据。
-- **`routes/`**: API 路由定义 (v1, v2 等)。
 - **`docs/`**: 生成的 OpenAPI 3.1 文档（用于 Scalar UI）。
 - **`tests/`**: 集中测试目录。
   - `unit/`: 隔离单元测试。
   - `integration/`: 端到端和集成测试。
+  - `contract/`: HTTP/readiness 等外部契约测试。
 - **`lang/`**: 语言文件（i18n）。
 - **`storage/`**: 运行时存储。
 
 ### 应用容器与 Provider
 
-本项目使用集中的应用容器来管理基础设施依赖。你应该优先使用 `app/Providers/providers.go` 中提供的全局访问方法。
+本项目使用集中的应用容器来管理基础设施依赖。你应该优先使用 `internal/providers/providers.go` 中提供的全局访问方法。
 
 #### 全局访问
 
@@ -178,7 +213,7 @@ cfg := rt.Config    // 获取配置
 2. **初始化项目**
 
    ```bash
-   make init
+   rtk make init
    # 该命令会自动：
    # 1. 安装开发工具（Air、Lint、Atlas）
    # 2. 下载依赖（go mod tidy）
@@ -186,12 +221,23 @@ cfg := rt.Config    // 获取配置
    ```
 
 3. **配置环境变量**
-   编辑 `.env` 文件，配置数据库、Redis 等连接信息。
+   编辑 `.env` 文件，配置数据库、Redis 等连接信息。`JWT_SECRET`、邮件 API key、对象存储密钥等敏感值必须通过环境变量或密钥管理系统注入，禁止写入源码；生产环境保持 `APP_DEBUG=false`。
 
-4. **启动开发环境**
+   生成本地 JWT secret：
 
    ```bash
-   make dev
+   ./artisan jwt:secret
+   # 或指定环境文件
+   ./artisan jwt:secret --env .env.local
+   ```
+
+4. **配置依赖关键性**
+   默认数据库为关键依赖，缓存、邮件、队列、搜索、存储和实时通信为可降级依赖。可通过 `SERVICE_DATABASE_CRITICAL`、`SERVICE_CACHE_CRITICAL` 等环境变量调整 `/ready` 的 `ok`、`degraded`、`fail` 行为。
+
+5. **启动开发环境**
+
+   ```bash
+   rtk make dev
    # 使用 Air 进行热重载开发
    ```
 
@@ -213,17 +259,40 @@ cfg := rt.Config    // 获取配置
 
 ### 异步队列
 
-- `rtk go run ./cmd/app queue:work`：运行任务队列工作进程
+- `./artisan queue:work`：运行任务队列工作进程
+
+### 密钥生成
+
+- `./artisan jwt:secret`：生成 32 字节随机 JWT secret，并替换 `.env` 中的 `JWT_SECRET`
+- `./artisan jwt:secret --env .env.local`：替换指定环境文件中的 `JWT_SECRET`
+- `rtk make jwt`：通过 Makefile 执行同一命令
+- `rtk make artisan CMD="routes"`：通过 Makefile 运行任意 CLI 命令
+- JWT secret 只保留 `jwt:secret` 一个命令入口，不再提供重复的 `jwt:generate` 命令。
 
 ### 代码质量
 
 - `rtk make lint`：运行代码检查
 - `rtk make fmt`：格式化代码
 - `rtk make test`：运行单元测试
+- `rtk make check`：运行格式、静态检查与测试门禁
+- `rtk make check-all`：运行完整质量门禁
+- `rtk make coverage`：运行覆盖率门禁
 
 ### 文档
 
 - `rtk make docs`：重新生成 OpenAPI 3.1 规范（通过 `/docs` 访问 Scalar UI）
+
+### 性能验证
+
+运行 k6 前先启动服务，默认 `BASE_URL` 为 `http://localhost:3300`：
+
+```bash
+APP_PORT=3300 DB_CONNECTION=sqlite DB_SQLITE_DATABASE=/tmp/fiber-template-k6.sqlite CACHE_DRIVER=memory STORAGE_DRIVER=local STORAGE_LOCAL_ROOT=/tmp/fiber-template-storage STORAGE_LOCAL_URL=/storage I18N_LANGUAGE_DIR=$(pwd)/lang ./artisan serve
+rtk make k6-root
+rtk make k6-root-load
+```
+
+k6 默认门禁：错误率 `< 1%`，常用路径 p95 `< 1s`。
 
 ## 许可证
 

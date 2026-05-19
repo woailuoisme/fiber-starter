@@ -45,15 +45,15 @@ func (h *HealthController) Health(c fiber.Ctx) error {
 //	@Router			/ready [get]
 func (h *HealthController) Ready(c fiber.Ctx) error {
 	agg := health.NewAggregator(h.app)
-	results, allHealthy := agg.CheckAll()
+	results, overall := agg.Check()
 
 	status := fiber.StatusOK
-	if !allHealthy {
+	if overall == health.OverallFail {
 		status = fiber.StatusServiceUnavailable
 	}
 
 	return c.Status(status).JSON(fiber.Map{
-		"status":   map[bool]string{true: "ok", false: "fail"}[allHealthy],
+		"status":   overall,
 		"services": results,
 	})
 }

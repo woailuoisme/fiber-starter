@@ -37,6 +37,7 @@ import (
 	storageContracts "fiber-starter/internal/providers/storage/contracts"
 	validation "fiber-starter/internal/providers/validation"
 	validationContracts "fiber-starter/internal/providers/validation/contracts"
+	helpers "fiber-starter/internal/support"
 	"fiber-starter/internal/support/appctx"
 )
 
@@ -65,6 +66,7 @@ type Runtime struct {
 	Validation      validationContracts.Factory
 	Log             loggingContracts.Logger
 	RateLimiter     ratelimiterContracts.Limiter
+	Degraded        map[string]string
 }
 
 // App returns the global application container instance.
@@ -92,7 +94,7 @@ func Build() (*Runtime, error) {
 		return nil, errors.New("config is nil")
 	}
 
-	rt := &Runtime{Config: cfg}
+	rt := &Runtime{Config: cfg, Degraded: map[string]string{}}
 
 	// Phase 1: Register (Object creation, dependency wiring)
 	configRepo, err := config.RegisterConfig(k)
@@ -116,10 +118,14 @@ func Build() (*Runtime, error) {
 
 	cacheManager, cacheStore, err := cache.RegisterCache(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("register cache provider: %w", err)
+		if isDependencyCritical(cfg, "cache", false) {
+			return nil, fmt.Errorf("register cache provider: %w", err)
+		}
+		rt.markDegraded("cache", err)
+	} else {
+		rt.CacheManager = cacheManager
+		rt.Cache = cacheStore
 	}
-	rt.CacheManager = cacheManager
-	rt.Cache = cacheStore
 
 	hashManager, err := hash.RegisterHash(cfg)
 	if err != nil {
@@ -135,23 +141,35 @@ func Build() (*Runtime, error) {
 
 	mailManager, emailService, err := mail.Register(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("register mail provider: %w", err)
+		if isDependencyCritical(cfg, "mail", false) {
+			return nil, fmt.Errorf("register mail provider: %w", err)
+		}
+		rt.markDegraded("mail", err)
+	} else {
+		rt.MailManager = mailManager
+		rt.EmailService = emailService
 	}
-	rt.MailManager = mailManager
-	rt.EmailService = emailService
 
 	realtimeManager, err := realtime.RegisterRealtime(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("register realtime provider: %w", err)
+		if isDependencyCritical(cfg, "realtime", false) {
+			return nil, fmt.Errorf("register realtime provider: %w", err)
+		}
+		rt.markDegraded("realtime", err)
+	} else {
+		rt.Realtime = realtimeManager
 	}
-	rt.Realtime = realtimeManager
 
 	queueManager, queueService, err := queue.RegisterQueue(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("register queue provider: %w", err)
+		if isDependencyCritical(cfg, "queue", false) {
+			return nil, fmt.Errorf("register queue provider: %w", err)
+		}
+		rt.markDegraded("queue", err)
+	} else {
+		rt.QueueManager = queueManager
+		rt.QueueService = queueService
 	}
-	rt.QueueManager = queueManager
-	rt.QueueService = queueService
 
 	scheduleManager, scheduleService, err := schedule.RegisterSchedule(cfg)
 	if err != nil {
@@ -162,16 +180,24 @@ func Build() (*Runtime, error) {
 
 	searchManager, searchService, err := search.Register(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("register search provider: %w", err)
+		if isDependencyCritical(cfg, "search", false) {
+			return nil, fmt.Errorf("register search provider: %w", err)
+		}
+		rt.markDegraded("search", err)
+	} else {
+		rt.SearchManager = searchManager
+		rt.SearchService = searchService
 	}
-	rt.SearchManager = searchManager
-	rt.SearchService = searchService
 
 	storageManager, err := storage.Register(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("register storage provider: %w", err)
+		if isDependencyCritical(cfg, "storage", false) {
+			return nil, fmt.Errorf("register storage provider: %w", err)
+		}
+		rt.markDegraded("storage", err)
+	} else {
+		rt.Storage = storageManager
 	}
-	rt.Storage = storageManager
 
 	notificationManager, notificationService, err := notification.RegisterNotification(emailService)
 	if err != nil {
@@ -260,6 +286,36 @@ func (rt *Runtime) Close() error {
 	}
 
 	return errors.Join(errs...)
+}
+
+func (rt *Runtime) markDegraded(name string, err error) {
+	if rt.Degraded == nil {
+		rt.Degraded = map[string]string{}
+	}
+	rt.Degraded[name] = helpers.RedactError(err)
+}
+
+func isDependencyCritical(cfg *configs.Config, name string, fallback bool) bool {
+	if cfg == nil || cfg.Services.Dependencies == nil {
+		return fallback
+	}
+	dependency, ok := cfg.Services.Dependencies[name]
+	if !ok {
+		return fallback
+	}
+	return dependency.Critical
+}
+
+func (rt *Runtime) DegradedProviders() map[string]string {
+	if rt == nil || len(rt.Degraded) == 0 {
+		return nil
+	}
+
+	degraded := make(map[string]string, len(rt.Degraded))
+	for name, reason := range rt.Degraded {
+		degraded[name] = reason
+	}
+	return degraded
 }
 
 func (rt *Runtime) AppConfig() *configs.Config { return rt.Config }

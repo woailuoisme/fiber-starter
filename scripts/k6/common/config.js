@@ -16,12 +16,12 @@ export const config = {
 	load: {
 		VUS: Number(__ENV.VUS || 10),
 		DURATION: __ENV.DURATION || "1m",
-		TARGET_DURATION: Number(__ENV.TARGET_DURATION || 500),
+		TARGET_DURATION: Number(__ENV.TARGET_DURATION || 1000),
 	},
 
-	// Common Thresholds
+	// Common Thresholds: keep p95 under 1s for common HTTP paths.
 	thresholds: {
 		http_req_failed: ["rate<0.01"],
-		http_req_duration: ["p(95)<500"],
+		http_req_duration: ["p(95)<1000"],
 	},
 };

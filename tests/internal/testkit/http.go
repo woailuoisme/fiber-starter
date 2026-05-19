@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
 )
 
@@ -56,6 +58,34 @@ func JSONBody(t *testing.T, resp *http.Response) map[string]any {
 		t.Fatalf("decode response body failed: %v", err)
 	}
 
+	return payload
+}
+
+// AssertEnvelope verifies the public response envelope without constraining data shape.
+func AssertEnvelope(t *testing.T, payload map[string]any, success bool, code int) {
+	t.Helper()
+
+	assert.Equal(t, success, payload["success"])
+	assert.EqualValues(t, code, payload["code"])
+	require.Contains(t, payload, "message")
+}
+
+// AssertErrorEnvelope verifies an error response envelope.
+func AssertErrorEnvelope(t *testing.T, resp *http.Response, code int) map[string]any {
+	t.Helper()
+
+	payload := JSONBody(t, resp)
+	AssertEnvelope(t, payload, false, code)
+	return payload
+}
+
+// AssertSuccessEnvelope verifies a success response envelope.
+func AssertSuccessEnvelope(t *testing.T, resp *http.Response, code int) map[string]any {
+	t.Helper()
+
+	payload := JSONBody(t, resp)
+	AssertEnvelope(t, payload, true, code)
+	require.Contains(t, payload, "data")
 	return payload
 }
 

@@ -94,3 +94,39 @@ func TestRequestID_PreservedAndLogged(t *testing.T) {
 
 	require.True(t, foundError)
 }
+
+func TestRequestLogging_RedactsSensitiveURLAndHeaders(t *testing.T) {
+	core, observed := observer.New(zapcore.DebugLevel)
+	prevLogger := logging.DefaultLogger
+	logging.DefaultLogger = zap.New(core)
+	t.Cleanup(func() {
+		logging.DefaultLogger = prevLogger
+	})
+
+	app := fiber.New(fiber.Config{
+		ErrorHandler: helpers.HandleHTTPError,
+	})
+	middleware.SetupMiddleware(app, nil)
+	app.Get("/boom", func(c fiber.Ctx) error {
+		return fiber.NewError(fiber.StatusBadRequest, "boom")
+	})
+
+	req := httptest.NewRequest("GET", "/boom?token=secret-token", nil)
+	req.Header.Set("Authorization", "Bearer secret-token")
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	require.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+
+	var found bool
+	for _, entry := range observed.All() {
+		if entry.Message != "client_error" {
+			continue
+		}
+		found = true
+		fields := entry.ContextMap()
+		assert.Contains(t, fields["url"], helpers.RedactionSentinel())
+		assert.NotContains(t, fields["url"], "secret-token")
+	}
+
+	require.True(t, found)
+}

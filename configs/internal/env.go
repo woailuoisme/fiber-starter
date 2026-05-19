@@ -168,6 +168,15 @@ func EnvConfigMap() map[string]any {
 		"SECURITY_LOAD_SHED_LOWER":      "security.load_shed.lower_threshold",
 		"SECURITY_LOAD_SHED_UPPER":      "security.load_shed.upper_threshold",
 
+		// Dependency criticality
+		"SERVICE_DATABASE_CRITICAL": "services.dependencies.database.critical",
+		"SERVICE_CACHE_CRITICAL":    "services.dependencies.cache.critical",
+		"SERVICE_MAIL_CRITICAL":     "services.dependencies.mail.critical",
+		"SERVICE_QUEUE_CRITICAL":    "services.dependencies.queue.critical",
+		"SERVICE_SEARCH_CRITICAL":   "services.dependencies.search.critical",
+		"SERVICE_STORAGE_CRITICAL":  "services.dependencies.storage.critical",
+		"SERVICE_REALTIME_CRITICAL": "services.dependencies.realtime.critical",
+
 		// I18n
 		"I18N_ENABLED":          "i18n.enabled",
 		"I18N_DEFAULT_LANGUAGE": "i18n.default_language",

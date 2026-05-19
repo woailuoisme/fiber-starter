@@ -93,6 +93,8 @@
 - **传输安全**：所有生产环境通信必须采用 HTTPS。
 - **时间格式**：时间字段统一采用 ISO 8601 / RFC 3339 格式，如 `2026-05-18T19:16:41+08:00`。
 - **编码格式**：请求体 and 响应体统一采用 `application/json; charset=utf-8`。
+- **密钥处理**：`JWT_SECRET`、邮件 API key、对象存储密钥、连接串等只允许通过环境变量或密钥管理系统注入，禁止使用源码默认 secret。
+- **日志脱敏**：请求 URL、Authorization、Cookie、API key、token、password 和连接串在日志与 readiness 错误中必须脱敏。
 
 ### 3.2 统一分页模型
 
@@ -135,3 +137,11 @@
 | `422 Unprocessable Entity` | 实体无法处理 | 请求数据格式正确，但业务或验证规则校验失败。 |
 | `429 Too Many Requests` | 请求过于频繁 | 触发接口速率限制（Rate Limiting）。 |
 | `500 Internal Server Error` | 服务器内部错误 | 服务端内部异常，请联系系统管理员。 |
+| `503 Service Unavailable` | 服务不可用 | 关键依赖不可用或服务处于不可接收请求状态。 |
+
+### 3.4 就绪与降级状态
+
+- `/health` 只表示进程存活，成功时返回 `200`。
+- `/ready` 聚合数据库、缓存、邮件、队列、搜索、存储等依赖状态。
+- 整体 `status=ok` 或 `status=degraded` 时返回 `200`；只有关键依赖失败导致 `status=fail` 时返回 `503`。
+- 依赖错误信息会脱敏，日志和响应不得输出令牌、密码、API key、连接串明文。

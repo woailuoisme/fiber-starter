@@ -29,9 +29,3 @@ func SetupMiddleware(app *fiber.App, cfg *configs.Config) {
 	SetupHelmet(app)
 	SetupETag(app)
 }
-
-// SetupAuthMiddleware 保留认证中间件的统一装配入口。
-// 作用：预留全局认证相关扩展点。
-// 场景：未来如果需要增加全局认证前置逻辑，可集中放在这里。
-// 使用方式：由应用启动时调用；当前版本不额外挂载任何内容。
-func SetupAuthMiddleware(_ *fiber.App) {}

@@ -11,8 +11,8 @@ OPENAPI_GEN ?= $(GO) run ./scripts/openapi
 ATLAS ?= atlas
 BUILD_DIR ?= build
 COVERAGE_DIR ?= coverage
-LINT_CACHE_HOME ?= /tmp/fiber-starter-cache
-LINT_GOCACHE ?= /tmp/fiber-starter-gocache
+LINT_CACHE_HOME ?= .cache/golangci-lint
+LINT_GOCACHE ?= .cache/go-build
 SERVER_BINARY_NAME ?= fiber-starter
 CLI_BINARY_NAME ?= fiber-starter-cli
 APP_LOG_DIR ?= storage/logs
@@ -29,7 +29,7 @@ define run_golangci_lint
 	if [ -z "$$LINT_BIN" ] && [ -x /usr/local/bin/$(GOLANGCI_LINT) ]; then LINT_BIN=/usr/local/bin/$(GOLANGCI_LINT); fi; \
 	if [ -z "$$LINT_BIN" ]; then echo "$(GOLANGCI_LINT) is not installed"; exit 1; fi; \
 	mkdir -p $(LINT_GOCACHE) $(LINT_CACHE_HOME); \
-	HOME=/tmp XDG_CACHE_HOME=$(LINT_CACHE_HOME) GOCACHE=$(LINT_GOCACHE) GOFLAGS=-mod=mod "$$LINT_BIN" $(1)
+	XDG_CACHE_HOME=$(LINT_CACHE_HOME) GOCACHE=$(LINT_GOCACHE) GOFLAGS=-mod=mod "$$LINT_BIN" $(1)
 endef
 
 define run_gofumpt
@@ -50,7 +50,7 @@ endef
 .PHONY: all help build build-cli build-prod build-dir coverage-dir config run dev test coverage lint lint-strict fmt vet clean \
         fmt-gofumpt \
         k6-root k6-root-load \
-        migrate migrate-rollback seed seed-random routes jwt schedule \
+        artisan migrate migrate-rollback seed seed-random routes jwt schedule \
 	        docs install-tools deps init sync \
         atlas-status atlas-history atlas-repair atlas-reset \
         atlas-hash atlas-hash-postgres atlas-hash-sqlite \
@@ -135,6 +135,9 @@ check-all: fmt-gofumpt lint-fix test ## 运行所有检查
 
 # --- Database & CLI ---
 
+artisan: ## 运行 CLI 命令（CMD="jwt:secret"）
+	@$(CLI_RUN) $(CMD)
+
 migrate: ## 运行数据库迁移
 	@$(CLI_RUN) migrate run
 
@@ -151,7 +154,7 @@ routes: ## 显示所有路由
 	@$(CLI_RUN) routes
 
 jwt: ## 生成新的 JWT 密钥
-	@$(CLI_RUN) jwt:generate
+	@$(CLI_RUN) jwt:secret
 
 schedule: ## 运行定时任务调度器
 	@$(CLI_RUN) schedule:run
@@ -239,10 +242,10 @@ docs: ## 自动从注释生成文档并由 Scalar 展示
 	@cp docs/swagger.json docs/openapi.json
 	@echo "Documentation generated at docs/openapi.json"
 
-k6-root: ## 运行根路径 / 的 k6 smoke test
+k6-root: ## 运行根路径 / 的 k6 smoke test（p95 < 1s，错误率 < 1%）
 	@command -v $(K6) >/dev/null 2>&1 || { echo "$(K6) is not installed"; exit 1; }
 	@$(K6) run scripts/k6/scenarios/smoke.js
 
-k6-root-load: ## 运行根路径 / 的 k6 load test
+k6-root-load: ## 运行根路径 / 的 k6 load test（p95 < 1s，错误率 < 1%）
 	@command -v $(K6) >/dev/null 2>&1 || { echo "$(K6) is not installed"; exit 1; }
 	@$(K6) run scripts/k6/scenarios/load.js

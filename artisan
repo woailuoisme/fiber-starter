@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+set -eu
+
+GOFLAGS="${GOFLAGS:--mod=mod}"
+
+GOFLAGS="$GOFLAGS" exec go run ./cmd/app "$@"

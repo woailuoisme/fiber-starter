@@ -15,6 +15,23 @@ search:
   host: ${MEILISEARCH_HOST:http://localhost:7700}
   api_key: ${MEILISEARCH_KEY:""}
 
+services:
+  dependencies:
+    database:
+      critical: ${SERVICE_DATABASE_CRITICAL:true}
+    cache:
+      critical: ${SERVICE_CACHE_CRITICAL:false}
+    mail:
+      critical: ${SERVICE_MAIL_CRITICAL:false}
+    queue:
+      critical: ${SERVICE_QUEUE_CRITICAL:false}
+    search:
+      critical: ${SERVICE_SEARCH_CRITICAL:false}
+    storage:
+      critical: ${SERVICE_STORAGE_CRITICAL:false}
+    realtime:
+      critical: ${SERVICE_REALTIME_CRITICAL:false}
+
 otel:
   enabled: ${OTEL_ENABLED:false}
   service_name: ${OTEL_SERVICE_NAME:fiber-starter}

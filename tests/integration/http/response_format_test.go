@@ -71,3 +71,28 @@ func TestResponseFormat_SuccessErrorAndPagination(t *testing.T) {
 	assert.EqualValues(t, 1, meta["from"])
 	assert.EqualValues(t, 15, meta["to"])
 }
+
+func TestResponseFormat_EmptySlicesEncodeAsEmptyArrays(t *testing.T) {
+	app := fiber.New()
+	app.Get("/items", func(c fiber.Ctx) error {
+		var items []string
+		return helpers.HandleSuccess(c, "ok", items)
+	})
+	app.Get("/pagination-empty", func(c fiber.Ctx) error {
+		var items []interface{}
+		return helpers.HandlePaginationResponse(c, "ok", items, 0, 1, 15)
+	})
+
+	itemsResp := testkit.DoRequest(t, app, "GET", "/items", "")
+	itemsPayload := testkit.AssertSuccessEnvelope(t, itemsResp, fiber.StatusOK)
+	items, ok := itemsPayload["data"].([]any)
+	require.True(t, ok)
+	assert.Empty(t, items)
+
+	paginationResp := testkit.DoRequest(t, app, "GET", "/pagination-empty", "")
+	paginationPayload := testkit.AssertSuccessEnvelope(t, paginationResp, fiber.StatusOK)
+	data := paginationPayload["data"].(map[string]any)
+	paginatedItems, ok := data["items"].([]any)
+	require.True(t, ok)
+	assert.Empty(t, paginatedItems)
+}

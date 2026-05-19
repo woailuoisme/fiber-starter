@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"strings"
 
-	"fiber-starter/internal/support/appctx"
 	helpers "fiber-starter/internal/support"
+	"fiber-starter/internal/support/appctx"
 
 	"github.com/gofiber/contrib/v3/monitor"
 	"github.com/gofiber/fiber/v3"
@@ -39,7 +39,8 @@ func openAPISpecPath() string {
 		root := filepath.Clean(filepath.Join(filepath.Dir(file), "..", "..", ".."))
 		candidates = append(candidates, filepath.Join(root, "docs", "openapi.json"))
 	}
-	candidates = append(candidates,
+	candidates = append(
+		candidates,
 		filepath.Join("docs", "openapi.json"),
 		filepath.Join("..", "docs", "openapi.json"),
 	)

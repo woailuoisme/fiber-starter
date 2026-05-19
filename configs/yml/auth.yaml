@@ -16,7 +16,7 @@ auth:
       table: admin_users
 
 jwt:
-  secret: ${JWT_SECRET:change-me}
+  secret: ${JWT_SECRET:""}
   expiration_time: ${JWT_EXPIRATION_TIME:86400}
   refresh_time: ${JWT_REFRESH_TIME:604800}
   expire_hours: ${JWT_EXPIRE_HOURS:24}

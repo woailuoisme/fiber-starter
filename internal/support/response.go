@@ -2,6 +2,8 @@ package support
 
 import (
 	"fmt"
+	"os"
+	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
@@ -59,9 +61,9 @@ func writeJSONResponse(ctx fiber.Ctx, status int, success bool, message string, 
 	}
 
 	if success {
-		response.Data = data
+		response.Data = normalizeJSONData(data)
 	} else {
-		response.Errors = errs
+		response.Errors = normalizeJSONData(errs)
 	}
 
 	return ctx.Status(status).JSON(response)
@@ -102,7 +104,7 @@ func JSON(c fiber.Ctx, data interface{}, message string) error {
 		Success: true,
 		Code:    fiber.StatusOK,
 		Message: message,
-		Data:    data,
+		Data:    normalizeJSONData(data),
 	})
 }
 
@@ -115,7 +117,7 @@ func Created(c fiber.Ctx, data interface{}, message string) error {
 		Success: true,
 		Code:    fiber.StatusCreated,
 		Message: message,
-		Data:    data,
+		Data:    normalizeJSONData(data),
 	})
 }
 
@@ -268,6 +270,40 @@ func HandlePaginationResponse(ctx fiber.Ctx, message string, data interface{}, t
 	})
 }
 
+func normalizeJSONData(value any) any {
+	if value == nil {
+		return value
+	}
+
+	rv := reflect.ValueOf(value)
+	switch rv.Kind() {
+	case reflect.Map:
+		normalized := reflect.MakeMapWithSize(rv.Type(), rv.Len())
+		for _, key := range rv.MapKeys() {
+			mapValue := rv.MapIndex(key)
+			if !mapValue.CanInterface() {
+				normalized.SetMapIndex(key, mapValue)
+				continue
+			}
+			nextValue := normalizeJSONData(mapValue.Interface())
+			next := reflect.ValueOf(nextValue)
+			if next.IsValid() && next.Type().AssignableTo(rv.Type().Elem()) {
+				normalized.SetMapIndex(key, next)
+			} else {
+				normalized.SetMapIndex(key, mapValue)
+			}
+		}
+		return normalized.Interface()
+	case reflect.Slice:
+		if !rv.IsNil() {
+			return value
+		}
+		return reflect.MakeSlice(rv.Type(), 0, 0).Interface()
+	default:
+		return value
+	}
+}
+
 // ValidatePaginationParams 校验分页参数。
 func ValidatePaginationParams(pageStr, limitStr string) (int, int, error) {
 	page := 1
@@ -334,7 +370,8 @@ func GetStackTrace() []string {
 
 // IsDebugMode 检查是否为调试模式。
 func IsDebugMode() bool {
-	return true
+	value := strings.ToLower(strings.TrimSpace(os.Getenv("APP_DEBUG")))
+	return value == "true" || value == "1" || value == "yes" || value == "on"
 }
 
 // FormatValidationErrors 格式化验证错误。

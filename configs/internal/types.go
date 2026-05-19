@@ -125,6 +125,15 @@ type Config struct {
 	Hash         HashConfig         `mapstructure:"hash"`
 	OTEL         OTELConfig         `mapstructure:"otel"`
 	Limiter      LimiterConfig      `mapstructure:"limiter"`
+	Services     ServicesConfig     `mapstructure:"services"`
+}
+
+type ServicesConfig struct {
+	Dependencies map[string]ServiceDependencyConfig `mapstructure:"dependencies"`
+}
+
+type ServiceDependencyConfig struct {
+	Critical bool `mapstructure:"critical"`
 }
 
 type SearchConfig struct {

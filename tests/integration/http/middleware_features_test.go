@@ -2,15 +2,23 @@ package tests
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"net/http/httptest"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"fiber-starter/configs"
+	"fiber-starter/internal/bootstrap"
+	exceptions "fiber-starter/internal/common/exceptions"
 	middleware "fiber-starter/internal/common/middleware"
+	"fiber-starter/internal/common/requests"
 	ratelimiter "fiber-starter/internal/providers/ratelimiter"
+	"fiber-starter/internal/providers/validation"
+	helpers "fiber-starter/internal/support"
+	"fiber-starter/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
@@ -117,4 +125,71 @@ func TestIdempotencyMiddleware_AllowsSafeMethods(t *testing.T) {
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	assert.Equal(t, "ok", strings.TrimSpace(string(body)))
+}
+
+func TestRequestBehavior_InvalidJSONUsesErrorEnvelope(t *testing.T) {
+	app := fiber.New(fiber.Config{
+		JSONDecoder:  json.Unmarshal,
+		ErrorHandler: helpers.HandleHTTPError,
+	})
+	app.Post("/json", func(c fiber.Ctx) error {
+		var payload struct {
+			Name string `json:"name"`
+		}
+		if err := json.Unmarshal(c.Body(), &payload); err != nil {
+			return exceptions.BadRequestWithDetails("Invalid request body", err.Error())
+		}
+		return nil
+	})
+
+	resp := testkit.DoRequest(t, app, "POST", "/json", `{"name":`)
+	testkit.AssertErrorEnvelope(t, resp, fiber.StatusBadRequest)
+}
+
+func TestRequestBehavior_BodyLimitUsesErrorEnvelope(t *testing.T) {
+	app := fiber.New(fiber.Config{ErrorHandler: helpers.HandleHTTPError})
+	app.Post("/limited-body", func(c fiber.Ctx) error {
+		return fiber.ErrRequestEntityTooLarge
+	})
+
+	resp := testkit.DoRequest(t, app, "POST", "/limited-body", `{"name":"too-large"}`)
+	testkit.AssertErrorEnvelope(t, resp, fiber.StatusRequestEntityTooLarge)
+}
+
+func TestRequestBehavior_ValidationFailureUsesErrorEnvelope(t *testing.T) {
+	v, err := validation.RegisterValidation(&configs.Config{})
+	require.NoError(t, err)
+	requests.InitValidator(v)
+	t.Cleanup(func() {
+		requests.InitValidator(nil)
+	})
+
+	app := fiber.New(fiber.Config{ErrorHandler: helpers.HandleHTTPError})
+	app.Post("/validate", func(c fiber.Ctx) error {
+		var payload struct {
+			Email string `json:"email" validate:"required,email"`
+		}
+		return requests.BindAndValidateBody(c, &payload)
+	})
+
+	resp := testkit.DoRequest(t, app, "POST", "/validate", `{}`)
+	testkit.AssertErrorEnvelope(t, resp, fiber.StatusUnprocessableEntity)
+}
+
+func TestHTTPStartupAndMiddlewareBaseline(t *testing.T) {
+	cfg := testkit.NewSQLiteConfig(t)
+	start := time.Now()
+	app := bootstrap.NewHTTPApp(cfg)
+	middleware.SetupMiddleware(app, cfg)
+	app.Get("/", func(c fiber.Ctx) error {
+		return helpers.HandleSuccess(c, "ok", fiber.Map{"ready": true})
+	})
+	startupDuration := time.Since(start)
+
+	require.Less(t, startupDuration, 30*time.Second)
+
+	resp := testkit.DoRequest(t, app, "GET", "/", "")
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+	assert.NotEmpty(t, resp.Header.Get("X-Request-ID"))
+	assert.NotEmpty(t, resp.Header.Get("X-Content-Type-Options"))
 }

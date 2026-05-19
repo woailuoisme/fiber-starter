@@ -31,13 +31,19 @@
 
 ## 构建、测试与开发命令
 
-- `make init`: 初始化开发环境，安装工具集，同步 Go modules 依赖并建立本地 `.env`。
-- `make dev`: 启动 Air 热重载开发服务器。
-- `make run`: 生产环境模式下直接编译并运行 HTTP 实例。
-- `make test`: 运行 `tests/` 目录下的所有自动化测试。
-- `make check`: 自动化格式化校验、严格静态代码 Lint 检查与全量测试。
-- `make docs`: 重新生成 OpenAPI 3.1 定义并导出，刷新 Scalar 文档界面。
-- `make atlas-diff NAME=<name>` & `make atlas-apply`: 通过 Atlas 控制和应用数据库迁移 Schema 的演进。
+- `rtk make init`: 初始化开发环境，安装工具集，同步 Go modules 依赖并建立本地 `.env`。
+- `rtk make dev`: 启动 Air 热重载开发服务器。
+- `rtk make run`: 生产环境模式下直接编译并运行 HTTP 实例。
+- `rtk make test`: 运行 `tests/` 目录下的所有自动化测试。
+- `rtk make check`: 自动化格式化校验、严格静态代码 Lint 检查与全量测试。
+- `rtk make check-all`: 完整质量门禁，用于实现完成前最终验证。
+- `rtk make coverage`: 运行覆盖率门禁并生成覆盖率报告。
+- `rtk make docs`: 重新生成 OpenAPI 3.1 定义并导出，刷新 Scalar 文档界面。
+- `rtk make k6-root` / `rtk make k6-root-load`: 对根路径执行 smoke/load 性能验证；运行前需确保服务监听在 `BASE_URL`，默认 `http://localhost:3300`。
+- `rtk make atlas-diff NAME=<name>` & `rtk make atlas-apply`: 通过 Atlas 控制和应用数据库迁移 Schema 的演进。
+- `./artisan <command>`: Laravel Artisan 风格短入口，例如 `./artisan jwt:secret`、`./artisan serve`、`./artisan queue:work`。
+- `rtk make artisan CMD="jwt:secret"`: 通过 Makefile 运行任意 CLI 命令。
+- `rtk make jwt`: 生成 32 字节随机 JWT secret，并替换 `.env` 中的 `JWT_SECRET`。
 
 ## 代码风格与命名规范
 
@@ -57,6 +63,17 @@
 ## 应用容器与 Provider
 
 本项目使用集中的应用容器管理基础设施。你应该优先使用 `internal/providers/providers.go` 中提供的全局访问方法。
+
+### 就绪、降级与安全默认值
+
+- `/health` 只表示进程存活；`/ready` 返回 `ok`、`degraded` 或 `fail`，只有关键依赖失败时返回 `503`。
+- 默认数据库为关键依赖；缓存、邮件、队列、搜索、存储和实时通信为可降级依赖，可用 `SERVICE_*_CRITICAL` 环境变量覆盖。
+- `JWT_SECRET`、API key、密码、token、连接串等敏感值必须来自环境变量或密钥管理系统，源码默认值不得包含真实 secret。
+- 需要生成本地 JWT secret 时使用 `./artisan jwt:secret` 或 `rtk make jwt`，不要手写弱 secret；不要新增重复的 `jwt:generate` 类命令入口。
+- 日志与 readiness 错误必须使用 `internal/support/redaction.go` 的脱敏辅助函数。
+- 非关键 provider 构建或健康检查失败时，服务应保持可启动并在 `/ready` 中报告 `degraded`；配置错误和关键依赖失败不能被静默吞掉。
+- HTTP 成功、错误和分页响应必须保持 `success`、`code`、`message`、`data`、`errors` 的公开信封；API 切片响应不得输出 JSON `null`。
+- 不要在项目脚本、Makefile、文档或测试中随意写入本机专用绝对路径或缓存路径（如 `GOCACHE`、`/private/tmp/...`、用户目录）。需要项目级缓存时优先使用仓库已有且被 `.gitignore` 忽略的 `.cache/` 约定；只有用户明确要求、项目已有配置约定或命令运行时临时传参时才允许指定路径。
 
 ### 全局访问
 
@@ -120,5 +137,5 @@ t.Cleanup(func() {
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-file:///Users/seaside/Projects/go/fiber-template/specs/002-architecture-optimization/plan.md
+file:///Users/seaside/Projects/go/fiber-template/specs/001-fiber-best-practices/plan.md
 <!-- SPECKIT END -->
