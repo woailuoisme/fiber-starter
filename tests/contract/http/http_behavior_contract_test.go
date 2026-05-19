@@ -20,13 +20,23 @@ func TestHTTPBehaviorContract_ResponseEnvelopeShape(t *testing.T) {
 	app.Post("/validate", func(c fiber.Ctx) error {
 		return helpers.HandleAppError(c, exceptions.NewValidationException("invalid payload"))
 	})
+	app.Post("/validate-with-errors", func(c fiber.Ctx) error {
+		return helpers.HandleAppError(c, exceptions.NewValidationExceptionWithErrors("Validation failed", map[string][]string{
+			"email": {"Email field is required."},
+		}))
+	})
 
 	okResp := testkit.DoRequest(t, app, "GET", "/ok", "")
 	okPayload := testkit.AssertSuccessEnvelope(t, okResp, fiber.StatusOK)
 	assert.Equal(t, "ok", okPayload["message"])
 
 	validationResp := testkit.DoRequest(t, app, "POST", "/validate", "{}")
-	testkit.AssertErrorEnvelope(t, validationResp, fiber.StatusUnprocessableEntity)
+	validationPayload := testkit.AssertErrorEnvelope(t, validationResp, fiber.StatusUnprocessableEntity)
+	assert.NotContains(t, validationPayload, "errors")
+
+	validationWithErrorsResp := testkit.DoRequest(t, app, "POST", "/validate-with-errors", "{}")
+	validationWithErrorsPayload := testkit.AssertErrorEnvelope(t, validationWithErrorsResp, fiber.StatusUnprocessableEntity)
+	assert.Contains(t, validationWithErrorsPayload, "errors")
 }
 
 func TestHTTPBehaviorContract_NotFoundAndMethodNotAllowedUseEnvelope(t *testing.T) {
@@ -36,10 +46,12 @@ func TestHTTPBehaviorContract_NotFoundAndMethodNotAllowedUseEnvelope(t *testing.
 	})
 
 	notFoundResp := testkit.DoRequest(t, app, "GET", "/missing", "")
-	testkit.AssertErrorEnvelope(t, notFoundResp, fiber.StatusNotFound)
+	notFoundPayload := testkit.AssertErrorEnvelope(t, notFoundResp, fiber.StatusNotFound)
+	assert.NotContains(t, notFoundPayload, "errors")
 
 	methodResp := testkit.DoRequest(t, app, "POST", "/resource", "")
-	testkit.AssertErrorEnvelope(t, methodResp, fiber.StatusMethodNotAllowed)
+	methodPayload := testkit.AssertErrorEnvelope(t, methodResp, fiber.StatusMethodNotAllowed)
+	assert.NotContains(t, methodPayload, "errors")
 }
 
 func TestHTTPBehaviorContract_RateLimitServiceUnavailableAndUnknownErrorUseEnvelope(t *testing.T) {
@@ -66,4 +78,21 @@ func TestHTTPBehaviorContract_RateLimitServiceUnavailableAndUnknownErrorUseEnvel
 	unknownPayload := testkit.AssertErrorEnvelope(t, unknownResp, fiber.StatusInternalServerError)
 	assert.Equal(t, "Internal server error", unknownPayload["message"])
 	assert.NotContains(t, unknownPayload, "exception")
+}
+
+func TestHTTPBehaviorContract_DebugExceptionOnlyForThrownErrors(t *testing.T) {
+	t.Setenv("APP_DEBUG", "true")
+
+	app := fiber.New(fiber.Config{ErrorHandler: helpers.HandleHTTPError})
+	app.Get("/exception", func(c fiber.Ctx) error {
+		return exceptions.NewAPIException("failed", fiber.StatusInternalServerError)
+	})
+
+	notFoundResp := testkit.DoRequest(t, app, "GET", "/missing", "")
+	notFoundPayload := testkit.AssertErrorEnvelope(t, notFoundResp, fiber.StatusNotFound)
+	assert.NotContains(t, notFoundPayload, "exception")
+
+	exceptionResp := testkit.DoRequest(t, app, "GET", "/exception", "")
+	exceptionPayload := testkit.AssertErrorEnvelope(t, exceptionResp, fiber.StatusInternalServerError)
+	assert.Contains(t, exceptionPayload, "exception")
 }

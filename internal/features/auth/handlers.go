@@ -45,7 +45,7 @@ func NewAuthController(authService AuthService) *AuthController {
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		RegisterRequest															true	"注册参数"
-//	@Success		201		{object}	support.APIResponse{data=object{user=user.SafeUser,verification_required=bool}}	"注册成功"
+//	@Success		201		{object}	support.APISuccessResponse{data=object{user=user.SafeUser,verification_required=bool}}	"注册成功"
 //	@Router			/api/v1/auth/sign-up [post]
 func (c *AuthController) SignUp(ctx fiber.Ctx) error {
 	var req RegisterRequest
@@ -75,7 +75,7 @@ func (c *AuthController) Register(ctx fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		VerifySignUpRequest																								true	"验证参数"
-//	@Success		200		{object}	support.APIResponse{data=object{user=user.SafeUser,tokens=object{access_token=string,refresh_token=string}}}	"验证成功"
+//	@Success		200		{object}	support.APISuccessResponse{data=object{user=user.SafeUser,tokens=object{access_token=string,refresh_token=string}}}	"验证成功"
 //	@Router			/api/v1/auth/sign-up/verify [post]
 func (c *AuthController) VerifySignUp(ctx fiber.Ctx) error {
 	var req VerifySignUpRequest
@@ -100,7 +100,7 @@ func (c *AuthController) VerifySignUp(ctx fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		LoginRequest																									true	"登录参数"
-//	@Success		200		{object}	support.APIResponse{data=object{user=user.SafeUser,tokens=object{access_token=string,refresh_token=string}}}	"登录成功"
+//	@Success		200		{object}	support.APISuccessResponse{data=object{user=user.SafeUser,tokens=object{access_token=string,refresh_token=string}}}	"登录成功"
 //	@Router			/api/v1/auth/sign-in [post]
 func (c *AuthController) SignIn(ctx fiber.Ctx) error {
 	var req LoginRequest
@@ -130,7 +130,7 @@ func (c *AuthController) Login(ctx fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		RefreshTokenRequest														true	"刷新参数"
-//	@Success		200		{object}	support.APIResponse{data=object{access_token=string,refresh_token=string}}	"刷新成功"
+//	@Success		200		{object}	support.APISuccessResponse{data=object{access_token=string,refresh_token=string}}	"刷新成功"
 //	@Router			/api/v1/auth/refresh [post]
 func (c *AuthController) RefreshSession(ctx fiber.Ctx) error {
 	var req RefreshTokenRequest
@@ -160,7 +160,7 @@ func (c *AuthController) RefreshToken(ctx fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Security		Bearer
-//	@Success		200	{object}	support.APIResponse	"注销成功"
+//	@Success		200	{object}	support.APISuccessNoDataResponse	"注销成功"
 //	@Router			/api/v1/auth/sign-out [post]
 func (c *AuthController) SignOut(ctx fiber.Ctx) error {
 	user := middleware.GetUserFromContext(ctx)
@@ -194,7 +194,7 @@ func (c *AuthController) Logout(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Security		Bearer
 //	@Param			request	body		ChangePasswordRequest	true	"修改参数"
-//	@Success		200		{object}	support.APIResponse		"修改成功"
+//	@Success		200		{object}	support.APISuccessNoDataResponse		"修改成功"
 //	@Router			/api/v1/auth/change-password [post]
 func (c *AuthController) UpdatePassword(ctx fiber.Ctx) error {
 	userID := middleware.GetCurrentUserID(ctx)
@@ -227,7 +227,7 @@ func (c *AuthController) ChangePassword(ctx fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		ResetPasswordRequest	true	"重置密码参数"
-//	@Success		200		{object}	support.APIResponse		"成功"
+//	@Success		200		{object}	support.APISuccessNoDataResponse		"成功"
 //	@Router			/api/v1/auth/reset-password [post]
 func (c *AuthController) SendPasswordReset(ctx fiber.Ctx) error {
 	var req ResetPasswordRequest
@@ -255,7 +255,7 @@ func (c *AuthController) ResetPassword(ctx fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		VerifyResetPasswordRequest								true	"验证重置密码参数"
-//	@Success		200		{object}	support.APIResponse{data=object{reset_token=string}}	"验证成功"
+//	@Success		200		{object}	support.APISuccessResponse{data=object{reset_token=string}}	"验证成功"
 //	@Router			/api/v1/auth/reset-password/verify [post]
 func (c *AuthController) VerifyPasswordReset(ctx fiber.Ctx) error {
 	var req VerifyResetPasswordRequest
@@ -282,7 +282,7 @@ func (c *AuthController) VerifyPasswordReset(ctx fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		ConfirmResetPasswordRequest	true	"确认重置密码参数"
-//	@Success		200		{object}	support.APIResponse			"成功"
+//	@Success		200		{object}	support.APISuccessNoDataResponse			"成功"
 //	@Router			/api/v1/auth/reset-password/confirm [post]
 func (c *AuthController) ConfirmPasswordReset(ctx fiber.Ctx) error {
 	var req ConfirmResetPasswordRequest
@@ -310,7 +310,7 @@ func (c *AuthController) ConfirmResetPassword(ctx fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Security		Bearer
-//	@Success		200	{object}	support.APIResponse{data=object{user=user.SafeUser}}	"获取成功"
+//	@Success		200	{object}	support.APISuccessResponse{data=object{user=user.SafeUser}}	"获取成功"
 //	@Router			/api/v1/auth/session [get]
 func (c *AuthController) Session(ctx fiber.Ctx) error {
 	user := middleware.GetUserFromContext(ctx)

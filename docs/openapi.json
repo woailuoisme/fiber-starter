@@ -45,7 +45,7 @@
             "schema": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/APIResponse"
+                  "$ref": "#/definitions/APISuccessResponse"
                 },
                 {
                   "type": "object",
@@ -99,7 +99,7 @@
             "schema": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/APIResponse"
+                  "$ref": "#/definitions/APISuccessResponse"
                 },
                 {
                   "type": "object",
@@ -161,7 +161,7 @@
             "schema": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/APIResponse"
+                  "$ref": "#/definitions/APISuccessResponse"
                 },
                 {
                   "type": "object",
@@ -217,7 +217,7 @@
             "schema": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/APIResponse"
+                  "$ref": "#/definitions/APISuccessResponse"
                 },
                 {
                   "type": "object",
@@ -268,7 +268,7 @@
             "schema": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/APIResponse"
+                  "$ref": "#/definitions/APISuccessResponse"
                 },
                 {
                   "type": "object",
@@ -314,7 +314,7 @@
           "200": {
             "description": "注销成功",
             "schema": {
-              "$ref": "#/definitions/APIResponse"
+              "$ref": "#/definitions/APISuccessNoDataResponse"
             }
           }
         }
@@ -353,7 +353,7 @@
           "200": {
             "description": "修改成功",
             "schema": {
-              "$ref": "#/definitions/APIResponse"
+              "$ref": "#/definitions/APISuccessNoDataResponse"
             }
           }
         }
@@ -387,7 +387,7 @@
           "200": {
             "description": "成功",
             "schema": {
-              "$ref": "#/definitions/APIResponse"
+              "$ref": "#/definitions/APISuccessNoDataResponse"
             }
           }
         }
@@ -421,7 +421,7 @@
           "200": {
             "description": "成功",
             "schema": {
-              "$ref": "#/definitions/APIResponse"
+              "$ref": "#/definitions/APISuccessNoDataResponse"
             }
           }
         }
@@ -457,7 +457,7 @@
             "schema": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/APIResponse"
+                  "$ref": "#/definitions/APISuccessResponse"
                 },
                 {
                   "type": "object",
@@ -502,7 +502,7 @@
             "schema": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/APIResponse"
+                  "$ref": "#/definitions/APISuccessResponse"
                 },
                 {
                   "type": "object",
@@ -553,7 +553,7 @@
             "schema": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/APIResponse"
+                  "$ref": "#/definitions/APISuccessResponse"
                 },
                 {
                   "type": "object",
@@ -616,7 +616,7 @@
             "schema": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/APIResponse"
+                  "$ref": "#/definitions/APISuccessResponse"
                 },
                 {
                   "type": "object",
@@ -705,7 +705,7 @@
             "schema": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/APIResponse"
+                  "$ref": "#/definitions/APISuccessResponse"
                 },
                 {
                   "type": "object",
@@ -765,7 +765,7 @@
             "schema": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/APIResponse"
+                  "$ref": "#/definitions/APISuccessResponse"
                 },
                 {
                   "type": "object",
@@ -829,7 +829,7 @@
             "schema": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/APIResponse"
+                  "$ref": "#/definitions/APISuccessResponse"
                 },
                 {
                   "type": "object",
@@ -885,7 +885,7 @@
             "schema": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/APIResponse"
+                  "$ref": "#/definitions/APISuccessResponse"
                 },
                 {
                   "type": "object",
@@ -930,7 +930,7 @@
           "200": {
             "description": "删除成功",
             "schema": {
-              "$ref": "#/definitions/APIResponse"
+              "$ref": "#/definitions/APISuccessNoDataResponse"
             }
           }
         }
@@ -986,13 +986,9 @@
     }
   },
   "definitions": {
-    "APIResponse": {
+    "APISuccessNoDataResponse": {
       "type": "object",
       "properties": {
-        "success": {
-          "type": "boolean",
-          "example": true
-        },
         "code": {
           "type": "integer",
           "example": 200
@@ -1001,10 +997,27 @@
           "type": "string",
           "example": "OK"
         },
+        "success": {
+          "type": "boolean",
+          "example": true
+        }
+      }
+    },
+    "APISuccessResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "example": 200
+        },
         "data": {},
-        "errors": {},
-        "exception": {
-          "$ref": "#/definitions/ExceptionInfo"
+        "message": {
+          "type": "string",
+          "example": "OK"
+        },
+        "success": {
+          "type": "boolean",
+          "example": true
         }
       }
     },
@@ -1037,36 +1050,6 @@
         },
         "token": {
           "type": "string"
-        }
-      }
-    },
-    "ExceptionInfo": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string"
-        },
-        "line": {
-          "type": "integer"
-        },
-        "memory_usage": {
-          "type": "string"
-        },
-        "message": {
-          "type": "string"
-        },
-        "query_count": {
-          "type": "integer"
-        },
-        "request_time": {
-          "description": "milliseconds",
-          "type": "number"
-        },
-        "trace": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         }
       }
     },

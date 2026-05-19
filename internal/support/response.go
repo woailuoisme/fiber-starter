@@ -25,6 +25,21 @@ type APIResponse struct {
 	Exception *ExceptionInfo `json:"exception,omitempty"`
 }
 
+// APISuccessResponse 成功响应结构，包含 data。
+type APISuccessResponse struct {
+	Success bool        `json:"success" example:"true"`
+	Code    int         `json:"code" example:"200"`
+	Message string      `json:"message" example:"OK"`
+	Data    interface{} `json:"data,omitempty"`
+}
+
+// APISuccessNoDataResponse 成功响应结构，不包含 data。
+type APISuccessNoDataResponse struct {
+	Success bool   `json:"success" example:"true"`
+	Code    int    `json:"code" example:"200"`
+	Message string `json:"message" example:"OK"`
+}
+
 // ExceptionInfo 异常与调试信息结构体。
 type ExceptionInfo struct {
 	Message     string   `json:"message"`
@@ -54,15 +69,16 @@ type PaginatedResponse struct {
 }
 
 func writeJSONResponse(ctx fiber.Ctx, status int, success bool, message string, data any, errs any) error {
+	if success {
+		return ctx.Status(status).JSON(buildSuccessResponse(status, message, data))
+	}
+
 	response := APIResponse{
 		Success: success,
 		Code:    status,
 		Message: message,
 	}
-
-	if success {
-		response.Data = normalizeJSONData(data)
-	} else {
+	if shouldExposeErrors(status, errs) {
 		response.Errors = normalizeJSONData(errs)
 	}
 
@@ -100,12 +116,7 @@ func JSON(c fiber.Ctx, data interface{}, message string) error {
 	if message == "" {
 		message = "success"
 	}
-	return c.Status(fiber.StatusOK).JSON(APIResponse{
-		Success: true,
-		Code:    fiber.StatusOK,
-		Message: message,
-		Data:    normalizeJSONData(data),
-	})
+	return c.Status(fiber.StatusOK).JSON(buildSuccessResponse(fiber.StatusOK, message, data))
 }
 
 // Created 发送创建成功响应。
@@ -113,12 +124,7 @@ func Created(c fiber.Ctx, data interface{}, message string) error {
 	if message == "" {
 		message = "created"
 	}
-	return c.Status(fiber.StatusCreated).JSON(APIResponse{
-		Success: true,
-		Code:    fiber.StatusCreated,
-		Message: message,
-		Data:    normalizeJSONData(data),
-	})
+	return c.Status(fiber.StatusCreated).JSON(buildSuccessResponse(fiber.StatusCreated, message, data))
 }
 
 // ErrorWithDebugger 带调试信息的错误响应。
@@ -135,10 +141,12 @@ func ErrorWithDebugger(
 		Success: false,
 		Code:    code,
 		Message: message,
-		Errors:  errs,
+	}
+	if shouldExposeErrors(code, errs) {
+		response.Errors = normalizeJSONData(errs)
 	}
 
-	if IsDebugMode() {
+	if IsDebugMode() && exception != "" {
 		exceptionInfo := GetExceptionInfo(c)
 		exceptionInfo.Message = exception
 		exceptionInfo.File = file
@@ -301,6 +309,64 @@ func normalizeJSONData(value any) any {
 		return reflect.MakeSlice(rv.Type(), 0, 0).Interface()
 	default:
 		return value
+	}
+}
+
+func buildSuccessResponse(status int, message string, data any) any {
+	if isNilJSONValue(data) {
+		return APISuccessNoDataResponse{
+			Success: true,
+			Code:    status,
+			Message: message,
+		}
+	}
+
+	return APISuccessResponse{
+		Success: true,
+		Code:    status,
+		Message: message,
+		Data:    normalizeJSONData(data),
+	}
+}
+
+func shouldExposeErrors(status int, errs any) bool {
+	return status == fiber.StatusUnprocessableEntity && hasNonEmptyJSONValue(errs)
+}
+
+func isNilJSONValue(value any) bool {
+	if value == nil {
+		return true
+	}
+
+	rv := reflect.ValueOf(value)
+	for rv.Kind() == reflect.Interface || rv.Kind() == reflect.Pointer {
+		if rv.IsNil() {
+			return true
+		}
+		rv = rv.Elem()
+	}
+
+	return false
+}
+
+func hasNonEmptyJSONValue(value any) bool {
+	if value == nil {
+		return false
+	}
+
+	rv := reflect.ValueOf(value)
+	for rv.Kind() == reflect.Interface || rv.Kind() == reflect.Pointer {
+		if rv.IsNil() {
+			return false
+		}
+		rv = rv.Elem()
+	}
+
+	switch rv.Kind() {
+	case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice, reflect.String:
+		return rv.Len() > 0
+	default:
+		return true
 	}
 }
 

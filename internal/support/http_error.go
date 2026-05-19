@@ -77,7 +77,7 @@ func writeDebuggerError(c fiber.Ctx, code int, message string, details interface
 }
 
 func handleFiberError(c fiber.Ctx, fiberErr *fiber.Error) error {
-	return writeDebuggerError(c, fiberErr.Code, fiberErrorMessage(fiberErr), nil, "FiberError", 1)
+	return writeDebuggerError(c, fiberErr.Code, fiberErrorMessage(fiberErr), nil, "", 1)
 }
 
 func handleUnknownError(c fiber.Ctx, err error) error {

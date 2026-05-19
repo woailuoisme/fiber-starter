@@ -31,7 +31,7 @@ func NewUserController(userService UserService) *UserController {
 //	@Produce		json
 //	@Security		Bearer
 //	@Param			request	query		UserListRequest												true	"分页过滤参数"
-//	@Success		200		{object}	support.APIResponse{data=support.PaginatedResponse{items=[]user.SafeUser}}	"获取成功"
+//	@Success		200		{object}	support.APISuccessResponse{data=support.PaginatedResponse{items=[]user.SafeUser}}	"获取成功"
 //	@Router			/api/v1/users [get]
 func (c *UserController) GetUsers(ctx fiber.Ctx) error {
 	var req UserListRequest
@@ -55,7 +55,7 @@ func (c *UserController) GetUsers(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Security		Bearer
 //	@Param			id	path		int					true	"用户ID"
-//	@Success		200	{object}	support.APIResponse{data=user.SafeUser}	"获取成功"
+//	@Success		200	{object}	support.APISuccessResponse{data=user.SafeUser}	"获取成功"
 //	@Router			/api/v1/users/{id} [get]
 func (c *UserController) GetUser(ctx fiber.Ctx) error {
 	idStr := ctx.Params("id")
@@ -82,7 +82,7 @@ func (c *UserController) GetUser(ctx fiber.Ctx) error {
 //	@Security		Bearer
 //	@Param			id		path		int						true	"用户ID"
 //	@Param			request	body		UpdateProfileRequest	true	"修改参数"
-//	@Success		200		{object}	support.APIResponse{data=user.SafeUser}	"更新成功"
+//	@Success		200		{object}	support.APISuccessResponse{data=user.SafeUser}	"更新成功"
 //	@Router			/api/v1/users/{id} [put]
 func (c *UserController) UpdateUser(ctx fiber.Ctx) error {
 	idStr := ctx.Params("id")
@@ -113,7 +113,7 @@ func (c *UserController) UpdateUser(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Security		Bearer
 //	@Param			id	path		int					true	"用户ID"
-//	@Success		200	{object}	support.APIResponse	"删除成功"
+//	@Success		200	{object}	support.APISuccessNoDataResponse	"删除成功"
 //	@Router			/api/v1/users/{id} [delete]
 func (c *UserController) DeleteUser(ctx fiber.Ctx) error {
 	idStr := ctx.Params("id")
@@ -138,7 +138,7 @@ func (c *UserController) DeleteUser(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Security		Bearer
 //	@Param			request	body		UpdateProfileRequest	true	"更新个人资料参数"
-//	@Success		200		{object}	support.APIResponse{data=user.SafeUser}	"更新成功"
+//	@Success		200		{object}	support.APISuccessResponse{data=user.SafeUser}	"更新成功"
 //	@Router			/api/v1/users/profile [put]
 func (c *UserController) UpdateProfile(ctx fiber.Ctx) error {
 	userID := middleware.GetCurrentUserID(ctx)
@@ -167,7 +167,7 @@ func (c *UserController) UpdateProfile(ctx fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Security		Bearer
-//	@Success		200	{object}	support.APIResponse{data=user.SafeUser}	"获取成功"
+//	@Success		200	{object}	support.APISuccessResponse{data=user.SafeUser}	"获取成功"
 //	@Router			/api/v1/users/me [get]
 func (c *UserController) GetCurrentUser(ctx fiber.Ctx) error {
 	userID, ok := ctx.Locals("user_id").(int64)
@@ -192,7 +192,7 @@ func (c *UserController) GetCurrentUser(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Security		Bearer
 //	@Param			request	query		SearchUsersRequest											true	"检索过滤参数"
-//	@Success		200		{object}	support.APIResponse{data=support.PaginatedResponse{items=[]user.SafeUser}}	"搜索成功"
+//	@Success		200		{object}	support.APISuccessResponse{data=support.PaginatedResponse{items=[]user.SafeUser}}	"搜索成功"
 //	@Router			/api/v1/users/search [get]
 func (c *UserController) SearchUsers(ctx fiber.Ctx) error {
 	var req SearchUsersRequest
@@ -240,7 +240,7 @@ func (c *UserController) ExportUsers(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Security		Bearer
 //	@Param			file	formData	file															true	"用户数据 Excel 文件"
-//	@Success		200		{object}	support.APIResponse{data=object{count=int}}	"导入成功"
+//	@Success		200		{object}	support.APISuccessResponse{data=object{count=int}}	"导入成功"
 //	@Router			/api/v1/users/import [post]
 func (c *UserController) ImportUsers(ctx fiber.Ctx) error {
 	file, err := ctx.FormFile("file")
