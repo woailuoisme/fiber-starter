@@ -17,14 +17,8 @@ COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     GOFLAGS=-mod=mod go mod download
 
-# 复制核心业务源码与配置文件以进行编译
-COPY internal ./internal
-COPY cmd ./cmd
-COPY routes ./routes
-COPY configs/config.go ./configs/config.go
-COPY configs/internal ./configs/internal
-COPY database/factories ./database/factories
-COPY database/seeders ./database/seeders
+# 复制核心业务源码与配置文件以进行编译（基于 .dockerignore 过滤无关文件）
+COPY . .
 
 # 挂载 Go 缓存、编译无符号与无调试信息的极简 Linux 静态二进制
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
@@ -55,15 +49,15 @@ RUN mkdir -p /app/storage/app /app/storage/logs /app/storage/framework/cache /ap
 # 设置容器运行默认环境变量（生产环境模式、端口、上海时区）
 ENV APP_ENV=production \
     CONFIG_WARN_MISSING_ENV_FILE=false \
-    APP_PORT=8080 \
+    APP_PORT=3100 \
     APP_HOST=0.0.0.0 \
     TZ=Asia/Shanghai
 
-EXPOSE 8080
+EXPOSE 3100
 
 # 容器健康状态检测
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD wget -qO- http://127.0.0.1:8080/health >/dev/null || exit 1
+    CMD wget -qO- http://127.0.0.1:3100/health >/dev/null || exit 1
 
 # 以非 root 用户安全身份运行进程
 USER appuser
