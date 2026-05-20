@@ -1,25 +1,33 @@
-# 作用：构建并推送 Docker 镜像到 GitHub Container Registry。
-# 使用：需要手动发布、验证镜像构建，或在恢复注释后的 push/tag 场景下自动触发。
 name: Docker Build and Push
 
 on:
-#  push:
-#    branches:
-#      - main
-#    tags:
-#      - "v*"
+  # push:
+  #   branches:
+  #     - main
+  #   tags:
+  #     - "v*.*.*"
+  # pull_request:
+  #   branches:
+  #     - main
   workflow_dispatch:
-
-permissions:
-  contents: read
-  packages: write
+    inputs:
+      docker_username:
+        description: 'Docker Hub Username'
+        type: string
+        default: 'jiaoio'
+      
+      image_name:
+        description: 'Docker Image Name'
+        type: string
+        default: 'fiber'
 
 jobs:
   build-and-push:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up QEMU
@@ -28,32 +36,23 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ inputs.docker_username || secrets.DOCKERHUB_USERNAME || 'jiaoio' }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push
+      - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
+          # Multi-platform build
           platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          # Only push if it's not a pull request
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ inputs.docker_username || secrets.DOCKERHUB_USERNAME || 'jiaoio' }}/${{ inputs.image_name || 'fiber' }}:starter-latest
+          # Use GitHub Actions cache to speed up builds
           cache-from: type=gha
           cache-to: type=gha,mode=max

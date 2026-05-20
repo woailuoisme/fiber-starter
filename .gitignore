@@ -1,5 +1,10 @@
-# Binaries
-# ------------------------------
+# ==========================================
+# Go Fiber Starter Project - .gitignore
+# ==========================================
+
+# ------------------------------------------
+# Binaries & Execution
+# ------------------------------------------
 *.exe
 *.exe~
 *.dll
@@ -8,22 +13,15 @@
 *.test
 *.out
 debug
+debug.test
 __debug_bin
-bin/
-fiber-starter
-main
+/bin/
+/fiber-starter
+/main
 
-# IDEs
-# ------------------------------
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-*.iml
-
-# OS Files
-# ------------------------------
+# ------------------------------------------
+# OS Generated Files
+# ------------------------------------------
 .DS_Store
 .DS_Store?
 ._*
@@ -31,110 +29,129 @@ main
 .Trashes
 ehthumbs.db
 Thumbs.db
+Desktop.ini
 
-# Dependency directories
-# ------------------------------
-vendor/
+# ------------------------------------------
+# IDEs, Editors & Tooling
+# ------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.iml
+.project
+.settings/
 
-# Go Workspace
-# ------------------------------
-go.work
-
-# Environment Variables
-# ------------------------------
+# ------------------------------------------
+# Environment & Secrets (SECURITY)
+# ------------------------------------------
 .env
-.env.local
-.env.dev
-.env.product
-.env.production
-.env.*.local
-# Keep these as templates/defaults
-# !.env.example
-# !.env.dev
-# !.env.production
+.env.*
+!.env.example
+!.env.dev
+!.env.production
+secrets.ini
+*.pem
+*.key
+*.cert
 
+# ------------------------------------------
+# Dependencies & Workspaces
+# ------------------------------------------
+/vendor/
+go.work
+go.work.sum
+
+# ------------------------------------------
 # Logs
-# ------------------------------
+# ------------------------------------------
 *.log
-logs/
-storage/logs/
+/logs/
+/storage/logs/
 
-# Database
-# ------------------------------
+# ------------------------------------------
+# Databases
+# ------------------------------------------
 *.db
 *.sqlite
 *.sqlite3
+*.sqlite3-journal
 
-# Air (Live Reload)
-# ------------------------------
-tmp/
+# ------------------------------------------
+# Caches & Temporary Files
+# ------------------------------------------
+/tmp/
+.temp/
+.cache/
+.gocache/
+.gopath/
+.go/
+.golangci-lint-cache/
+.playwright-cli/
 
-# Build Output
-# ------------------------------
-dist/
-build/
+# ------------------------------------------
+# Build & Distribution Outputs
+# ------------------------------------------
+/dist/
+/build/
 
-# Test Coverage
-# ------------------------------
+# ------------------------------------------
+# Testing & Coverage
+# ------------------------------------------
 coverage.txt
 coverage.html
 coverage.out
-test-results/
+coverage.xml
+/test-results/
+/.test-results/
 
-# Cache
-# ------------------------------
-.cache/
-
-# Local Development
-# ------------------------------
-.local/
-
-# Terraform
-# ------------------------------
+# ------------------------------------------
+# Infrastructure & Deployment
+# ------------------------------------------
 *.tfstate
 *.tfstate.*
 .terraform/
-
-# Kubeconfig
-# ------------------------------
 *.kubeconfig
 
-# Storage (Local Uploads)
-# ------------------------------
-storage/app/public/*
-!storage/app/public/.gitkeep
-storage/framework/cache/*
-!storage/framework/cache/.gitkeep
-storage/framework/sessions/*
-!storage/framework/sessions/.gitkeep
-storage/framework/views/*
-!storage/framework/views/.gitkeep
+# ------------------------------------------
+# Framework Storage (Laravel Style)
+# ------------------------------------------
+/storage/app/public/*
+!/storage/app/public/.gitkeep
+/storage/framework/cache/*
+!/storage/framework/cache/.gitkeep
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitkeep
+/storage/framework/views/*
+!/storage/framework/views/.gitkeep
+/storage/framework/testing/*
+!/storage/framework/testing/.gitkeep
 
-# Project Specific
-# ------------------------------
-.kiro
-.idea
-.vscode
+# ------------------------------------------
+# Local Development
+# ------------------------------------------
+.local/
+
+# ------------------------------------------
+# AI & Agent Tools
+# ------------------------------------------
 .claude
 .gemini
 .trae
-specs
+.kiro
+/specs/
 
-# .agents
+# .agents (Selectively allow certain skills)
 !.agents/
 .agents/*
 !.agents/skills/
 .agents/skills/*
 !.agents/skills/bun-orm/
 
-# .specify
+# .specify (Selectively allow memory configuration)
 !.specify/
 .specify/*
 !.specify/memory/
 .specify/memory/*
 !.specify/memory/constitution.md
-
-.playwright-cli
-.go
-.gocache
-.gopath
