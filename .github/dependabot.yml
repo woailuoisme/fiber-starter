@@ -2,41 +2,43 @@
 # Dependabot Configuration
 # 作用：自动依赖更新与安全补丁管理
 # 保持项目所使用的框架、依赖库以及CI/CD组件处于最新状态
+#
+# 注意：暂时停用。如需重新启用，请取消下方内容的注释。
 # ==========================================
-version: 2
-updates:
-  # ------------------------------------------
-  # 1. 监控 GitHub Actions 工作流组件更新
-  # 作用：确保 .github/workflows 中使用的 actions/checkout、docker/build-push-action 等始终是最新的安全版本
-  # ------------------------------------------
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly" # 每周定期检查一次更新
-    open-pull-requests-limit: 5 # 最多允许存在 5 个开启的 PR，防止 PR 泛滥干扰开发
-    labels:
-      - dependencies
-      - security
-    groups:
-      # 分组功能：将所有的 Actions 更新打包合并成一个单一的 PR，大幅减少审查与合并的代码负担
-      github-actions:
-        patterns:
-          - "*"
-
-  # ------------------------------------------
-  # 2. 监控 Go 语言 (Go Modules) 依赖更新
-  # 作用：自动检查 go.mod 中的 fiber 框架和各种第三方依赖库是否有新版本或被曝光的漏洞补丁
-  # ------------------------------------------
-  - package-ecosystem: "gomod"
-    directory: "/"
-    schedule:
-      interval: "weekly" # 每周定期检查一次更新
-    open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - security
-    groups:
-      # 分组功能：将所有的 Go 依赖包更新打包合并成一个单一的 PR
-      dependencies:
-        patterns:
-          - "*"
+# version: 2
+# updates:
+#   # ------------------------------------------
+#   # 1. 监控 GitHub Actions 工作流组件更新
+#   # 作用：确保 .github/workflows 中使用的 actions/checkout、docker/build-push-action 等始终是最新的安全版本
+#   # ------------------------------------------
+#   - package-ecosystem: "github-actions"
+#     directory: "/"
+#     schedule:
+#       interval: "weekly" # 每周定期检查一次更新
+#     open-pull-requests-limit: 5 # 最多允许存在 5 个开启的 PR，防止 PR 泛滥干扰开发
+#     labels:
+#       - dependencies
+#       - security
+#     groups:
+#       # 分组功能：将所有的 Actions 更新打包合并成一个单一的 PR，大幅减少审查与合并的代码负担
+#       github-actions:
+#         patterns:
+#           - "*"
+# 
+#   # ------------------------------------------
+#   # 2. 监控 Go 语言 (Go Modules) 依赖更新
+#   # 作用：自动检查 go.mod 中的 fiber 框架和各种第三方依赖库是否有新版本或被曝光的漏洞补丁
+#   # ------------------------------------------
+#   - package-ecosystem: "gomod"
+#     directory: "/"
+#     schedule:
+#       interval: "weekly" # 每周定期检查一次更新
+#     open-pull-requests-limit: 5
+#     labels:
+#       - dependencies
+#       - security
+#     groups:
+#       # 分组功能：将所有的 Go 依赖包更新打包合并成一个单一的 PR
+#       dependencies:
+#         patterns:
+#           - "*"
