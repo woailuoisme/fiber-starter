@@ -58,8 +58,13 @@ func showCommand() *cobra.Command {
 
 func redact(key, value string) string {
 	lowerKey := strings.ToLower(key)
-	if strings.Contains(lowerKey, "secret") || strings.Contains(lowerKey, "password") || strings.Contains(lowerKey, "token") || strings.Contains(lowerKey, "key") {
-		return support.RedactionSentinel()
+	sensitiveKeywords := []string{
+		"secret", "password", "token", "key", "pass", "dsn", "dns", "credential", "auth", "cert", "private",
+	}
+	for _, kw := range sensitiveKeywords {
+		if strings.Contains(lowerKey, kw) {
+			return support.RedactionSentinel()
+		}
 	}
 	return support.RedactSensitive(value)
 }

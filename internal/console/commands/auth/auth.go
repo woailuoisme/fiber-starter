@@ -19,7 +19,7 @@ func aboutCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:     "auth:about",
 		Short:   "Display authentication configuration summary",
-		GroupID: "system",
+		GroupID: "auth",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg, _, err := configs.LoadConfig()

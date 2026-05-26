@@ -13,7 +13,7 @@ func Commands() []*cobra.Command {
 }
 
 func clearCommand() *cobra.Command {
-	return &cobra.Command{Use: "cache:clear", Short: "Flush the default cache store", GroupID: "system", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+	return &cobra.Command{Use: "cache:clear", Short: "Flush the default cache store", GroupID: "cache", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 		rt, err := commandutil.BuildRuntime()
 		if err != nil {
 			return err
@@ -31,7 +31,7 @@ func clearCommand() *cobra.Command {
 }
 
 func forgetCommand() *cobra.Command {
-	return &cobra.Command{Use: "cache:forget <key>", Short: "Remove a key from the default cache store", GroupID: "system", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+	return &cobra.Command{Use: "cache:forget <key>", Short: "Remove a key from the default cache store", GroupID: "cache", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		rt, err := commandutil.BuildRuntime()
 		if err != nil {
 			return err
@@ -49,7 +49,7 @@ func forgetCommand() *cobra.Command {
 }
 
 func hasCommand() *cobra.Command {
-	return &cobra.Command{Use: "cache:has <key>", Short: "Check if a cache key exists", GroupID: "system", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+	return &cobra.Command{Use: "cache:has <key>", Short: "Check if a cache key exists", GroupID: "cache", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		rt, err := commandutil.BuildRuntime()
 		if err != nil {
 			return err
@@ -68,7 +68,7 @@ func hasCommand() *cobra.Command {
 }
 
 func ttlCommand() *cobra.Command {
-	return &cobra.Command{Use: "cache:ttl <key>", Short: "Show a cache key TTL", GroupID: "system", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+	return &cobra.Command{Use: "cache:ttl <key>", Short: "Show a cache key TTL", GroupID: "cache", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		rt, err := commandutil.BuildRuntime()
 		if err != nil {
 			return err

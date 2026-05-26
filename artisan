@@ -3,4 +3,8 @@ set -eu
 
 GOFLAGS="${GOFLAGS:--mod=mod}"
 
-GOFLAGS="$GOFLAGS" exec go run ./cmd/app "$@"
+if [ $# -eq 0 ]; then
+    GOFLAGS="$GOFLAGS" exec go run ./cmd/app --help
+else
+    GOFLAGS="$GOFLAGS" exec go run ./cmd/app "$@"
+fi

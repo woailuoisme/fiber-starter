@@ -19,7 +19,7 @@ func makeCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:     "hash:make <value>",
 		Short:   "Hash a value using the configured hash driver",
-		GroupID: "system",
+		GroupID: "auth",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			hasher, err := configuredHasher()
@@ -40,7 +40,7 @@ func checkCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:     "hash:check <value> <hash>",
 		Short:   "Check a value against a hash",
-		GroupID: "system",
+		GroupID: "auth",
 		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			hasher, err := configuredHasher()
@@ -60,7 +60,7 @@ func infoCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:     "hash:info <hash>",
 		Short:   "Display hash metadata",
-		GroupID: "system",
+		GroupID: "auth",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			hasher, err := configuredHasher()

@@ -18,7 +18,7 @@ func Commands() []*cobra.Command {
 }
 
 func runCommand() *cobra.Command {
-	return &cobra.Command{Use: "schedule:run", Short: "Run scheduled task scheduler", GroupID: "queue", Args: cobra.NoArgs, RunE: func(_ *cobra.Command, _ []string) error {
+	return &cobra.Command{Use: "schedule:run", Short: "Run scheduled task scheduler", GroupID: "schedule", Args: cobra.NoArgs, RunE: func(_ *cobra.Command, _ []string) error {
 		rt, err := commandutil.BuildRuntime()
 		if err != nil {
 			return err
@@ -44,7 +44,7 @@ func runCommand() *cobra.Command {
 }
 
 func listCommand() *cobra.Command {
-	return &cobra.Command{Use: "schedule:list", Short: "List all scheduled tasks", GroupID: "queue", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+	return &cobra.Command{Use: "schedule:list", Short: "List all scheduled tasks", GroupID: "schedule", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 		rt, err := commandutil.BuildRuntime()
 		if err != nil {
 			return err

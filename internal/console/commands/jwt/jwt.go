@@ -19,7 +19,7 @@ func generateCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "jwt:generate",
 		Short:   "Generate and replace JWT_SECRET in the environment file",
-		GroupID: "system",
+		GroupID: "auth",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			secret, err := GenerateSecret()

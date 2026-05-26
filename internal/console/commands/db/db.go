@@ -124,17 +124,27 @@ func seedCommand() *cobra.Command {
 }
 
 func seedRandomCommand() *cobra.Command {
-	return &cobra.Command{Use: "db:seed-random [count]", Short: "Generate random test data", GroupID: "database", Args: cobra.MaximumNArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		count := 10
-		if len(args) > 0 {
-			count = commandutil.ParsePositiveInt(args[0], count)
-		}
-		if err := runSeedOperation(func(db *sql.DB, dialect string) error { return seeders.RunRandomSeeders(db, dialect, count) }); err != nil {
-			return fmt.Errorf("failed to run random seeds: %w", err)
-		}
-		ui.Success(cmd.OutOrStdout(), "Random seed data completed")
-		return nil
-	}}
+	var countOption int
+	cmd := &cobra.Command{
+		Use:     "db:seed-random [count]",
+		Short:   "Generate random test data",
+		GroupID: "database",
+		Args:    cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			count := countOption
+			// If positional argument is provided, it takes precedence
+			if len(args) > 0 {
+				count = commandutil.ParsePositiveInt(args[0], countOption)
+			}
+			if err := runSeedOperation(func(db *sql.DB, dialect string) error { return seeders.RunRandomSeeders(db, dialect, count) }); err != nil {
+				return fmt.Errorf("failed to run random seeds: %w", err)
+			}
+			ui.Success(cmd.OutOrStdout(), "Random seed data completed")
+			return nil
+		},
+	}
+	cmd.Flags().IntVarP(&countOption, "count", "n", 10, "number of random test items to seed")
+	return cmd
 }
 
 func rebuildDatabase(cmd *cobra.Command, startMessage string, withSeed bool) error {
