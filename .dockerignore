@@ -5,7 +5,17 @@
 .gemini
 .trae
 .kiro
+.specify
+.cursor
 specs
+.idea
+.vscode
+.local
+.cache
+.gocache
+.gopath
+.go
+.golangci-lint-cache
 
 build
 coverage

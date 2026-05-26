@@ -17,6 +17,7 @@ debug.test
 __debug_bin
 /bin/
 /lfiber
+/lfiber-cli
 /main
 
 # ------------------------------------------
