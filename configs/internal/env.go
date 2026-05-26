@@ -185,13 +185,15 @@ func EnvConfigMap() map[string]any {
 		"I18N_COOKIE_MAX_AGE":   "i18n.cookie_max_age",
 
 		// Meilisearch & OTEL
-		"SEARCH_DRIVER":       "search.default",
-		"MEILISEARCH_HOST":    "search.host",
-		"MEILISEARCH_API_KEY": "search.api_key",
-		"OTEL_ENABLED":        "otel.enabled",
-		"OTEL_SERVICE_NAME":   "otel.service_name",
-		"OTEL_EXPORTER_TYPE":  "otel.exporter_type",
-		"OTEL_ENDPOINT":       "otel.endpoint",
+		"SEARCH_DRIVER":        "search.default",
+		"MEILISEARCH_HOST":     "search.host",
+		"MEILISEARCH_API_KEY":  "search.api_key",
+		"OTEL_ENABLED":         "otel.enabled",
+		"OTEL_SERVICE_NAME":    "otel.service_name",
+		"OTEL_EXPORTER_TYPE":   "otel.exporter_type",
+		"OTEL_ENDPOINT":        "otel.endpoint",
+		"OTEL_METRICS_ENABLED": "otel.metrics_enabled",
+		"OTEL_METRICS_PATH":    "otel.metrics_path",
 
 		// Database common
 		"DB_POOL_MAX_OPEN_CONNS":     "database.pool.max_open_conns",

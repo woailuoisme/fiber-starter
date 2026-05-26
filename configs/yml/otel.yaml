@@ -1,0 +1,15 @@
+otel:
+  # 是否启用 OpenTelemetry 链路追踪 (Tracer 引擎)
+  trace_enabled: ${OTEL_TRACE_ENABLED:false}
+  # 注册服务名称 (会附加在所有 Trace Spans 和 Metrics 上用于服务标识)
+  service_name: ${OTEL_SERVICE_NAME:lfiber}
+  # 数据导出器类型：
+  #   stdout - 输出到控制台终端 (开发环境调试用)
+  #   otlp   - 推送到 OTel Collector 收集服务 (生产环境推荐)
+  exporter_type: ${OTEL_EXPORTER_TYPE:stdout}
+  # OTLP Collector 的 gRPC 接收地址 (仅在 exporter_type 为 otlp 且开启 trace_enabled 时生效)
+  endpoint: ${OTEL_ENDPOINT:localhost:4317}
+  # 是否开启 Prometheus 性能指标度量暴露 (/metrics)
+  metrics_enabled: ${OTEL_METRICS_ENABLED:false}
+  # Prometheus 抓取指标的 HTTP 路由路径
+  metrics_path: ${OTEL_METRICS_PATH:/metrics}

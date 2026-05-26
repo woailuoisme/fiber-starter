@@ -207,5 +207,7 @@ func DefaultConfigMap() map[string]any {
 		"otel.service_name":                       "lfiber",
 		"otel.exporter_type":                      "stdout",
 		"otel.endpoint":                           "localhost:4317",
+		"otel.metrics_enabled":                    true,
+		"otel.metrics_path":                       "/metrics",
 	}
 }

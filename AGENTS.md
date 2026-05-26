@@ -41,8 +41,8 @@
 - `rtk just docs`: 重新生成 Swagger 2.0 定义并导出，刷新 Swagger UI 文档界面。
 - `rtk just k6-root` / `rtk just k6-root-load`: 对根路径执行 smoke/load 性能验证；运行前需确保服务监听在 `BASE_URL`，默认 `http://localhost:3300`。
 - `rtk just atlas-diff <name>` & `rtk just atlas-apply`: 通过 Atlas 控制和应用数据库迁移 Schema 的演进。
-- `./artisan <command>`: Laravel Artisan 风格短入口，例如 `./artisan jwt:generate`、`./artisan serve`、`./artisan queue:work`。
-- `rtk just artisan jwt:generate`: 通过 justfile 运行任意 CLI 命令。
+- `./lfiber <command>`: Laravel Artisan 风格短入口，例如 `./lfiber jwt:generate`、`./lfiber serve`、`./lfiber queue:work`。
+- `rtk just lfiber jwt:generate`: 通过 justfile 运行任意 CLI 命令。
 - `rtk just jwt`: 生成 32 字节随机 JWT secret，并替换 `.env` 中的 `JWT_SECRET`。
 
 ## 代码风格与命名规范
@@ -69,7 +69,7 @@
 - `/health` 只表示进程存活；`/ready` 返回 `ok`、`degraded` 或 `fail`，只有关键依赖失败时返回 `503`。
 - 默认数据库为关键依赖；缓存、邮件、队列、搜索、存储和实时通信为可降级依赖，可用 `SERVICE_*_CRITICAL` 环境变量覆盖。
 - `JWT_SECRET`、API key、密码、token、连接串等敏感值必须来自环境变量或密钥管理系统，源码默认值不得包含真实 secret。
-- 需要生成本地 JWT secret 时使用 `./artisan jwt:generate` 或 `rtk just jwt`，不要手写弱 secret；不要新增重复的 JWT 生成命令入口。
+- 需要生成本地 JWT secret 时使用 `./lfiber jwt:generate` 或 `rtk just jwt`，不要手写弱 secret；不要新增重复的 JWT 生成命令入口。
 - 日志与 readiness 错误必须使用 `internal/support/redaction.go` 的脱敏辅助函数。
 - 时区与时间格式规范：全局配置时区固定为 `Asia/Shanghai`（东八区）。为了保证可读性，日志时间戳的序列化格式必须统一使用 `2006-01-02 15:04:05`（年月日时分秒），这在 [internal/providers/logging/config.go](file:///Users/seaside/Projects/go/fiber-starter/internal/providers/logging/config.go) 中由自定义 `EncodeTime` 函数拦截。
 - 命令行命令规范与模块分组：新添加的 Cobra CLI 命令必须使用 `GroupID` 显式划分至 7 个核心的 Laravel 风格分组中：`app` (应用命令)、`database` (数据库命令)、`cache` (缓存命令)、`auth` (安全鉴权命令)、`queue` (队列命令)、`schedule` (计划任务) 或 `system` (系统与配置项)。严禁随意将命令丢入默认的无分组或通用的 `system` 组中。

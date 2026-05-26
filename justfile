@@ -124,8 +124,8 @@ check: fmt-gofumpt lint-fix
 # 运行所有检查
 check-all: check test
 
-# 运行 CLI 命令（示例：just artisan jwt:generate 或 CMD="jwt:generate" just artisan）
-artisan cmd=CMD:
+# 运行 CLI 命令（示例：just lfiber jwt:generate 或 CMD="jwt:generate" just lfiber）
+lfiber cmd=CMD:
     @{{ APP_RUN }} {{ cmd }}
 
 # 运行数据库迁移
@@ -257,7 +257,7 @@ atlas-inspect env=ENV:
 # 自动从注释生成 Swagger 文档并由官方 Fiber contrib SwaggerUI 展示
 docs:
     @swag init --pd --st --parseInternal --packagePrefix lfiber --md docs/md -d cmd/app,internal -g main.go -o docs --ot json
-    @python3 internal/support/scripts/reorder_swagger.py docs/swagger.json
+    @python3 scripts/swagger/reorder_swagger.py docs/swagger.json
     @cp docs/swagger.json docs/openapi.json
     @echo "Documentation generated at docs/openapi.json"
 

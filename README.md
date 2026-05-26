@@ -226,9 +226,9 @@ cfg := rt.Config    // 获取配置
    生成本地 JWT secret：
 
    ```bash
-   ./artisan jwt:generate
+   ./lfiber jwt:generate
    # 或指定环境文件
-   ./artisan jwt:generate --env .env.local
+   ./lfiber jwt:generate --env .env.local
    ```
 
 4. **配置依赖关键性**
@@ -256,19 +256,19 @@ cfg := rt.Config    // 获取配置
 
 - `rtk just migrate`：执行数据库迁移（使用 Atlas）
 - `rtk just seed`：填充数据库种子数据
-- `./artisan db:reset --force`：跳过交互确认并重置数据库，适合受控脚本环境
-- `./artisan db:fresh --no-interaction`：禁用交互输入；未显式 `--force` 时会安全取消破坏性操作
+- `./lfiber db:reset --force`：跳过交互确认并重置数据库，适合受控脚本环境
+- `./lfiber db:fresh --no-interaction`：禁用交互输入；未显式 `--force` 时会安全取消破坏性操作
 
 ### 异步队列
 
-- `./artisan queue:work`：运行任务队列工作进程
+- `./lfiber queue:work`：运行任务队列工作进程
 
 ### 密钥生成
 
-- `./artisan jwt:generate`：生成 32 字节随机 JWT secret，并替换 `.env` 中的 `JWT_SECRET`
-- `./artisan jwt:generate --env .env.local`：替换指定环境文件中的 `JWT_SECRET`
+- `./lfiber jwt:generate`：生成 32 字节随机 JWT secret，并替换 `.env` 中的 `JWT_SECRET`
+- `./lfiber jwt:generate --env .env.local`：替换指定环境文件中的 `JWT_SECRET`
 - `rtk just jwt`：通过 justfile 执行同一命令
-- `rtk just artisan route:list`：通过 justfile 运行任意 CLI 命令
+- `rtk just lfiber route:list`：通过 justfile 运行任意 CLI 命令
 - JWT secret 只保留 `jwt:generate` 一个命令入口，不再提供重复的 `jwt:secret` 命令。
 
 ### 代码质量
@@ -289,7 +289,7 @@ cfg := rt.Config    // 获取配置
 运行 k6 前先启动服务，默认 `BASE_URL` 为 `http://localhost:3300`：
 
 ```bash
-APP_PORT=3300 DB_CONNECTION=sqlite DB_SQLITE_DATABASE=/tmp/fiber-template-k6.sqlite CACHE_DRIVER=memory STORAGE_DRIVER=local STORAGE_LOCAL_ROOT=/tmp/fiber-template-storage STORAGE_LOCAL_URL=/storage I18N_LANGUAGE_DIR=$(pwd)/lang ./artisan serve
+APP_PORT=3300 DB_CONNECTION=sqlite DB_SQLITE_DATABASE=/tmp/fiber-template-k6.sqlite CACHE_DRIVER=memory STORAGE_DRIVER=local STORAGE_LOCAL_ROOT=/tmp/fiber-template-storage STORAGE_LOCAL_URL=/storage I18N_LANGUAGE_DIR=$(pwd)/lang ./lfiber serve
 rtk just k6-root
 rtk just k6-root-load
 ```

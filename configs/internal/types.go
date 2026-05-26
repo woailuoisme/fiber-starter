@@ -366,10 +366,12 @@ type LimiterConfig struct {
 }
 
 type OTELConfig struct {
-	Enabled      bool   `mapstructure:"enabled"`
-	ServiceName  string `mapstructure:"service_name"`
-	ExporterType string `mapstructure:"exporter_type"` // stdout, otlp
-	Endpoint     string `mapstructure:"endpoint"`      // for otlp
+	TraceEnabled   bool   `mapstructure:"trace_enabled"` // 是否启用链路追踪 (Tracer 引擎)
+	ServiceName    string `mapstructure:"service_name"`
+	ExporterType   string `mapstructure:"exporter_type"`   // exporter_type 可选值: stdout (开发调试输出至控制台), otlp (生产推荐推送至 OTel Collector)
+	Endpoint       string `mapstructure:"endpoint"`        // OTLP Collector 的 gRPC 地址，仅当 ExporterType 为 otlp 且开启 trace_enabled 时生效
+	MetricsEnabled bool   `mapstructure:"metrics_enabled"` // 是否启用 Prometheus 指标监控 (/metrics)
+	MetricsPath    string `mapstructure:"metrics_path"`    // Prometheus 抓取指标的路由路径
 }
 
 type I18nConfig struct {
