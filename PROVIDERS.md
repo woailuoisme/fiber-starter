@@ -31,7 +31,7 @@
 通过 `providers.App()` 获取全局 `Runtime` 实例。这种方式适合在结构体初始化或需要明确依赖关系的场景中使用。
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 rt := providers.App()
 db := rt.Connection
@@ -43,7 +43,7 @@ cfg := rt.Config
 每个 Provider 包都导出了直接调用的函数，这些函数会自动从全局容器中获取实例。这种方式代码更简洁，适合在控制器或辅助函数中快速使用。
 
 ```go
-import "fiber-starter/app/Providers/Cache"
+import "lfiber/app/Providers/Cache"
 
 val, err := cache.Get("my-key")
 ```
@@ -73,7 +73,7 @@ val, err := cache.Get("my-key")
 #### Auth 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 auth := providers.App().Auth
 if auth.Check(c) {
@@ -84,7 +84,7 @@ if auth.Check(c) {
 #### Auth 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/Auth"
+import "lfiber/app/Providers/Auth"
 
 if auth.Check(c) {
     user := auth.User(c)
@@ -123,7 +123,7 @@ if auth.Check(c) {
 #### Cache 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 providers.App().Cache.Set("key", "value", 10*time.Minute)
 ```
@@ -131,7 +131,7 @@ providers.App().Cache.Set("key", "value", 10*time.Minute)
 #### Cache 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/Cache"
+import "lfiber/app/Providers/Cache"
 
 cache.Set("key", "value", 10*time.Minute)
 val, _ := cache.Get("key")
@@ -161,7 +161,7 @@ val, _ := cache.Get("key")
 #### Config 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 appName := providers.App().ConfigRepo.GetString("app.name")
 ```
@@ -169,7 +169,7 @@ appName := providers.App().ConfigRepo.GetString("app.name")
 #### Config 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/Config"
+import "lfiber/app/Providers/Config"
 
 appName := config.GetString("app.name")
 ```
@@ -205,7 +205,7 @@ appName := config.GetString("app.name")
 #### Database 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 db := providers.App().Connection.BunDB()
 ```
@@ -213,7 +213,7 @@ db := providers.App().Connection.BunDB()
 #### Database 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/Database"
+import "lfiber/app/Providers/Database"
 
 db := database.Connection().BunDB()
 ```
@@ -236,7 +236,7 @@ db := database.Connection().BunDB()
 #### Hash 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 hashed, _ := providers.App().Hash.Make("password")
 ```
@@ -244,7 +244,7 @@ hashed, _ := providers.App().Hash.Make("password")
 #### Hash 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/Hash"
+import "lfiber/app/Providers/Hash"
 
 hashed, _ := hash.Make("password")
 isValid := hash.Check("password", hashed)
@@ -269,7 +269,7 @@ isValid := hash.Check("password", hashed)
 #### I18n 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 msg := providers.App().Translator.Trans(c, "messages.welcome", nil)
 ```
@@ -277,7 +277,7 @@ msg := providers.App().Translator.Trans(c, "messages.welcome", nil)
 #### I18n 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/I18n"
+import "lfiber/app/Providers/I18n"
 
 msg := i18n.Trans(c, "messages.welcome", nil)
 ```
@@ -300,7 +300,7 @@ msg := i18n.Trans(c, "messages.welcome", nil)
 #### Realtime 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 providers.App().Realtime.Dispatch("public", "update", data)
 ```
@@ -308,7 +308,7 @@ providers.App().Realtime.Dispatch("public", "update", data)
 #### Realtime 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/Realtime"
+import "lfiber/app/Providers/Realtime"
 
 realtime.Dispatch("public", "update", data)
 ```
@@ -337,7 +337,7 @@ realtime.Dispatch("public", "update", data)
 #### Logging 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 providers.App().Log.Info("User action", zap.String("key", "val"))
 ```
@@ -345,7 +345,7 @@ providers.App().Log.Info("User action", zap.String("key", "val"))
 #### Logging 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/Logging"
+import "lfiber/app/Providers/Logging"
 
 logging.Info("User action", zap.String("key", "val"))
 logging.Channel("slack").Error("Critical error")
@@ -369,7 +369,7 @@ logging.Channel("slack").Error("Critical error")
 #### Mail 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 msg := providers.App().EmailService.To("user@test.com").Subject("Hi").Plain("Body")
 providers.App().EmailService.Send(msg)
@@ -378,7 +378,7 @@ providers.App().EmailService.Send(msg)
 #### Mail 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/Mail"
+import "lfiber/app/Providers/Mail"
 
 msg := mail.To("user@test.com").Subject("Hi").Plain("Body")
 mail.Send(msg)
@@ -399,7 +399,7 @@ mail.Send(msg)
 #### Notification 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 providers.App().Notification.Send(user, &WelcomeNotification{})
 ```
@@ -407,7 +407,7 @@ providers.App().Notification.Send(user, &WelcomeNotification{})
 #### Notification 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/Notification"
+import "lfiber/app/Providers/Notification"
 
 notification.Send(user, &WelcomeNotification{})
 ```
@@ -432,7 +432,7 @@ notification.Send(user, &WelcomeNotification{})
 #### Queue 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 providers.App().QueueService.Push(&MyJob{})
 ```
@@ -440,7 +440,7 @@ providers.App().QueueService.Push(&MyJob{})
 #### Queue 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/Queue"
+import "lfiber/app/Providers/Queue"
 
 queue.Push(&MyJob{})
 ```
@@ -461,7 +461,7 @@ queue.Push(&MyJob{})
 #### RateLimiter 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 app.Use(providers.App().RateLimiter.Middleware("api"))
 ```
@@ -469,7 +469,7 @@ app.Use(providers.App().RateLimiter.Middleware("api"))
 #### RateLimiter 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/RateLimiter"
+import "lfiber/app/Providers/RateLimiter"
 
 app.Use(ratelimiter.Middleware("api"))
 ```
@@ -492,7 +492,7 @@ app.Use(ratelimiter.Middleware("api"))
 #### Schedule 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 providers.App().ScheduleService.Command("db:seed").Daily()
 ```
@@ -500,7 +500,7 @@ providers.App().ScheduleService.Command("db:seed").Daily()
 #### Schedule 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/Schedule"
+import "lfiber/app/Providers/Schedule"
 
 schedule.Command("db:seed").Daily()
 ```
@@ -522,7 +522,7 @@ schedule.Command("db:seed").Daily()
 #### Search 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 res, _ := providers.App().SearchService.Search("index", "query", nil)
 ```
@@ -530,7 +530,7 @@ res, _ := providers.App().SearchService.Search("index", "query", nil)
 #### Search 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/Search"
+import "lfiber/app/Providers/Search"
 
 res, _ := search.Search("index", "query", nil)
 ```
@@ -554,7 +554,7 @@ res, _ := search.Search("index", "query", nil)
 #### Storage 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 providers.App().Storage.Disk("s3").Put("file.txt", []byte("data"))
 ```
@@ -562,7 +562,7 @@ providers.App().Storage.Disk("s3").Put("file.txt", []byte("data"))
 #### Storage 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/Storage"
+import "lfiber/app/Providers/Storage"
 
 storage.Disk("s3").Put("file.txt", []byte("data"))
 val, _ := storage.Get("file.txt")
@@ -587,7 +587,7 @@ val, _ := storage.Get("file.txt")
 #### Validation 方案 A: 全局容器
 
 ```go
-import "fiber-starter/app/Providers"
+import "lfiber/app/Providers"
 
 val := providers.App().Validation.Make(data, rules, nil, nil)
 ```
@@ -595,7 +595,7 @@ val := providers.App().Validation.Make(data, rules, nil, nil)
 #### Validation 方案 B: Facade
 
 ```go
-import "fiber-starter/app/Providers/Validation"
+import "lfiber/app/Providers/Validation"
 
 val := validation.Make(data, rules, nil, nil)
 if val.Fails() {

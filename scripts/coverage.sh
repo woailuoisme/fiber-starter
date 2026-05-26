@@ -5,6 +5,7 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 if [ -f ".buildconfig" ]; then
     set -a
+    # shellcheck source=/dev/null
     . ./.buildconfig
     set +a
 fi
@@ -15,7 +16,7 @@ else
     export GOFLAGS="-mod=mod"
 fi
 
-COVERAGE_DIR=${COVERAGE_DIR:-coverage}
+COVERAGE_DIR=${COVERAGE_DIR:-tests/coverage}
 COVERAGE_THRESHOLD=${COVERAGE_THRESHOLD:-}
 
 mkdir -p "$COVERAGE_DIR"

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"fiber-starter/configs"
-	contracts "fiber-starter/internal/providers/notification/contracts"
+	"lfiber/configs"
+	contracts "lfiber/internal/providers/notification/contracts"
 
 	"github.com/go-resty/resty/v2"
 )

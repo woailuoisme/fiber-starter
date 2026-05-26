@@ -25,7 +25,7 @@ export const apiChecks = {
 	rootResponse: (res) =>
 		check(res, {
 			"message matches": (r) =>
-				r.json("message") === "Welcome to Fiber Starter API",
+				r.json("message") === "Welcome to lfiber API",
 			"api version link present": (r) => r.json("data.api") === "/api/v1",
 			"docs link present": (r) => r.json("data.docs") === "/docs",
 		}),

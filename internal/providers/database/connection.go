@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/providers/database/contracts"
-	drivers "fiber-starter/internal/providers/database/drivers"
-	helpers "fiber-starter/internal/support"
+	"lfiber/configs"
+	"lfiber/internal/providers/database/contracts"
+	drivers "lfiber/internal/providers/database/drivers"
+	helpers "lfiber/internal/support"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"

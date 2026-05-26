@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"fiber-starter/configs"
+	"lfiber/configs"
 
 	_ "github.com/mattn/go-sqlite3"
 )

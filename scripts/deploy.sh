@@ -1,12 +1,14 @@
 #!/bin/bash
 
-# 部署脚本
-# 使用方法: ./scripts/deploy.sh [environment]
+# 部署打包脚本
+# 用法: ./scripts/deploy.sh [staging|production]
 
-set -e
+set -euo pipefail
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 if [ -f ".buildconfig" ]; then
     set -a
+    # shellcheck source=/dev/null
     . ./.buildconfig
     set +a
 fi
@@ -18,385 +20,94 @@ else
 fi
 
 BUILD_DIR=${BUILD_DIR:-build}
-SERVER_BINARY_NAME=${SERVER_BINARY_NAME:-fiber-starter}
-CLI_BINARY_NAME=${CLI_BINARY_NAME:-fiber-starter-cli}
+SERVER_BINARY_NAME=${SERVER_BINARY_NAME:-lfiber}
 DEPLOY_DIR=${DEPLOY_DIR:-deploy}
-APP_LOG_DIR=${APP_LOG_DIR:-storage/logs}
 
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# 日志函数
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# 默认环境
-ENVIRONMENT=${1:-development}
-
-# 检查环境
-check_environment() {
-    log_info "Checking deployment environment: $ENVIRONMENT"
-    
-    case $ENVIRONMENT in
-        "development"|"staging"|"production")
-            log_success "Environment check passed: $ENVIRONMENT"
-            ;;
-        *)
-            log_error "Invalid environment: $ENVIRONMENT"
-            log_info "Available environments: development, staging, production"
-            exit 1
-            ;;
-    esac
-}
-
-# 准备部署
-prepare_deploy() {
-    log_info "Preparing deployment..."
-    
-    # 检查代码状态
-    if [ "$ENVIRONMENT" != "development" ]; then
-        log_info "Checking Git status..."
-        if [ -n "$(git status --porcelain)" ]; then
-            log_error "Working directory is not clean. Please commit your changes first."
-            exit 1
-        fi
-    fi
-    
-    # 运行测试
-    log_info "Running tests..."
-    ./scripts/dev.sh test
-    
-    # 代码质量检查
-    log_info "Running code quality checks..."
-    ./scripts/dev.sh quality
-    
-    log_success "Deployment preparation completed"
-}
-
-# 构建应用
-build_app() {
-    log_info "Building application..."
-    
-    # 设置构建信息
-    VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "unknown")
-    BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S')
-    GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
-    
-    # 构建标志
-    LDFLAGS="-w -s -X main.Version=$VERSION -X main.BuildTime=$BUILD_TIME -X main.GitCommit=$GIT_COMMIT"
-    
-    case $ENVIRONMENT in
-        "development")
-			go build -ldflags="$LDFLAGS" -o "$BUILD_DIR/$SERVER_BINARY_NAME" ./cmd/server
-            ;;
-        "staging")
-			GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o "$BUILD_DIR/$SERVER_BINARY_NAME-linux-amd64" ./cmd/server
-            ;;
-        "production")
-			GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o "$BUILD_DIR/$SERVER_BINARY_NAME-linux-amd64" ./cmd/server
-            ;;
-    esac
-    
-    log_success "Build completed"
-}
-
-# 部署到不同环境
-deploy_to_env() {
-    case $ENVIRONMENT in
-        "development")
-            deploy_development
-            ;;
-        "staging")
-            deploy_staging
-            ;;
-        "production")
-            deploy_production
-            ;;
-    esac
-}
-
-# 开发环境部署
-deploy_development() {
-    log_info "Deploying to development..."
-    
-    # 停止现有服务
-    if pgrep -f "$SERVER_BINARY_NAME" > /dev/null; then
-        log_info "Stopping existing service..."
-        pkill -f "$SERVER_BINARY_NAME"
-        sleep 2
-    fi
-    
-    # 启动新服务
-    log_info "Starting development service..."
-    nohup ./"$BUILD_DIR/$SERVER_BINARY_NAME" > "$APP_LOG_DIR/app.log" 2>&1 &
-    
-    log_success "Development deployment completed"
-}
-
-# 预发布环境部署
-deploy_staging() {
-    log_info "Deploying to staging..."
-    
-    # 这里可以添加实际的部署逻辑
-    # 例如：Docker 部署、Kubernetes 部署等
-    
-    log_info "Simulating staging deployment..."
-    
-    # 创建部署包
-    mkdir -p "$DEPLOY_DIR/staging"
-    cp "$BUILD_DIR/$SERVER_BINARY_NAME-linux-amd64" "$DEPLOY_DIR/staging/$SERVER_BINARY_NAME"
-    cp -r config "$DEPLOY_DIR/staging/"
-    cp -r database "$DEPLOY_DIR/staging/"
-    cp .env.example "$DEPLOY_DIR/staging/.env"
-    cp .buildconfig "$DEPLOY_DIR/staging/.buildconfig"
-    
-    # 创建部署脚本
-    cat > "$DEPLOY_DIR/staging/deploy.sh" << 'EOF'
-#!/bin/bash
-# 预发布环境部署脚本
-
-set -e
-
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-if [ -f "$SCRIPT_DIR/.buildconfig" ]; then
-    set -a
-    . "$SCRIPT_DIR/.buildconfig"
-    set +a
-fi
-
-cd "$SCRIPT_DIR"
-
-BUILD_DIR=${BUILD_DIR:-build}
-SERVER_BINARY_NAME=${SERVER_BINARY_NAME:-fiber-starter}
-
-# 停止现有服务
-sudo systemctl stop "$SERVER_BINARY_NAME" || true
-
-# 备份现有版本
-sudo cp "/opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME" "/opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME.backup.$(date +%Y%m%d_%H%M%S)" || true
-
-# 复制新版本
-sudo cp "$SERVER_BINARY_NAME" "/opt/$SERVER_BINARY_NAME/"
-sudo cp -r config "/opt/$SERVER_BINARY_NAME/"
-sudo cp .env "/opt/$SERVER_BINARY_NAME/"
-
-# 设置权限
-sudo chmod +x "/opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME"
-
-# 启动服务
-sudo systemctl start "$SERVER_BINARY_NAME"
-
-# 检查服务状态
-sudo systemctl status "$SERVER_BINARY_NAME"
-EOF
-    
-    chmod +x "$DEPLOY_DIR/staging/deploy.sh"
-    
-    log_success "Staging deployment package is ready"
-}
-
-# 生产环境部署
-deploy_production() {
-    log_info "Deploying to production..."
-    
-    # 生产环境部署逻辑
-    log_warning "Production deployment requires manual confirmation"
-    
-    # 创建部署包
-    mkdir -p "$DEPLOY_DIR/production"
-    cp "$BUILD_DIR/$SERVER_BINARY_NAME-linux-amd64" "$DEPLOY_DIR/production/$SERVER_BINARY_NAME"
-    cp -r config "$DEPLOY_DIR/production/"
-    cp -r database "$DEPLOY_DIR/production/"
-    cp .env.example "$DEPLOY_DIR/production/.env"
-    cp .buildconfig "$DEPLOY_DIR/production/.buildconfig"
-    
-    # 创建部署脚本
-    cat > "$DEPLOY_DIR/production/deploy.sh" << 'EOF'
-#!/bin/bash
-# 生产环境部署脚本
-
-set -e
-
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-if [ -f "$SCRIPT_DIR/.buildconfig" ]; then
-    set -a
-    . "$SCRIPT_DIR/.buildconfig"
-    set +a
-fi
-
-cd "$SCRIPT_DIR"
-
-BUILD_DIR=${BUILD_DIR:-build}
-SERVER_BINARY_NAME=${SERVER_BINARY_NAME:-fiber-starter}
-
-# 颜色定义
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
 NC='\033[0m'
 
-log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
+log_info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+log_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-# 检查权限
-if [ "$EUID" -ne 0 ]; then
-    log_error "Please run this script with sudo"
-    exit 1
-fi
-
-# 备份现有版本
-if [ -f "/opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME" ]; then
-    log_info "Backing up current version..."
-    cp "/opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME" "/opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME.backup.$(date +%Y%m%d_%H%M%S)"
-fi
-
-# 停止服务
-log_info "Stopping service..."
-systemctl stop "$SERVER_BINARY_NAME" || true
-
-# 复制新版本
-log_info "Deploying new version..."
-cp "$SERVER_BINARY_NAME" "/opt/$SERVER_BINARY_NAME/"
-cp -r config "/opt/$SERVER_BINARY_NAME/"
-cp .env "/opt/$SERVER_BINARY_NAME/.env.template"
-
-# 设置权限
-chmod +x "/opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME"
-chown -R "$SERVER_BINARY_NAME:$SERVER_BINARY_NAME" "/opt/$SERVER_BINARY_NAME/"
-
-# 运行数据库迁移
-log_info "Running database migrations..."
-cd "/opt/$SERVER_BINARY_NAME"
-sudo -u "$SERVER_BINARY_NAME" "./$SERVER_BINARY_NAME" migrate
-
-# 启动服务
-log_info "Starting service..."
-systemctl start "$SERVER_BINARY_NAME"
-
-# 检查服务状态
-sleep 5
-if systemctl is-active --quiet "$SERVER_BINARY_NAME"; then
-    log_info "Service started successfully"
-else
-    log_error "Service failed to start"
-    systemctl status "$SERVER_BINARY_NAME"
-    exit 1
-fi
-
-# 健康检查
-log_info "Running health check..."
-sleep 10
-if curl -f http://localhost:8080/health > /dev/null 2>&1; then
-    log_info "Health check passed"
-else
-    log_error "Health check failed"
-    exit 1
-fi
-
-log_info "Production deployment completed"
-EOF
-    
-    chmod +x deploy/production/deploy.sh
-    
-    log_success "Production deployment package is ready"
-    log_warning "Run deploy/production/deploy.sh manually to perform the actual deployment"
-}
-
-# 回滚
-rollback() {
-    log_info "Rolling back to the previous version..."
-    
-    case $ENVIRONMENT in
-        "development")
-            # 开发环境回滚逻辑
-    if [ -f "$BUILD_DIR/$SERVER_BINARY_NAME.backup" ]; then
-                cp "$BUILD_DIR/$SERVER_BINARY_NAME.backup" "$BUILD_DIR/$SERVER_BINARY_NAME"
-                log_success "Development rollback completed"
-            else
-                log_error "Backup file not found"
-            fi
-            ;;
-        "staging"|"production")
-            log_info "Please perform rollback manually"
-            log_info "Backup files: /opt/$SERVER_BINARY_NAME/$SERVER_BINARY_NAME.backup.*"
-            ;;
-    esac
-}
-
-# 显示帮助信息
 show_help() {
-    echo "Fiber Starter deployment script"
+    echo "lfiber deployment packager"
     echo ""
-    echo "Usage: $0 [environment] [command]"
+    echo "Usage: $0 [environment]"
     echo ""
     echo "Environments:"
-    echo "  development   Development (default)"
-    echo "  staging       Staging"
-    echo "  production    Production"
+    echo "  staging       Build and package for staging"
+    echo "  production    Build and package for production"
     echo ""
-    echo "Commands:"
-    echo "  deploy        Deploy (default)"
-    echo "  rollback      Rollback"
-    echo "  help          Show help"
+    echo "Output:"
+    echo "  ${DEPLOY_DIR}/release-<env>.tar.gz"
     echo ""
     echo "Examples:"
-    echo "  $0"
-    echo "  $0 staging deploy"
-    echo "  $0 production deploy"
-    echo "  $0 staging rollback"
+    echo "  $0 staging"
+    echo "  $0 production"
 }
 
-# 主函数
-main() {
-    local command=${2:-deploy}
-    
-    case $command in
-        "deploy")
-            check_environment
-            prepare_deploy
-            build_app
-            deploy_to_env
-            ;;
-        "rollback")
-            check_environment
-            rollback
-            ;;
-        "help"|"--help"|"-h")
-            show_help
-            ;;
-        *)
-            log_error "Unknown command: $command"
-            show_help
-            exit 1
-            ;;
-    esac
-}
+# ── 验证环境 ──────────────────────────────────────────────────────────────────
 
-# 执行主函数
-main "$@"
+ENVIRONMENT="${1:-}"
+case "$ENVIRONMENT" in
+    staging|production) ;;
+    help|--help|-h) show_help; exit 0 ;;
+    "")
+        log_error "Environment required."
+        show_help
+        exit 1
+        ;;
+    *)
+        log_error "Unknown environment: $ENVIRONMENT"
+        show_help
+        exit 1
+        ;;
+esac
+
+log_info "Target environment: $ENVIRONMENT"
+
+# ── 代码质量检查 ───────────────────────────────────────────────────────────────
+
+log_info "Running code quality checks..."
+just check
+
+log_info "Running tests..."
+just test
+
+# ── 编译 ───────────────────────────────────────────────────────────────────────
+
+VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "unknown")
+BUILD_TIME=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+LDFLAGS="-w -s -X main.Version=$VERSION -X main.BuildTime=$BUILD_TIME -X main.GitCommit=$GIT_COMMIT"
+
+BINARY="$BUILD_DIR/${SERVER_BINARY_NAME}-linux-amd64"
+mkdir -p "$BUILD_DIR"
+
+log_info "Building $ENVIRONMENT binary (linux/amd64) — version: $VERSION..."
+GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o "$BINARY" ./cmd/app
+log_success "Build complete: $BINARY"
+
+# ── 打包 ───────────────────────────────────────────────────────────────────────
+
+RELEASE_DIR="$(mktemp -d)"
+trap 'rm -rf "$RELEASE_DIR"' EXIT
+
+cp "$BINARY" "$RELEASE_DIR/$SERVER_BINARY_NAME"
+[ -d configs ] && cp -r configs "$RELEASE_DIR/"
+[ -d database ] && cp -r database "$RELEASE_DIR/"
+[ -f .env.example ] && cp .env.example "$RELEASE_DIR/.env.example"
+
+mkdir -p "$DEPLOY_DIR"
+ARCHIVE="$DEPLOY_DIR/release-${ENVIRONMENT}.tar.gz"
+tar -czf "$ARCHIVE" -C "$RELEASE_DIR" .
+
+log_success "Release archive: $ARCHIVE"
+log_info "Contents:"
+tar -tf "$ARCHIVE" | sed 's/^/  /'

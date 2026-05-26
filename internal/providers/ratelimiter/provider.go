@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"fiber-starter/configs"
-	ratelimiterContracts "fiber-starter/internal/providers/ratelimiter/contracts"
+	"lfiber/configs"
+	ratelimiterContracts "lfiber/internal/providers/ratelimiter/contracts"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/limiter"

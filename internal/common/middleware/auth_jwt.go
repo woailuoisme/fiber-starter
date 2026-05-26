@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"time"
 
-	"fiber-starter/configs"
-	exceptions "fiber-starter/internal/common/exceptions"
-	auth "fiber-starter/internal/providers/auth"
-	cacheContracts "fiber-starter/internal/providers/cache/contracts"
+	"lfiber/configs"
+	exceptions "lfiber/internal/common/exceptions"
+	auth "lfiber/internal/providers/auth"
+	cacheContracts "lfiber/internal/providers/cache/contracts"
 
 	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/fiber/v3"

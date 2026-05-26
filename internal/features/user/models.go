@@ -3,7 +3,7 @@ package user
 import (
 	"time"
 
-	enums "fiber-starter/internal/common/enums"
+	enums "lfiber/internal/common/enums"
 
 	"github.com/uptrace/bun"
 )

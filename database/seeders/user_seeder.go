@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 
-	"fiber-starter/database/factories"
-	userPkg "fiber-starter/internal/features/user"
+	"lfiber/database/factories"
+	userPkg "lfiber/internal/features/user"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"

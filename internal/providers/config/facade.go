@@ -1,8 +1,8 @@
 package config
 
 import (
-	contracts "fiber-starter/internal/providers/config/contracts"
-	"fiber-starter/internal/support/appctx"
+	contracts "lfiber/internal/providers/config/contracts"
+	"lfiber/internal/support/appctx"
 )
 
 // Facade provides a static interface to the configuration repository.

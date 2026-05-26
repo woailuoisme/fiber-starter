@@ -3,12 +3,12 @@ package tests
 import (
 	"testing"
 
-	"fiber-starter/configs"
-	requests "fiber-starter/internal/common/requests"
-	"fiber-starter/internal/features/auth"
-	"fiber-starter/internal/features/user"
-	supporti18n "fiber-starter/internal/providers/i18n"
-	validation "fiber-starter/internal/providers/validation"
+	"lfiber/configs"
+	requests "lfiber/internal/common/requests"
+	"lfiber/internal/features/auth"
+	"lfiber/internal/features/user"
+	supporti18n "lfiber/internal/providers/i18n"
+	validation "lfiber/internal/providers/validation"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

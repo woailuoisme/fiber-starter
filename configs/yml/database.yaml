@@ -5,7 +5,7 @@ database:
       driver: postgres
       host: ${DB_HOST:localhost}
       port: ${DB_PORT:5432}
-      database: ${DB_DATABASE:fiber_starter}
+      database: ${DB_DATABASE:lfiber}
       username: ${DB_USERNAME:postgres}
       password: ${DB_PASSWORD:""}
       charset: ${DB_CHARSET:utf8}
@@ -23,7 +23,7 @@ database:
       driver: postgres
       host: ${DB_HOST:localhost}
       port: ${DB_PORT:5432}
-      database: ${DB_DATABASE:fiber_starter}
+      database: ${DB_DATABASE:lfiber}
       username: ${DB_USERNAME:postgres}
       password: ${DB_PASSWORD:""}
       charset: ${DB_CHARSET:utf8}

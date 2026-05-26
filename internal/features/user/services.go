@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	exceptions "fiber-starter/internal/common/exceptions"
-	database "fiber-starter/internal/providers/database/contracts"
-	helpers "fiber-starter/internal/support"
+	exceptions "lfiber/internal/common/exceptions"
+	database "lfiber/internal/providers/database/contracts"
+	helpers "lfiber/internal/support"
 
 	"github.com/uptrace/bun"
 	"go.uber.org/zap"

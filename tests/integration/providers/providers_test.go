@@ -8,11 +8,11 @@ import (
 	"sync/atomic"
 	"testing"
 
-	providers "fiber-starter/internal/providers"
-	notification "fiber-starter/internal/providers/notification"
-	channels "fiber-starter/internal/providers/notification/channels"
-	notificationContracts "fiber-starter/internal/providers/notification/contracts"
-	"fiber-starter/tests/internal/testkit"
+	providers "lfiber/internal/providers"
+	notification "lfiber/internal/providers/notification"
+	channels "lfiber/internal/providers/notification/channels"
+	notificationContracts "lfiber/internal/providers/notification/contracts"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"

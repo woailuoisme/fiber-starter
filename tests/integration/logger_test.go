@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"fiber-starter/configs"
-	logging "fiber-starter/internal/providers/logging"
-	helpers "fiber-starter/internal/support"
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/configs"
+	logging "lfiber/internal/providers/logging"
+	helpers "lfiber/internal/support"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

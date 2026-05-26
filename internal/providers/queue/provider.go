@@ -1,8 +1,8 @@
 package queue
 
 import (
-	"fiber-starter/configs"
-	queueContracts "fiber-starter/internal/providers/queue/contracts"
+	"lfiber/configs"
+	queueContracts "lfiber/internal/providers/queue/contracts"
 )
 
 // RegisterQueue initializes and returns the queue manager and the default queue.

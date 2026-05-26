@@ -1,8 +1,8 @@
 package schedule
 
 import (
-	"fiber-starter/configs"
-	scheduleContracts "fiber-starter/internal/providers/schedule/contracts"
+	"lfiber/configs"
+	scheduleContracts "lfiber/internal/providers/schedule/contracts"
 )
 
 // RegisterSchedule initializes and returns the schedule manager and the default scheduler.

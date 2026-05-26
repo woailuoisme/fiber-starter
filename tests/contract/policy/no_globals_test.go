@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/stretchr/testify/require"
 )

@@ -3,9 +3,9 @@ package support
 import (
 	"strings"
 
-	logging "fiber-starter/internal/providers/logging"
-	"fiber-starter/internal/providers/logging/contracts"
-	"fiber-starter/internal/support/appctx"
+	logging "lfiber/internal/providers/logging"
+	"lfiber/internal/providers/logging/contracts"
+	"lfiber/internal/support/appctx"
 
 	"go.uber.org/zap"
 )

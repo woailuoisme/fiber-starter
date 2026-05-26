@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"fiber-starter/configs"
-	validation "fiber-starter/internal/providers/validation"
-	validationContracts "fiber-starter/internal/providers/validation/contracts"
+	"lfiber/configs"
+	validation "lfiber/internal/providers/validation"
+	validationContracts "lfiber/internal/providers/validation/contracts"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/assert"

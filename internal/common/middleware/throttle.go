@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"fiber-starter/internal/providers/ratelimiter/contracts"
+	"lfiber/internal/providers/ratelimiter/contracts"
 
 	"github.com/gofiber/fiber/v3"
 )

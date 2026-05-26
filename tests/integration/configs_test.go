@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"fiber-starter/configs"
+	"lfiber/configs"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -60,6 +60,6 @@ func TestConfigs_ModularLoading(t *testing.T) {
 	// 只要能加载成功，说明 yml/ 目录下的文件被正确合并了
 	assert.NotNil(t, cfg.App)
 	assert.NotNil(t, cfg.Notification)
-	assert.Contains(t, []string{"", "Fiber Starter"}, cfg.Notification.Gotify.Title)
+	assert.Contains(t, []string{"", "lfiber"}, cfg.Notification.Gotify.Title)
 	assert.Equal(t, "https://api.telegram.org", cfg.Notification.Telegram.APIURL)
 }

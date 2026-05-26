@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 
-	"fiber-starter/configs"
-	contracts "fiber-starter/internal/providers/hash/contracts"
-	drivers "fiber-starter/internal/providers/hash/drivers"
+	"lfiber/configs"
+	contracts "lfiber/internal/providers/hash/contracts"
+	drivers "lfiber/internal/providers/hash/drivers"
 )
 
 // Manager handles multiple hashing drivers.

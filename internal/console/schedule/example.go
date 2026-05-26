@@ -1,9 +1,9 @@
 package schedule_tasks
 
 import (
-	monitoringJobs "fiber-starter/internal/features/monitoring/jobs"
-	userJobs "fiber-starter/internal/features/user/jobs"
-	schedule "fiber-starter/internal/providers/schedule"
+	monitoringJobs "lfiber/internal/features/monitoring/jobs"
+	userJobs "lfiber/internal/features/user/jobs"
+	schedule "lfiber/internal/providers/schedule"
 )
 
 // RegisterSampleTasks 展示了如何在不同的频率下注册调度任务

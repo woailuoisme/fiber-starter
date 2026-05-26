@@ -3,9 +3,9 @@ package providers_test
 import (
 	"testing"
 
-	"fiber-starter/configs"
-	providers "fiber-starter/internal/providers"
-	mail "fiber-starter/internal/providers/mail"
+	"lfiber/configs"
+	providers "lfiber/internal/providers"
+	mail "lfiber/internal/providers/mail"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,7 +15,7 @@ func TestMailProvider_ResendErrorWithoutAPIKey(t *testing.T) {
 	cfg := &configs.Config{}
 	cfg.Mail.Enabled = true
 	cfg.Mail.FromAddress = "noreply@example.com"
-	cfg.Mail.FromName = "Fiber Starter"
+	cfg.Mail.FromName = "lfiber"
 	cfg.Mail.APIKey = "" // Explicitly empty
 
 	_, mailer, err := mail.Register(cfg)

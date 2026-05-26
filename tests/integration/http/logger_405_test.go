@@ -5,12 +5,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"fiber-starter/internal/bootstrap"
-	middleware "fiber-starter/internal/common/middleware"
-	providers "fiber-starter/internal/providers"
-	logging "fiber-starter/internal/providers/logging"
-	helpers "fiber-starter/internal/support"
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/internal/bootstrap"
+	middleware "lfiber/internal/common/middleware"
+	providers "lfiber/internal/providers"
+	logging "lfiber/internal/providers/logging"
+	helpers "lfiber/internal/support"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"

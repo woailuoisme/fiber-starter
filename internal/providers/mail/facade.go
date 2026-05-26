@@ -1,8 +1,8 @@
 package mail
 
 import (
-	"fiber-starter/internal/providers/mail/contracts"
-	"fiber-starter/internal/support/appctx"
+	"lfiber/internal/providers/mail/contracts"
+	"lfiber/internal/support/appctx"
 )
 
 // mailer returns the default mailer instance from the container.

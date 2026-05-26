@@ -3,8 +3,8 @@ package middleware
 import (
 	"time"
 
-	"fiber-starter/configs"
-	exceptions "fiber-starter/internal/common/exceptions"
+	"lfiber/configs"
+	exceptions "lfiber/internal/common/exceptions"
 
 	loadshed "github.com/gofiber/contrib/v3/loadshed"
 	"github.com/gofiber/fiber/v3"

@@ -3,9 +3,9 @@ package tests
 import (
 	"testing"
 
-	exceptions "fiber-starter/internal/common/exceptions"
-	helpers "fiber-starter/internal/support"
-	"fiber-starter/tests/internal/testkit"
+	exceptions "lfiber/internal/common/exceptions"
+	helpers "lfiber/internal/support"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"

@@ -1,11 +1,23 @@
+# ==============================================================================
+# Go lfiber Project - Build & Path Configuration (.buildconfig)
+# ==============================================================================
+# 作用:
+#   定义统一的项目编译、构建、测试覆盖率、日志输出等目录和二进制文件名。
+#
+# 使用者:
+#   1. justfile - 通过 `set dotenv-filename := ".buildconfig"` 自动加载变量
+#   2. scripts/*.sh - 大多数辅助脚本 (如 dev.sh, coverage.sh, config.sh 等) 
+#      检测并加载该配置文件 `. ./.buildconfig` 以同步构建环境变量。
+# ==============================================================================
+
 # 编译构建输出目录
 BUILD_DIR=build
 # 单测覆盖率报告输出目录
-COVERAGE_DIR=coverage
+COVERAGE_DIR=tests/coverage
 # HTTP 服务端编译二进制文件名
-SERVER_BINARY_NAME=fiber-starter
+SERVER_BINARY_NAME=lfiber
 # CLI 命令行服务端编译二进制文件名
-CLI_BINARY_NAME=fiber-starter-cli
+CLI_BINARY_NAME=lfiber-cli
 # 系统日志存储目录
 APP_LOG_DIR=storage/logs
 # 部署包与打包产物目录

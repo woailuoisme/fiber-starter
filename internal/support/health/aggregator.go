@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"fiber-starter/configs"
-	helpers "fiber-starter/internal/support"
-	"fiber-starter/internal/support/appctx"
+	"lfiber/configs"
+	helpers "lfiber/internal/support"
+	"lfiber/internal/support/appctx"
 )
 
 const (

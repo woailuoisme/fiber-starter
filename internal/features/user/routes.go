@@ -3,8 +3,8 @@ package user
 import (
 	"time"
 
-	middleware "fiber-starter/internal/common/middleware"
-	"fiber-starter/internal/support/appctx"
+	middleware "lfiber/internal/common/middleware"
+	"lfiber/internal/support/appctx"
 
 	"github.com/gofiber/fiber/v3"
 )

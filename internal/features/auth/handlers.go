@@ -3,10 +3,10 @@ package auth
 import (
 	"reflect"
 
-	exceptions "fiber-starter/internal/common/exceptions"
-	middleware "fiber-starter/internal/common/middleware"
-	userModel "fiber-starter/internal/features/user"
-	helpers "fiber-starter/internal/support"
+	exceptions "lfiber/internal/common/exceptions"
+	middleware "lfiber/internal/common/middleware"
+	userModel "lfiber/internal/features/user"
+	helpers "lfiber/internal/support"
 
 	"github.com/gofiber/fiber/v3"
 )

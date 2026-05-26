@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"reflect"
 
-	exceptions "fiber-starter/internal/common/exceptions"
-	database "fiber-starter/internal/providers/database/contracts"
-	hashContracts "fiber-starter/internal/providers/hash/contracts"
+	exceptions "lfiber/internal/common/exceptions"
+	database "lfiber/internal/providers/database/contracts"
+	hashContracts "lfiber/internal/providers/hash/contracts"
 
 	"github.com/uptrace/bun"
 )

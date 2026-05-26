@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"fiber-starter/configs"
-	cacheDrivers "fiber-starter/internal/providers/cache/drivers"
+	"lfiber/configs"
+	cacheDrivers "lfiber/internal/providers/cache/drivers"
 
 	"github.com/stretchr/testify/require"
 )
@@ -23,7 +23,7 @@ func TestRedisStore_BasicPathsWithDockerRedis(t *testing.T) {
 		t.Skip("docker daemon is not running")
 	}
 
-	containerName := fmt.Sprintf("fiber-starter-redis-%d", time.Now().UnixNano())
+	containerName := fmt.Sprintf("lfiber-redis-%d", time.Now().UnixNano())
 
 	run := exec.Command("docker", "run", "-d", "--rm", "-P", "--name", containerName, "redis:7-alpine")
 	var runOut bytes.Buffer

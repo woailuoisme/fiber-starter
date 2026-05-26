@@ -5,11 +5,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"fiber-starter/configs"
-	monitoring "fiber-starter/internal/features/monitoring"
-	providers "fiber-starter/internal/providers"
-	"fiber-starter/internal/support/health"
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/configs"
+	monitoring "lfiber/internal/features/monitoring"
+	providers "lfiber/internal/providers"
+	"lfiber/internal/support/health"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"fiber-starter/configs"
+	"lfiber/configs"
 
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"

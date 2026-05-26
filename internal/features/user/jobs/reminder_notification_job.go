@@ -3,7 +3,7 @@ package jobs
 import (
 	"context"
 
-	helpers "fiber-starter/internal/support"
+	helpers "lfiber/internal/support"
 
 	"go.uber.org/zap"
 )

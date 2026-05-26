@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"fiber-starter/configs/internal"
+	"lfiber/configs/internal"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/knadh/koanf/providers/confmap"

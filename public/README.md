@@ -3,12 +3,13 @@
 此目录用于存放静态资源文件，包括：
 
 ## favicon.ico
+
 网站图标文件，需要放置在此目录下。
 
-### 如何获取 favicon.ico 文件：
+### 如何获取 favicon.ico 文件
 
 1. **在线生成器**：
-   - 访问 https://favicon.io/ 
+   - 访问 https://favicon.io/
    - 上传图片或生成文字图标
    - 下载 favicon.ico 文件并放置在此目录
 
@@ -21,12 +22,14 @@
    - URL 路径：`/favicon.ico`
    - 缓存时间：1小时
 
-### 注意事项：
+### 注意事项
+
 - 确保文件名完全匹配：`favicon.ico`
 - 文件大小建议不超过 4KB
 - 支持的格式：.ico（推荐）、.png、.jpg、.gif
 
 ## 其他静态资源
+
 也可以在此目录下放置其他静态资源文件，如：
 - CSS 文件
 - JavaScript 文件

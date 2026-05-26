@@ -16,15 +16,15 @@ import (
 	"strings"
 	"time"
 
-	"fiber-starter/configs"
-	exceptions "fiber-starter/internal/common/exceptions"
-	middleware "fiber-starter/internal/common/middleware"
-	userPkg "fiber-starter/internal/features/user"
-	cacheContracts "fiber-starter/internal/providers/cache/contracts"
-	database "fiber-starter/internal/providers/database/contracts"
-	hash "fiber-starter/internal/providers/hash"
-	mailContracts "fiber-starter/internal/providers/mail/contracts"
-	helpers "fiber-starter/internal/support"
+	"lfiber/configs"
+	exceptions "lfiber/internal/common/exceptions"
+	middleware "lfiber/internal/common/middleware"
+	userPkg "lfiber/internal/features/user"
+	cacheContracts "lfiber/internal/providers/cache/contracts"
+	database "lfiber/internal/providers/database/contracts"
+	hash "lfiber/internal/providers/hash"
+	mailContracts "lfiber/internal/providers/mail/contracts"
+	helpers "lfiber/internal/support"
 
 	"github.com/uptrace/bun"
 	"go.uber.org/zap"
@@ -758,7 +758,7 @@ func (s *authService) otpSecret() string {
 	if s != nil && s.config != nil && strings.TrimSpace(s.config.App.Name) != "" {
 		return s.config.App.Name
 	}
-	return "fiber-starter-otp-secret"
+	return "lfiber-otp-secret"
 }
 
 func (s *authService) sendOTPEmail(to, subject, leadText, code string, expires time.Duration) error {

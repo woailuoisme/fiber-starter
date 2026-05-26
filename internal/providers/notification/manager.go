@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 
-	mailContracts "fiber-starter/internal/providers/mail/contracts"
-	channels "fiber-starter/internal/providers/notification/channels"
-	contracts "fiber-starter/internal/providers/notification/contracts"
+	mailContracts "lfiber/internal/providers/mail/contracts"
+	channels "lfiber/internal/providers/notification/channels"
+	contracts "lfiber/internal/providers/notification/contracts"
 )
 
 // Manager handles sending notifications through various channels.

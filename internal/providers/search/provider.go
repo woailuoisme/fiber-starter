@@ -1,8 +1,8 @@
 package search
 
 import (
-	"fiber-starter/configs"
-	searchContracts "fiber-starter/internal/providers/search/contracts"
+	"lfiber/configs"
+	searchContracts "lfiber/internal/providers/search/contracts"
 )
 
 // Register initializes and returns the search manager and the default engine.

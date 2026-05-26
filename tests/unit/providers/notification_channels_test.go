@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"testing"
 
-	"fiber-starter/configs"
-	channels "fiber-starter/internal/providers/notification/channels"
-	notificationContracts "fiber-starter/internal/providers/notification/contracts"
+	"lfiber/configs"
+	channels "lfiber/internal/providers/notification/channels"
+	notificationContracts "lfiber/internal/providers/notification/contracts"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
@@ -84,7 +84,7 @@ func TestGotifyChannel_Send(t *testing.T) {
 		Enabled:  true,
 		URL:      "http://localhost",
 		Token:    "secret-token",
-		Title:    "Fiber Starter",
+		Title:    "lfiber",
 		Priority: 5,
 	})
 	require.NoError(t, err)

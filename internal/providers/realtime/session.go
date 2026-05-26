@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"fiber-starter/internal/features/user"
+	"lfiber/internal/features/user"
 
 	"github.com/gofiber/contrib/v3/socketio"
 	"go.uber.org/zap"

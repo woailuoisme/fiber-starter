@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/features/user"
+	"lfiber/configs"
+	"lfiber/internal/features/user"
 
 	"github.com/gofiber/fiber/v3"
 )

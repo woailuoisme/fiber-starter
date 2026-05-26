@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"fiber-starter/configs"
-	contracts "fiber-starter/internal/providers/notification/contracts"
+	"lfiber/configs"
+	contracts "lfiber/internal/providers/notification/contracts"
 
 	"github.com/go-resty/resty/v2"
 )
@@ -66,7 +66,7 @@ func (c *GotifyChannel) Send(notifiable interface{}, notification contracts.Noti
 	}
 
 	if payload.Title == "" {
-		payload.Title = "Fiber Starter"
+		payload.Title = "lfiber"
 	}
 
 	resp, err := c.client.R().

@@ -10,9 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/features/user"
-	helpers "fiber-starter/internal/support"
+	"lfiber/configs"
+	"lfiber/internal/features/user"
+	helpers "lfiber/internal/support"
 
 	"github.com/gofiber/contrib/v3/socketio"
 	"github.com/gofiber/fiber/v3"

@@ -10,7 +10,7 @@ before:
 
 builds:
   - main: ./cmd/app
-    binary: fiber-starter
+    binary: lfiber
     env:
       - CGO_ENABLED=0
     goos:

@@ -1,8 +1,8 @@
 package logging
 
 import (
-	"fiber-starter/internal/providers/logging/contracts"
-	"fiber-starter/internal/support/appctx"
+	"lfiber/internal/providers/logging/contracts"
+	"lfiber/internal/support/appctx"
 
 	"go.uber.org/zap"
 )

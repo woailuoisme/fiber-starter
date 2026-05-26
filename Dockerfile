@@ -24,7 +24,7 @@ COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
     GOFLAGS=-mod=mod CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    go build -trimpath -ldflags="-s -w" -o /out/fiber-starter ./cmd/app
+    go build -trimpath -ldflags="-s -w" -o /out/lfiber ./cmd/app
 
 # --- 阶段二：生产运行的极简 Alpine 运行环境 ---
 FROM alpine:3.23
@@ -36,7 +36,7 @@ RUN apk --no-cache add ca-certificates tzdata \
 WORKDIR /app
 
 # 从构建器中复制已编译的二进制可执行文件与运行静态资源
-COPY --from=builder /out/fiber-starter /app/fiber-starter
+COPY --from=builder /out/lfiber /app/lfiber
 COPY configs /app/configs
 COPY docs /app/docs
 COPY lang /app/lang
@@ -62,5 +62,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 # 以非 root 用户安全身份运行进程
 USER appuser
 
-CMD ["/app/fiber-starter", "serve"]
+CMD ["/app/lfiber", "serve"]
 

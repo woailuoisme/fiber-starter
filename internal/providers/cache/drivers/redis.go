@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"fiber-starter/configs"
+	"lfiber/configs"
 
 	"github.com/gofiber/storage/ristretto/v2"
 	"github.com/gofiber/storage/rueidis"

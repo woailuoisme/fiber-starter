@@ -3,12 +3,12 @@ package providers_test
 import (
 	"testing"
 
-	"fiber-starter/configs"
-	models "fiber-starter/internal/features/user"
-	auth "fiber-starter/internal/providers/auth"
-	database "fiber-starter/internal/providers/database"
-	hash "fiber-starter/internal/providers/hash"
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/configs"
+	models "lfiber/internal/features/user"
+	auth "lfiber/internal/providers/auth"
+	database "lfiber/internal/providers/database"
+	hash "lfiber/internal/providers/hash"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

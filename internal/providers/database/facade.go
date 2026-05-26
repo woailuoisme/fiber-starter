@@ -3,8 +3,8 @@ package database
 import (
 	"errors"
 
-	"fiber-starter/internal/providers/database/contracts"
-	"fiber-starter/internal/support/appctx"
+	"lfiber/internal/providers/database/contracts"
+	"lfiber/internal/support/appctx"
 )
 
 var ErrContainerNotInitialized = errors.New("application container not initialized")

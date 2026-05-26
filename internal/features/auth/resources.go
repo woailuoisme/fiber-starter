@@ -1,7 +1,7 @@
 package auth
 
 import (
-	userPkg "fiber-starter/internal/features/user"
+	userPkg "lfiber/internal/features/user"
 
 	"github.com/gofiber/fiber/v3"
 )

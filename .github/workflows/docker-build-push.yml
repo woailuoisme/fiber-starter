@@ -21,6 +21,9 @@ on:
         type: string
         default: 'fiber'
 
+env:
+  DOCKERHUB_USERNAME: 'jiaoio'
+
 jobs:
   build-and-push:
     name: Build and Push Docker Image
@@ -40,7 +43,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          username: ${{ inputs.docker_username || secrets.DOCKERHUB_USERNAME || 'jiaoio' }}
+          username: ${{ inputs.docker_username || env.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push Docker image
@@ -52,7 +55,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           # Only push if it's not a pull request
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ inputs.docker_username || secrets.DOCKERHUB_USERNAME || 'jiaoio' }}/${{ inputs.image_name || 'fiber' }}:starter-latest
+          tags: ${{ inputs.docker_username || env.DOCKERHUB_USERNAME }}/${{ inputs.image_name || 'fiber' }}:starter-latest
           # Use GitHub Actions cache to speed up builds
           cache-from: type=gha
           cache-to: type=gha,mode=max

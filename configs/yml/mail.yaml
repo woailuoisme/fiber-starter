@@ -1,6 +1,6 @@
 mail:
   default: ${MAIL_MAILER:resend}
-  from_name: ${MAIL_FROM_NAME:Fiber Starter}
+  from_name: ${MAIL_FROM_NAME:lfiber}
   from_address: ${MAIL_FROM_ADDRESS:noreply@example.com}
   reply_to: ${MAIL_REPLY_TO:""}
   api_key: ${RESEND_API_KEY:""}

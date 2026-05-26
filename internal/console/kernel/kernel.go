@@ -1,8 +1,8 @@
 package kernel
 
 import (
-	monitoringJobs "fiber-starter/internal/features/monitoring/jobs"
-	schedule "fiber-starter/internal/providers/schedule"
+	monitoringJobs "lfiber/internal/features/monitoring/jobs"
+	schedule "lfiber/internal/providers/schedule"
 )
 
 // Schedule defines the application's command schedule.

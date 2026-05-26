@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"fiber-starter/configs"
+	"lfiber/configs"
 
 	"github.com/gofiber/fiber/v3"
 	"golang.org/x/text/language"

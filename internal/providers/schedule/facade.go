@@ -3,9 +3,9 @@ package schedule
 import (
 	"errors"
 
-	queueContracts "fiber-starter/internal/providers/queue/contracts"
-	"fiber-starter/internal/providers/schedule/contracts"
-	"fiber-starter/internal/support/appctx"
+	queueContracts "lfiber/internal/providers/queue/contracts"
+	"lfiber/internal/providers/schedule/contracts"
+	"lfiber/internal/support/appctx"
 )
 
 var ErrContainerNotInitialized = errors.New("application container not initialized")

@@ -1,7 +1,7 @@
 package requests
 
 import (
-	exceptions "fiber-starter/internal/common/exceptions"
+	exceptions "lfiber/internal/common/exceptions"
 
 	"github.com/gofiber/fiber/v3"
 )

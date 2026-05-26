@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
-	helpers "fiber-starter/internal/support"
+	helpers "lfiber/internal/support"
 
 	"go.uber.org/zap"
 )

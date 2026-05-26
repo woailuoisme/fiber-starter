@@ -4,9 +4,9 @@ import (
 	"errors"
 	"sync"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/providers/mail/contracts"
-	"fiber-starter/internal/providers/mail/drivers"
+	"lfiber/configs"
+	"lfiber/internal/providers/mail/contracts"
+	"lfiber/internal/providers/mail/drivers"
 )
 
 // Manager handles the lifecycle and selection of mail drivers

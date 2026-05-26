@@ -3,8 +3,8 @@ package database
 import (
 	"sync"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/providers/database/contracts"
+	"lfiber/configs"
+	"lfiber/internal/providers/database/contracts"
 )
 
 // Manager handles multiple database connections (similar to Laravel's DatabaseManager)

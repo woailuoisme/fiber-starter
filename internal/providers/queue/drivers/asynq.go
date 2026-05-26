@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/providers/queue/contracts"
-	helpers "fiber-starter/internal/support"
+	"lfiber/configs"
+	"lfiber/internal/providers/queue/contracts"
+	helpers "lfiber/internal/support"
 
 	"github.com/hibiken/asynq"
 	"go.uber.org/zap"

@@ -23,7 +23,7 @@
   - `config.go`: 提供全局配置实体类型导出的公共门面。
 - **`database/`**: 数据库迁移文件 (Atlas CLI 管理)、数据种子 (Seeders) 和测试数据工厂。
 - **`routes/`**: 顶层全局核心路由配置入口（绑定 V1, V2 等 API 路由）。
-- **`docs/`**: 由 API 自动生成的 OpenAPI 3.1 协议规范文件（用于提供 Scalar UI 调试界面）。
+- **`docs/`**: 由 API 自动生成的 Swagger 2.0 协议规范文件（用于提供 Swagger UI 调试界面）。
 - **`tests/`**: 全局集中测试中心。
   - `unit/`: 独立、零外部依赖的单元测试。
   - `integration/`: 端到端及需要数据库等外部介质的集成测试。
@@ -31,19 +31,19 @@
 
 ## 构建、测试与开发命令
 
-- `rtk make init`: 初始化开发环境，安装工具集，同步 Go modules 依赖并建立本地 `.env`。
-- `rtk make dev`: 启动 Air 热重载开发服务器。
-- `rtk make run`: 生产环境模式下直接编译并运行 HTTP 实例。
-- `rtk make test`: 运行 `tests/` 目录下的所有自动化测试。
-- `rtk make check`: 自动化格式化校验、严格静态代码 Lint 检查与全量测试。
-- `rtk make check-all`: 完整质量门禁，用于实现完成前最终验证。
-- `rtk make coverage`: 运行覆盖率门禁并生成覆盖率报告。
-- `rtk make docs`: 重新生成 OpenAPI 3.1 定义并导出，刷新 Scalar 文档界面。
-- `rtk make k6-root` / `rtk make k6-root-load`: 对根路径执行 smoke/load 性能验证；运行前需确保服务监听在 `BASE_URL`，默认 `http://localhost:3300`。
-- `rtk make atlas-diff NAME=<name>` & `rtk make atlas-apply`: 通过 Atlas 控制和应用数据库迁移 Schema 的演进。
-- `./artisan <command>`: Laravel Artisan 风格短入口，例如 `./artisan jwt:secret`、`./artisan serve`、`./artisan queue:work`。
-- `rtk make artisan CMD="jwt:secret"`: 通过 Makefile 运行任意 CLI 命令。
-- `rtk make jwt`: 生成 32 字节随机 JWT secret，并替换 `.env` 中的 `JWT_SECRET`。
+- `rtk just init`: 初始化开发环境，安装工具集，同步 Go modules 依赖并建立本地 `.env`。
+- `rtk just dev`: 启动 Air 热重载开发服务器。
+- `rtk just run`: 生产环境模式下直接编译并运行 HTTP 实例。
+- `rtk just test`: 运行 `tests/` 目录下的所有自动化测试。
+- `rtk just check`: 自动化格式化校验、严格静态代码 Lint 检查与全量测试。
+- `rtk just check-all`: 完整质量门禁，用于实现完成前最终验证。
+- `rtk just coverage`: 运行覆盖率门禁并生成覆盖率报告。
+- `rtk just docs`: 重新生成 Swagger 2.0 定义并导出，刷新 Swagger UI 文档界面。
+- `rtk just k6-root` / `rtk just k6-root-load`: 对根路径执行 smoke/load 性能验证；运行前需确保服务监听在 `BASE_URL`，默认 `http://localhost:3300`。
+- `rtk just atlas-diff <name>` & `rtk just atlas-apply`: 通过 Atlas 控制和应用数据库迁移 Schema 的演进。
+- `./artisan <command>`: Laravel Artisan 风格短入口，例如 `./artisan jwt:generate`、`./artisan serve`、`./artisan queue:work`。
+- `rtk just artisan jwt:generate`: 通过 justfile 运行任意 CLI 命令。
+- `rtk just jwt`: 生成 32 字节随机 JWT secret，并替换 `.env` 中的 `JWT_SECRET`。
 
 ## 代码风格与命名规范
 
@@ -51,7 +51,7 @@
 - **显式错误链传递**: 绝对禁止忽略任何 `error`，底层错误向上传递时必须使用 `%w` 进行显式包裹包装。
 - **单一职责专注度**: 单个文件只做一件事情，路由、控制器与核心服务要做到完美解耦。
 - **API 空切片 JSON 序列化规范**: 在 API 序列化或 Marshaling 流程中，返回数据集合的切片切忌返回 `nil`，必须将其初始化为 concrete 的空切片 `[]Type{}`。这样可以确保输出给前端消费者的 JSON 是符合预期的空数组 `[]`，从而彻底杜绝 JavaScript/Kotlin 客户端等消费解析时发生 runtime null pointer 崩溃。
-- **静态 Lint 检测**: 团队通过 `.golangci.yml` 强制审查所有 MR (govet, staticcheck, errcheck, gosec 等)，本地运行 `make check` 无警告方能提交。
+- **静态 Lint 检测**: 团队通过 `.golangci.yml` 强制审查所有 MR (govet, staticcheck, errcheck, gosec 等)，本地运行 `just check` 无警告方能提交。
 
 ## 测试指南
 
@@ -69,11 +69,11 @@
 - `/health` 只表示进程存活；`/ready` 返回 `ok`、`degraded` 或 `fail`，只有关键依赖失败时返回 `503`。
 - 默认数据库为关键依赖；缓存、邮件、队列、搜索、存储和实时通信为可降级依赖，可用 `SERVICE_*_CRITICAL` 环境变量覆盖。
 - `JWT_SECRET`、API key、密码、token、连接串等敏感值必须来自环境变量或密钥管理系统，源码默认值不得包含真实 secret。
-- 需要生成本地 JWT secret 时使用 `./artisan jwt:secret` 或 `rtk make jwt`，不要手写弱 secret；不要新增重复的 `jwt:generate` 类命令入口。
+- 需要生成本地 JWT secret 时使用 `./artisan jwt:generate` 或 `rtk just jwt`，不要手写弱 secret；不要新增重复的 JWT 生成命令入口。
 - 日志与 readiness 错误必须使用 `internal/support/redaction.go` 的脱敏辅助函数。
 - 非关键 provider 构建或健康检查失败时，服务应保持可启动并在 `/ready` 中报告 `degraded`；配置错误和关键依赖失败不能被静默吞掉。
 - HTTP 成功、错误和分页响应必须保持 `success`、`code`、`message`、`data`、`errors` 的公开信封；API 切片响应不得输出 JSON `null`。
-- 不要在项目脚本、Makefile、文档或测试中随意写入本机专用绝对路径或缓存路径（如 `GOCACHE`、`/private/tmp/...`、用户目录）。需要项目级缓存时优先使用仓库已有且被 `.gitignore` 忽略的 `.cache/` 约定；只有用户明确要求、项目已有配置约定或命令运行时临时传参时才允许指定路径。
+- 不要在项目脚本、justfile、文档或测试中随意写入本机专用绝对路径或缓存路径（如 `GOCACHE`、`/private/tmp/...`、用户目录）。需要项目级缓存时优先使用仓库已有且被 `.gitignore` 忽略的 `.cache/` 约定；只有用户明确要求、项目已有配置约定或命令运行时临时传参时才允许指定路径。
 
 ### 全局访问
 
@@ -139,3 +139,69 @@ For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
 file:///Users/seaside/Projects/go/fiber-template/specs/001-fiber-best-practices/plan.md
 <!-- SPECKIT END -->
+
+# CLAUDE.md
+
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+## 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+## 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+---
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

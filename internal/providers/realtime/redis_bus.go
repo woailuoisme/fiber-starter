@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"fiber-starter/configs"
+	"lfiber/configs"
 
 	"github.com/redis/go-redis/v9"
 )

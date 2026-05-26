@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	helpers "fiber-starter/internal/support"
+	helpers "lfiber/internal/support"
 
 	"github.com/stretchr/testify/assert"
 )

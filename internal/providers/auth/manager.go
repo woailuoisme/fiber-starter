@@ -3,11 +3,11 @@ package auth
 import (
 	"sync"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/providers/auth/contracts"
-	"fiber-starter/internal/providers/auth/drivers"
-	database "fiber-starter/internal/providers/database/contracts"
-	hashContracts "fiber-starter/internal/providers/hash/contracts"
+	"lfiber/configs"
+	"lfiber/internal/providers/auth/contracts"
+	"lfiber/internal/providers/auth/drivers"
+	database "lfiber/internal/providers/database/contracts"
+	hashContracts "lfiber/internal/providers/hash/contracts"
 )
 
 // Manager manages authentication guards and user providers

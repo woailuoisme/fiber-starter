@@ -1,7 +1,7 @@
 package mail
 
 import (
-	"fiber-starter/internal/providers/mail/contracts"
+	"lfiber/internal/providers/mail/contracts"
 )
 
 type Message struct {

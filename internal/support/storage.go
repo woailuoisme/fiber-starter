@@ -1,7 +1,7 @@
 package support
 
 import (
-	"fiber-starter/internal/providers/storage/contracts"
+	"lfiber/internal/providers/storage/contracts"
 )
 
 // storage is the default storage disk instance

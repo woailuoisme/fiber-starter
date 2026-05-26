@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"fiber-starter/configs"
+	"lfiber/configs"
 
 	"github.com/gofiber/contrib/v3/socketio"
 	"github.com/gofiber/contrib/v3/websocket"

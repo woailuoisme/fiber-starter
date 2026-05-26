@@ -1,9 +1,9 @@
 package jobs
 
 import (
-	monitoringJobs "fiber-starter/internal/features/monitoring/jobs"
-	userJobs "fiber-starter/internal/features/user/jobs"
-	queue "fiber-starter/internal/providers/queue"
+	monitoringJobs "lfiber/internal/features/monitoring/jobs"
+	userJobs "lfiber/internal/features/user/jobs"
+	queue "lfiber/internal/providers/queue"
 )
 
 // Register registers all application jobs with the queue system.

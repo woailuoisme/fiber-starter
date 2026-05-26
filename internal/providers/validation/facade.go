@@ -1,8 +1,8 @@
 package validation
 
 import (
-	"fiber-starter/internal/providers/validation/contracts"
-	"fiber-starter/internal/support/appctx"
+	"lfiber/internal/providers/validation/contracts"
+	"lfiber/internal/support/appctx"
 
 	"github.com/go-playground/validator/v10"
 )

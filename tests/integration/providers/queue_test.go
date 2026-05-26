@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"fiber-starter/configs"
-	providers "fiber-starter/internal/providers"
-	queue "fiber-starter/internal/providers/queue"
+	"lfiber/configs"
+	providers "lfiber/internal/providers"
+	queue "lfiber/internal/providers/queue"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -3,12 +3,12 @@ package bootstrap
 import (
 	"strings"
 
-	middleware "fiber-starter/internal/common/middleware"
-	"fiber-starter/internal/features/auth"
-	"fiber-starter/internal/features/monitoring"
-	"fiber-starter/internal/features/user"
-	providers "fiber-starter/internal/providers"
-	helpers "fiber-starter/internal/support"
+	middleware "lfiber/internal/common/middleware"
+	"lfiber/internal/features/auth"
+	"lfiber/internal/features/monitoring"
+	"lfiber/internal/features/user"
+	providers "lfiber/internal/providers"
+	helpers "lfiber/internal/support"
 
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"

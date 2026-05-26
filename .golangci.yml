@@ -32,7 +32,7 @@ formatters:
       no-lex-order: true
     goimports:
       local-prefixes:
-        - fiber-starter
+        - lfiber
   exclusions:
     generated: strict
     warn-unused: true

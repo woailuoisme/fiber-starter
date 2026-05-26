@@ -3,8 +3,8 @@ package search
 import (
 	"errors"
 
-	"fiber-starter/internal/providers/search/contracts"
-	"fiber-starter/internal/support/appctx"
+	"lfiber/internal/providers/search/contracts"
+	"lfiber/internal/support/appctx"
 )
 
 var ErrContainerNotInitialized = errors.New("application container not initialized")

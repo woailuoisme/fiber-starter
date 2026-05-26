@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/providers/storage/contracts"
+	"lfiber/configs"
+	"lfiber/internal/providers/storage/contracts"
 )
 
 // Manager handles multiple storage disks (similar to Laravel's StorageManager)

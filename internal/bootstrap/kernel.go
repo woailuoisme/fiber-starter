@@ -5,12 +5,12 @@ import (
 	"context"
 	"fmt"
 
-	"fiber-starter/configs"
-	requests "fiber-starter/internal/common/requests"
-	user "fiber-starter/internal/features/user"
-	providers "fiber-starter/internal/providers"
-	helpers "fiber-starter/internal/support"
-	"fiber-starter/internal/support/otel"
+	"lfiber/configs"
+	requests "lfiber/internal/common/requests"
+	user "lfiber/internal/features/user"
+	providers "lfiber/internal/providers"
+	helpers "lfiber/internal/support"
+	"lfiber/internal/support/otel"
 )
 
 // Kernel represents the core of the application

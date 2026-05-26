@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"fiber-starter/configs"
-	helpers "fiber-starter/internal/support"
+	"lfiber/configs"
+	helpers "lfiber/internal/support"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"

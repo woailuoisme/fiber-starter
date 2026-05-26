@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	"fiber-starter/configs"
-	validationContracts "fiber-starter/internal/providers/validation/contracts"
+	"lfiber/configs"
+	validationContracts "lfiber/internal/providers/validation/contracts"
 
 	"github.com/go-playground/validator/v10"
 )

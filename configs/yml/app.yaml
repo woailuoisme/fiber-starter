@@ -1,5 +1,5 @@
 app:
-  name: ${APP_NAME:Fiber Starter}
+  name: ${APP_NAME:lfiber}
   env: ${APP_ENV:local}
   debug: ${APP_DEBUG:false}
   port: ${APP_PORT:8080}

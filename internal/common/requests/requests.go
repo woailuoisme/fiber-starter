@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	exceptions "fiber-starter/internal/common/exceptions"
-	supporti18n "fiber-starter/internal/providers/i18n"
-	"fiber-starter/internal/providers/validation/contracts"
+	exceptions "lfiber/internal/common/exceptions"
+	supporti18n "lfiber/internal/providers/i18n"
+	"lfiber/internal/providers/validation/contracts"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"

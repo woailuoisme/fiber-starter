@@ -1,7 +1,7 @@
 package auth
 
 import (
-	requests "fiber-starter/internal/common/requests"
+	requests "lfiber/internal/common/requests"
 
 	"github.com/gofiber/fiber/v3"
 )

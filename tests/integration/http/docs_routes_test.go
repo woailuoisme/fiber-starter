@@ -6,16 +6,16 @@ import (
 	"strings"
 	"testing"
 
-	"fiber-starter/internal/bootstrap"
-	providers "fiber-starter/internal/providers"
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/internal/bootstrap"
+	providers "lfiber/internal/providers"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestDocsRoutes_ExposeRedocAndOpenAPISpec(t *testing.T) {
+func TestDocsRoutes_ExposeSwaggerUIAndOpenAPISpec(t *testing.T) {
 	t.Setenv("I18N_LANGUAGE_DIR", testkit.RepoRoot(t)+"/lang")
 
 	runtime, err := providers.Build()
@@ -50,17 +50,26 @@ func TestDocsRoutes_ExposeRedocAndOpenAPISpec(t *testing.T) {
 	require.Equal(t, fiber.StatusOK, rootResp.StatusCode)
 	rootJSON := testkit.ReadBody(t, rootResp)
 	assert.Contains(t, rootJSON, `"success":true`)
-	assert.Contains(t, rootJSON, `"message":"Welcome to Fiber Starter API"`)
+	assert.Contains(t, rootJSON, `"message":"Welcome to lfiber API"`)
 	assert.Contains(t, rootJSON, `"api":"/api/v1"`)
+	assert.Contains(t, rootJSON, `"scalar":"/docs/scalar"`)
 
 	docsResp, err := app.Test(httptest.NewRequest("GET", "/docs", nil))
 	require.NoError(t, err)
 	defer docsResp.Body.Close()
 	require.Equal(t, fiber.StatusOK, docsResp.StatusCode)
 	docsHTML := testkit.ReadBody(t, docsResp)
-	assert.Contains(t, docsHTML, "<redoc")
-	assert.Contains(t, docsHTML, "redoc.standalone.js")
+	assert.Contains(t, strings.ToLower(docsHTML), "swagger-ui")
+	assert.Contains(t, docsHTML, "SwaggerUIBundle")
 	assert.Contains(t, docsHTML, "/openapi.json")
+
+	scalarResp, err := app.Test(httptest.NewRequest("GET", "/docs/scalar", nil))
+	require.NoError(t, err)
+	defer scalarResp.Body.Close()
+	require.Equal(t, fiber.StatusOK, scalarResp.StatusCode)
+	scalarHTML := testkit.ReadBody(t, scalarResp)
+	assert.Contains(t, scalarHTML, `src="https://cdn.jsdelivr.net/npm/@scalar/api-reference" crossorigin`)
+	assert.Contains(t, scalarHTML, "data-url=\"/openapi.json\"")
 
 	specResp, err := app.Test(httptest.NewRequest("GET", "/openapi.json", nil))
 	require.NoError(t, err)

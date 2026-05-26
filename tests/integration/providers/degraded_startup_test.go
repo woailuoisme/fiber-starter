@@ -3,10 +3,10 @@ package providers_test
 import (
 	"testing"
 
-	"fiber-starter/configs"
-	providers "fiber-starter/internal/providers"
-	"fiber-starter/internal/support/health"
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/configs"
+	providers "lfiber/internal/providers"
+	"lfiber/internal/support/health"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

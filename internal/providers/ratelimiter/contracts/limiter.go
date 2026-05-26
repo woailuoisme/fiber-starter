@@ -1,7 +1,7 @@
 package contracts
 
 import (
-	"fiber-starter/configs"
+	"lfiber/configs"
 
 	fiber "github.com/gofiber/fiber/v3"
 )

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"fiber-starter/configs"
+	"lfiber/configs"
 
 	"github.com/hibiken/asynq"
 )

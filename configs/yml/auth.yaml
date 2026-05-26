@@ -20,4 +20,4 @@ jwt:
   expiration_time: ${JWT_EXPIRATION_TIME:86400}
   refresh_time: ${JWT_REFRESH_TIME:604800}
   expire_hours: ${JWT_EXPIRE_HOURS:24}
-  issuer: ${JWT_ISSUER:fiber-starter}
+  issuer: ${JWT_ISSUER:lfiber}

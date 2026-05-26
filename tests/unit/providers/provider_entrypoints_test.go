@@ -6,27 +6,27 @@ import (
 	"testing"
 	"time"
 
-	"fiber-starter/configs"
-	auth "fiber-starter/internal/providers/auth"
-	cache "fiber-starter/internal/providers/cache"
-	configProvider "fiber-starter/internal/providers/config"
-	database "fiber-starter/internal/providers/database"
-	hash "fiber-starter/internal/providers/hash"
-	i18nProvider "fiber-starter/internal/providers/i18n"
-	logging "fiber-starter/internal/providers/logging"
-	mail "fiber-starter/internal/providers/mail"
-	mailContracts "fiber-starter/internal/providers/mail/contracts"
-	notification "fiber-starter/internal/providers/notification"
-	notificationContracts "fiber-starter/internal/providers/notification/contracts"
-	queue "fiber-starter/internal/providers/queue"
-	queueContracts "fiber-starter/internal/providers/queue/contracts"
-	ratelimiter "fiber-starter/internal/providers/ratelimiter"
-	schedule "fiber-starter/internal/providers/schedule"
-	search "fiber-starter/internal/providers/search"
-	storage "fiber-starter/internal/providers/storage"
-	storageDrivers "fiber-starter/internal/providers/storage/drivers"
-	validation "fiber-starter/internal/providers/validation"
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/configs"
+	auth "lfiber/internal/providers/auth"
+	cache "lfiber/internal/providers/cache"
+	configProvider "lfiber/internal/providers/config"
+	database "lfiber/internal/providers/database"
+	hash "lfiber/internal/providers/hash"
+	i18nProvider "lfiber/internal/providers/i18n"
+	logging "lfiber/internal/providers/logging"
+	mail "lfiber/internal/providers/mail"
+	mailContracts "lfiber/internal/providers/mail/contracts"
+	notification "lfiber/internal/providers/notification"
+	notificationContracts "lfiber/internal/providers/notification/contracts"
+	queue "lfiber/internal/providers/queue"
+	queueContracts "lfiber/internal/providers/queue/contracts"
+	ratelimiter "lfiber/internal/providers/ratelimiter"
+	schedule "lfiber/internal/providers/schedule"
+	search "lfiber/internal/providers/search"
+	storage "lfiber/internal/providers/storage"
+	storageDrivers "lfiber/internal/providers/storage/drivers"
+	validation "lfiber/internal/providers/validation"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
@@ -41,13 +41,13 @@ func TestProviderEntryPoints_RegisterWrappers(t *testing.T) {
 	t.Run("Config", func(t *testing.T) {
 		k := koanf.New(".")
 		require.NoError(t, k.Load(confmap.Provider(map[string]interface{}{
-			"app.name": "Fiber Starter",
+			"app.name": "lfiber",
 		}, "."), nil))
 
 		repo, err := configProvider.RegisterConfig(k)
 		require.NoError(t, err)
 		require.NotNil(t, repo)
-		assert.Equal(t, "Fiber Starter", repo.GetString("app.name"))
+		assert.Equal(t, "lfiber", repo.GetString("app.name"))
 	})
 
 	t.Run("Database", func(t *testing.T) {
@@ -189,7 +189,7 @@ func TestProviderEntryPoints_RegisterWrappers(t *testing.T) {
 			Mail: configs.MailConfig{
 				Enabled:     true,
 				Default:     "log",
-				FromName:    "Fiber Starter",
+				FromName:    "lfiber",
 				FromAddress: "noreply@example.com",
 				ReplyTo:     "",
 				APIKey:      "",
@@ -213,7 +213,7 @@ func TestProviderEntryPoints_RegisterWrappers(t *testing.T) {
 			Mail: configs.MailConfig{
 				Enabled:     true,
 				Default:     "log",
-				FromName:    "Fiber Starter",
+				FromName:    "lfiber",
 				FromAddress: "noreply@example.com",
 				Host:        "localhost",
 				Port:        1025,

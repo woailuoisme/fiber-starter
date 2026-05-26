@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"fiber-starter/configs"
-	helpers "fiber-starter/internal/support"
+	"lfiber/configs"
+	helpers "lfiber/internal/support"
 
 	"github.com/gofiber/storage/s3"
 	"go.uber.org/zap"

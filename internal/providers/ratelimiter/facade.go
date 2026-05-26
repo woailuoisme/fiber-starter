@@ -1,9 +1,9 @@
 package ratelimiter
 
 import (
-	"fiber-starter/configs"
-	"fiber-starter/internal/providers/ratelimiter/contracts"
-	"fiber-starter/internal/support/appctx"
+	"lfiber/configs"
+	"lfiber/internal/providers/ratelimiter/contracts"
+	"lfiber/internal/support/appctx"
 
 	"github.com/gofiber/fiber/v3"
 )

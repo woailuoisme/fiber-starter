@@ -8,11 +8,11 @@ import (
 	"net/textproto"
 	"testing"
 
-	"fiber-starter/configs"
-	requests "fiber-starter/internal/common/requests"
-	validation "fiber-starter/internal/providers/validation"
-	helpers "fiber-starter/internal/support"
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/configs"
+	requests "lfiber/internal/common/requests"
+	validation "lfiber/internal/providers/validation"
+	helpers "lfiber/internal/support"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"

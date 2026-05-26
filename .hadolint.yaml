@@ -1,0 +1,7 @@
+# Alpine 包版本通常随基础镜像仓库滚动，项目级不强制在 Dockerfile 中固定 apk 包版本。
+ignored:
+  - DL3018
+
+failure-threshold: warning
+trustedRegistries:
+  - docker.io

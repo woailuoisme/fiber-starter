@@ -1,8 +1,8 @@
 package hash
 
 import (
-	contracts "fiber-starter/internal/providers/hash/contracts"
-	"fiber-starter/internal/support/appctx"
+	contracts "lfiber/internal/providers/hash/contracts"
+	"lfiber/internal/support/appctx"
 )
 
 // Facade returns the hashing service from the application container.

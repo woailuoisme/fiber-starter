@@ -1,5 +1,5 @@
 # ==========================================
-# Go Fiber Starter Project - .gitignore
+# Go lfiber Project - .gitignore
 # ==========================================
 
 # ------------------------------------------
@@ -16,7 +16,7 @@ debug
 debug.test
 __debug_bin
 /bin/
-/fiber-starter
+/lfiber
 /main
 
 # ------------------------------------------
@@ -103,6 +103,7 @@ coverage.txt
 coverage.html
 coverage.out
 coverage.xml
+/tests/coverage/
 /test-results/
 /.test-results/
 
@@ -148,6 +149,8 @@ coverage.xml
 !.agents/skills/
 .agents/skills/*
 !.agents/skills/bun-orm/
+
+.cursor
 
 # .specify (Selectively allow memory configuration)
 !.specify/

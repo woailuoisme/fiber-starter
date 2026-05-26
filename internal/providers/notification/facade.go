@@ -1,8 +1,8 @@
 package notification
 
 import (
-	"fiber-starter/internal/providers/notification/contracts"
-	"fiber-starter/internal/support/appctx"
+	"lfiber/internal/providers/notification/contracts"
+	"lfiber/internal/support/appctx"
 )
 
 // dispatcher returns the notification dispatcher instance from the container.

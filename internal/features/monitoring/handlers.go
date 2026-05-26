@@ -1,9 +1,9 @@
 package monitoring
 
 import (
-	"fiber-starter/configs"
-	"fiber-starter/internal/support/appctx"
-	health "fiber-starter/internal/support/health"
+	"lfiber/configs"
+	"lfiber/internal/support/appctx"
+	health "lfiber/internal/support/health"
 
 	"github.com/gofiber/fiber/v3"
 )

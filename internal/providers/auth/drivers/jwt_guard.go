@@ -3,7 +3,7 @@ package drivers
 import (
 	"reflect"
 
-	"fiber-starter/internal/providers/auth/contracts"
+	"lfiber/internal/providers/auth/contracts"
 
 	"github.com/gofiber/fiber/v3"
 )

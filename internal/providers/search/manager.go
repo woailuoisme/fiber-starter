@@ -4,9 +4,9 @@ import (
 	"errors"
 	"sync"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/providers/search/contracts"
-	"fiber-starter/internal/providers/search/drivers"
+	"lfiber/configs"
+	"lfiber/internal/providers/search/contracts"
+	"lfiber/internal/providers/search/drivers"
 )
 
 // Manager handles the lifecycle and selection of search engines

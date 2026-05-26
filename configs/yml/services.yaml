@@ -3,7 +3,7 @@ notification:
     enabled: ${GOTIFY_ENABLED:false}
     url: ${GOTIFY_URL:""}
     token: ${GOTIFY_TOKEN:""}
-    title: ${APP_NAME:Fiber Starter}
+    title: ${APP_NAME:lfiber}
     priority: 5
   telegram:
     enabled: ${TELEGRAM_ENABLED:false}
@@ -34,6 +34,6 @@ services:
 
 otel:
   enabled: ${OTEL_ENABLED:false}
-  service_name: ${OTEL_SERVICE_NAME:fiber-starter}
+  service_name: ${OTEL_SERVICE_NAME:lfiber}
   exporter_type: grpc
   endpoint: ${OTEL_ENDPOINT:localhost:4317}

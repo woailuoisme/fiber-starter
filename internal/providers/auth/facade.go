@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"fiber-starter/internal/providers/auth/contracts"
-	"fiber-starter/internal/support/appctx"
+	"lfiber/internal/providers/auth/contracts"
+	"lfiber/internal/support/appctx"
 
 	"github.com/gofiber/fiber/v3"
 )

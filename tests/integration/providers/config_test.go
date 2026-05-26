@@ -3,8 +3,8 @@ package providers
 import (
 	"testing"
 
-	configs "fiber-starter/configs"
-	config "fiber-starter/internal/providers/config"
+	configs "lfiber/configs"
+	config "lfiber/internal/providers/config"
 
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/v2"

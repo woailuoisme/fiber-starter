@@ -1,0 +1,12 @@
+# actionlint 配置：保持默认规则，仅声明项目级可扩展入口。
+self-hosted-runner:
+  labels: []
+
+# null 表示不限制 GitHub Actions configuration variables。
+config-variables: null
+
+paths:
+  .github/workflows/**/*.yml:
+    ignore: []
+  .github/workflows/**/*.yaml:
+    ignore: []

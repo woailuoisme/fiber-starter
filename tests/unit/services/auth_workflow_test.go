@@ -8,15 +8,15 @@ import (
 	"testing"
 	"time"
 
-	"fiber-starter/configs"
-	auth "fiber-starter/internal/features/auth"
-	user "fiber-starter/internal/features/user"
-	"fiber-starter/internal/providers"
-	cacheContracts "fiber-starter/internal/providers/cache/contracts"
-	dbProvider "fiber-starter/internal/providers/database"
-	hash "fiber-starter/internal/providers/hash"
-	mailContracts "fiber-starter/internal/providers/mail/contracts"
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/configs"
+	auth "lfiber/internal/features/auth"
+	user "lfiber/internal/features/user"
+	"lfiber/internal/providers"
+	cacheContracts "lfiber/internal/providers/cache/contracts"
+	dbProvider "lfiber/internal/providers/database"
+	hash "lfiber/internal/providers/hash"
+	mailContracts "lfiber/internal/providers/mail/contracts"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -102,13 +102,13 @@ func newAuthServiceTestHarness(t *testing.T) (auth.AuthService, *fakeMailer, *fa
 
 	cfg := &configs.Config{
 		App: configs.AppConfig{
-			Name: "fiber-starter",
+			Name: "lfiber",
 		},
 		JWT: configs.JWTConfig{
 			Secret:         "test-secret",
 			ExpirationTime: 3600,
 			RefreshTime:    7200,
-			Issuer:         "fiber-starter",
+			Issuer:         "lfiber",
 		},
 		Hash: configs.HashConfig{
 			Driver: "bcrypt",

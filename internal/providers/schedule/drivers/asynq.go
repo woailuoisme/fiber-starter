@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"fiber-starter/configs"
-	queueContracts "fiber-starter/internal/providers/queue/contracts"
-	"fiber-starter/internal/providers/schedule/contracts"
-	helpers "fiber-starter/internal/support"
+	"lfiber/configs"
+	queueContracts "lfiber/internal/providers/queue/contracts"
+	"lfiber/internal/providers/schedule/contracts"
+	helpers "lfiber/internal/support"
 
 	"github.com/hibiken/asynq"
 	"go.uber.org/zap"

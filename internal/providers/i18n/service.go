@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"fiber-starter/configs"
+	"lfiber/configs"
 
 	contribi18n "github.com/gofiber/contrib/v3/i18n"
 	"github.com/gofiber/fiber/v3"

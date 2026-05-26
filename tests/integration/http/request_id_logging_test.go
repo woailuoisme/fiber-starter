@@ -5,9 +5,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	middleware "fiber-starter/internal/common/middleware"
-	logging "fiber-starter/internal/providers/logging"
-	helpers "fiber-starter/internal/support"
+	middleware "lfiber/internal/common/middleware"
+	logging "lfiber/internal/providers/logging"
+	helpers "lfiber/internal/support"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"

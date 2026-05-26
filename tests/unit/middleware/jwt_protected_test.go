@@ -4,11 +4,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"fiber-starter/configs"
-	middleware "fiber-starter/internal/common/middleware"
-	models "fiber-starter/internal/features/user"
-	support "fiber-starter/internal/support"
-	"fiber-starter/tests/internal/testkit/mocks"
+	"lfiber/configs"
+	middleware "lfiber/internal/common/middleware"
+	models "lfiber/internal/features/user"
+	support "lfiber/internal/support"
+	"lfiber/tests/internal/testkit/mocks"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"

@@ -3,7 +3,7 @@ package queue
 import (
 	"fmt"
 
-	helpers "fiber-starter/internal/support"
+	helpers "lfiber/internal/support"
 
 	"go.uber.org/zap"
 )

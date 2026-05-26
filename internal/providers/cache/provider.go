@@ -1,8 +1,8 @@
 package cache
 
 import (
-	"fiber-starter/configs"
-	cacheContracts "fiber-starter/internal/providers/cache/contracts"
+	"lfiber/configs"
+	cacheContracts "lfiber/internal/providers/cache/contracts"
 )
 
 // RegisterCache initializes and returns the cache manager and the default store.

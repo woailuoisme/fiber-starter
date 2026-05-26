@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"fiber-starter/configs"
-	loggingContracts "fiber-starter/internal/providers/logging/contracts"
+	"lfiber/configs"
+	loggingContracts "lfiber/internal/providers/logging/contracts"
 
 	"go.uber.org/zap"
 )

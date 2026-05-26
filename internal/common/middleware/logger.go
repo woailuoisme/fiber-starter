@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	logging "fiber-starter/internal/providers/logging"
-	helpers "fiber-starter/internal/support"
+	logging "lfiber/internal/providers/logging"
+	helpers "lfiber/internal/support"
 
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"

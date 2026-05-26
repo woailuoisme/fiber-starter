@@ -3,8 +3,9 @@ package logging
 import (
 	"os"
 	"strings"
+	"time"
 
-	"fiber-starter/configs"
+	"lfiber/configs"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -109,7 +110,9 @@ func createEncoderConfig() zapcore.EncoderConfig {
 	encoderConfig.MessageKey = "message"
 	encoderConfig.CallerKey = "caller"
 	encoderConfig.StacktraceKey = "stacktrace"
-	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoderConfig.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+		enc.AppendString(t.Format("2006-01-02 15:04:05"))
+	}
 	encoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
 	encoderConfig.EncodeDuration = zapcore.SecondsDurationEncoder
 	return encoderConfig

@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"fiber-starter/configs"
+	"lfiber/configs"
 
 	"github.com/gofiber/fiber/v3"
 )

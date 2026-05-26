@@ -3,7 +3,7 @@ package middleware
 import (
 	"strings"
 
-	"fiber-starter/configs"
+	"lfiber/configs"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"

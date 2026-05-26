@@ -3,8 +3,8 @@ package bootstrap
 import (
 	"time"
 
-	"fiber-starter/configs"
-	helpers "fiber-starter/internal/support"
+	"lfiber/configs"
+	helpers "lfiber/internal/support"
 
 	json "github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v3"

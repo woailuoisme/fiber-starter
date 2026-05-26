@@ -3,8 +3,8 @@ package providers_test
 import (
 	"testing"
 
-	"fiber-starter/configs"
-	logging "fiber-starter/internal/providers/logging"
+	"lfiber/configs"
+	logging "lfiber/internal/providers/logging"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

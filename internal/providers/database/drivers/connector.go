@@ -3,7 +3,7 @@ package drivers
 import (
 	"database/sql"
 
-	"fiber-starter/configs"
+	"lfiber/configs"
 )
 
 // Connector is the interface for all database connectors (similar to Laravel's Connector)

@@ -3,9 +3,9 @@ package schedule
 import (
 	"sync"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/providers/schedule/contracts"
-	"fiber-starter/internal/providers/schedule/drivers"
+	"lfiber/configs"
+	"lfiber/internal/providers/schedule/contracts"
+	"lfiber/internal/providers/schedule/drivers"
 )
 
 // Manager handles the lifecycle of the scheduler

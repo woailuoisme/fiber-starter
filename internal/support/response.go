@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	exceptions "fiber-starter/internal/common/exceptions"
-	supporti18n "fiber-starter/internal/providers/i18n"
+	exceptions "lfiber/internal/common/exceptions"
+	supporti18n "lfiber/internal/providers/i18n"
 
 	"github.com/gofiber/fiber/v3"
 )

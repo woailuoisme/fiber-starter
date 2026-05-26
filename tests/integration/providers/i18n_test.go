@@ -3,9 +3,9 @@ package providers
 import (
 	"testing"
 
-	"fiber-starter/configs"
-	i18n "fiber-starter/internal/providers/i18n"
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/configs"
+	i18n "lfiber/internal/providers/i18n"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

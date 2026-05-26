@@ -3,9 +3,9 @@ package cache
 import (
 	"sync"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/providers/cache/contracts"
-	drivers "fiber-starter/internal/providers/cache/drivers"
+	"lfiber/configs"
+	"lfiber/internal/providers/cache/contracts"
+	drivers "lfiber/internal/providers/cache/drivers"
 )
 
 // Manager manages multiple cache stores (similar to Laravel's CacheManager)

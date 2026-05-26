@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"fiber-starter/internal/providers/storage/contracts"
-	"fiber-starter/internal/support/appctx"
+	"lfiber/internal/providers/storage/contracts"
+	"lfiber/internal/support/appctx"
 )
 
 var ErrContainerNotInitialized = errors.New("application container not initialized")

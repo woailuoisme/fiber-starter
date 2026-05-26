@@ -1,8 +1,8 @@
 package drivers
 
 import (
-	"fiber-starter/internal/providers/mail/contracts"
-	helpers "fiber-starter/internal/support"
+	"lfiber/internal/providers/mail/contracts"
+	helpers "lfiber/internal/support"
 
 	"go.uber.org/zap"
 )

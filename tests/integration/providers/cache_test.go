@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"fiber-starter/configs"
-	cache "fiber-starter/internal/providers/cache"
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/configs"
+	cache "lfiber/internal/providers/cache"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

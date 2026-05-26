@@ -1,7 +1,7 @@
 package drivers
 
 import (
-	"fiber-starter/internal/providers/search/contracts"
+	"lfiber/internal/providers/search/contracts"
 )
 
 type NullDriver struct{}

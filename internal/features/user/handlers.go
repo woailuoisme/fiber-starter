@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
-	middleware "fiber-starter/internal/common/middleware"
-	helpers "fiber-starter/internal/support"
+	middleware "lfiber/internal/common/middleware"
+	helpers "lfiber/internal/support"
 
 	"github.com/gofiber/fiber/v3"
 )

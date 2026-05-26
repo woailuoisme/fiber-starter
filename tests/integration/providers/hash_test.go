@@ -3,8 +3,8 @@ package providers
 import (
 	"testing"
 
-	"fiber-starter/configs"
-	hash "fiber-starter/internal/providers/hash"
+	"lfiber/configs"
+	hash "lfiber/internal/providers/hash"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

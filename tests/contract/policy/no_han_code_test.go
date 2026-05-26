@@ -12,7 +12,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/stretchr/testify/require"
 )

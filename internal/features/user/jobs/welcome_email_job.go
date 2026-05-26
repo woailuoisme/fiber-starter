@@ -3,8 +3,8 @@ package jobs
 import (
 	"context"
 
-	mail "fiber-starter/internal/providers/mail"
-	helpers "fiber-starter/internal/support"
+	mail "lfiber/internal/providers/mail"
+	helpers "lfiber/internal/support"
 
 	"go.uber.org/zap"
 )

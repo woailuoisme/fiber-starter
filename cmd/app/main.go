@@ -1,12 +1,12 @@
-// Package main is the single entry point for the fiber-starter application.
+// Package main is the single entry point for the lfiber application.
 //
 // Usage:
 //
 //	go run . serve              # Start the HTTP server
-//	go run . migrate run        # Run database migrations
-//	go run . routes             # Show all routes
+//	go run . db:migrate         # Run database migrations
+//	go run . route:list         # Show all routes
 //	go run . --help             # Show available commands
-//	@title						Restfull API docs
+//	@title						lfiber API docs
 //	@version					1.0.0
 //	@description.markdown		api.md
 //	@contact.name				Developer Support
@@ -26,7 +26,7 @@
 // @tag.description	服务健康检查、就绪检查及运行状态监控
 package main
 
-import command "fiber-starter/internal/console/commands"
+import command "lfiber/internal/console/commands"
 
 func main() {
 	command.CLI()

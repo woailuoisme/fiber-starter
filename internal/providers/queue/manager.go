@@ -4,9 +4,9 @@ import (
 	"errors"
 	"sync"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/providers/queue/contracts"
-	"fiber-starter/internal/providers/queue/drivers"
+	"lfiber/configs"
+	"lfiber/internal/providers/queue/contracts"
+	"lfiber/internal/providers/queue/drivers"
 )
 
 // Manager handles the lifecycle and selection of queue drivers

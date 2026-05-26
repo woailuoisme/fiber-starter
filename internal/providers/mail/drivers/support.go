@@ -1,7 +1,7 @@
 package drivers
 
 import (
-	"fiber-starter/internal/providers/mail/contracts"
+	"lfiber/internal/providers/mail/contracts"
 )
 
 type BaseMessage struct {

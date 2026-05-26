@@ -1,6 +1,18 @@
 {
   "version": 1,
   "skills": {
+    "code-polish": {
+      "source": "paulrberg/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/code-polish/SKILL.md",
+      "computedHash": "dd6e5d97e228cfcd0444fc2ad16f9983ab9eb66654c3e641f8214feddb95f547"
+    },
+    "code-simplify": {
+      "source": "paulrberg/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/code-simplify/SKILL.md",
+      "computedHash": "9573531d0a85874e9e69fab65ae24d937b9d864f4c72937ac9ef1b225c976c44"
+    },
     "golang-code-style": {
       "source": "samber/cc-skills-golang",
       "sourceType": "github",

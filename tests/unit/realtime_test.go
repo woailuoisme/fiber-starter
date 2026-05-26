@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"fiber-starter/configs"
-	models "fiber-starter/internal/features/user"
-	realtime "fiber-starter/internal/providers/realtime"
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/configs"
+	models "lfiber/internal/features/user"
+	realtime "lfiber/internal/providers/realtime"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"

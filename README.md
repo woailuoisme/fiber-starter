@@ -22,7 +22,7 @@
 - **Excel 导入导出**：基于 **Excelize v2** 实现高效的表格数据处理。
 - **可观测性**：集成 **OpenTelemetry (OTEL)**，支持分布式追踪与指标监控。
 - **命令行工具**：基于 Cobra，支持迁移、种子、调度等。
-- **Scalar 文档**：自动生成 OpenAPI 3.1，并通过 Scalar 展示。
+- **Swagger UI 文档**：通过 `swag init` 生成 Swagger 2.0 JSON，并由官方 Fiber contrib Swagger UI 展示。
 - **统一错误处理**：统一异常类型和错误响应格式。
 - **安全默认值**：默认关闭 Debug，源码不提供 JWT secret，日志和 readiness 错误会脱敏。
 - **国际化**：基于 Fiber 官方 `contrib/v3/i18n`，支持 `query lang`、Cookie 和 `Accept-Language`。
@@ -67,7 +67,7 @@ API 一致性、性能与高可用、安全运维等不可协商规则。所有 
 - **Resend**：邮件发送 SDK
 - **Validator**: 数据验证
 - **Carbon**: 时间处理
-- **OpenAPI 3.1 + Scalar**: API 规范展示
+- **Swagger UI + Swagger 2.0 JSON**: API 规范展示
 
 ## Fiber 启动配置
 
@@ -141,7 +141,7 @@ SERVICE_REALTIME_CRITICAL=false
   - `internal/`: 用于加载、默认值和环境映射的 Go 实现。
   - `config.go`: 提供类型和加载方法的公共门面。
 - **`database/`**: 迁移、种子和工厂数据。
-- **`docs/`**: 生成的 OpenAPI 3.1 文档（用于 Scalar UI）。
+- **`docs/`**: 生成的 Swagger 2.0 文档（用于 Swagger UI）。
 - **`tests/`**: 集中测试目录。
   - `unit/`: 隔离单元测试。
   - `integration/`: 端到端和集成测试。
@@ -199,7 +199,7 @@ cfg := rt.Config    // 获取配置
 
 - Go 1.26+
 - Docker & Docker Compose（推荐）
-- Make 工具
+- Just 命令运行器
 
 ### 安装步骤
 
@@ -207,13 +207,13 @@ cfg := rt.Config    // 获取配置
 
    ```bash
    git clone <repository-url>
-   cd fiber-starter
+   cd lfiber
    ```
 
 2. **初始化项目**
 
    ```bash
-   rtk make init
+   rtk just init
    # 该命令会自动：
    # 1. 安装开发工具（Air、Lint、Atlas）
    # 2. 下载依赖（go mod tidy）
@@ -226,9 +226,9 @@ cfg := rt.Config    // 获取配置
    生成本地 JWT secret：
 
    ```bash
-   ./artisan jwt:secret
+   ./artisan jwt:generate
    # 或指定环境文件
-   ./artisan jwt:secret --env .env.local
+   ./artisan jwt:generate --env .env.local
    ```
 
 4. **配置依赖关键性**
@@ -237,25 +237,27 @@ cfg := rt.Config    // 获取配置
 5. **启动开发环境**
 
    ```bash
-   rtk make dev
+   rtk just dev
    # 使用 Air 进行热重载开发
    ```
 
 ## 常用命令
 
-本项目使用 `Makefile` 封装了常用操作，**建议始终在命令前添加 `rtk` 前缀**：
+本项目使用 `justfile` 封装了常用操作，**建议始终在命令前添加 `rtk` 前缀**：
 
 ### 开发与运行
 
-- `rtk make dev`：启动热重载开发服务器
-- `rtk make run`：直接运行应用
-- `rtk make build`：构建二进制文件
-- `rtk make build-prod`：构建生产环境二进制文件（压缩体积）
+- `rtk just dev`：启动热重载开发服务器
+- `rtk just run`：直接运行应用
+- `rtk just build`：构建二进制文件
+- `rtk just build-prod`：构建生产环境二进制文件（压缩体积）
 
 ### 数据库管理
 
-- `rtk make migrate`：执行数据库迁移（使用 Atlas）
-- `rtk make seed`：填充数据库种子数据
+- `rtk just migrate`：执行数据库迁移（使用 Atlas）
+- `rtk just seed`：填充数据库种子数据
+- `./artisan db:reset --force`：跳过交互确认并重置数据库，适合受控脚本环境
+- `./artisan db:fresh --no-interaction`：禁用交互输入；未显式 `--force` 时会安全取消破坏性操作
 
 ### 异步队列
 
@@ -263,24 +265,24 @@ cfg := rt.Config    // 获取配置
 
 ### 密钥生成
 
-- `./artisan jwt:secret`：生成 32 字节随机 JWT secret，并替换 `.env` 中的 `JWT_SECRET`
-- `./artisan jwt:secret --env .env.local`：替换指定环境文件中的 `JWT_SECRET`
-- `rtk make jwt`：通过 Makefile 执行同一命令
-- `rtk make artisan CMD="routes"`：通过 Makefile 运行任意 CLI 命令
-- JWT secret 只保留 `jwt:secret` 一个命令入口，不再提供重复的 `jwt:generate` 命令。
+- `./artisan jwt:generate`：生成 32 字节随机 JWT secret，并替换 `.env` 中的 `JWT_SECRET`
+- `./artisan jwt:generate --env .env.local`：替换指定环境文件中的 `JWT_SECRET`
+- `rtk just jwt`：通过 justfile 执行同一命令
+- `rtk just artisan route:list`：通过 justfile 运行任意 CLI 命令
+- JWT secret 只保留 `jwt:generate` 一个命令入口，不再提供重复的 `jwt:secret` 命令。
 
 ### 代码质量
 
-- `rtk make lint`：运行代码检查
-- `rtk make fmt`：格式化代码
-- `rtk make test`：运行单元测试
-- `rtk make check`：运行格式、静态检查与测试门禁
-- `rtk make check-all`：运行完整质量门禁
-- `rtk make coverage`：运行覆盖率门禁
+- `rtk just lint`：运行代码检查
+- `rtk just fmt`：格式化代码
+- `rtk just test`：运行单元测试
+- `rtk just check`：运行格式、静态检查与测试门禁
+- `rtk just check-all`：运行完整质量门禁
+- `rtk just coverage`：运行覆盖率门禁
 
 ### 文档
 
-- `rtk make docs`：重新生成 OpenAPI 3.1 规范（通过 `/docs` 访问 Scalar UI）
+- `rtk just docs`：重新生成 Swagger 2.0 规范（通过 `/docs` 访问 Swagger UI）
 
 ### 性能验证
 
@@ -288,8 +290,8 @@ cfg := rt.Config    // 获取配置
 
 ```bash
 APP_PORT=3300 DB_CONNECTION=sqlite DB_SQLITE_DATABASE=/tmp/fiber-template-k6.sqlite CACHE_DRIVER=memory STORAGE_DRIVER=local STORAGE_LOCAL_ROOT=/tmp/fiber-template-storage STORAGE_LOCAL_URL=/storage I18N_LANGUAGE_DIR=$(pwd)/lang ./artisan serve
-rtk make k6-root
-rtk make k6-root-load
+rtk just k6-root
+rtk just k6-root-load
 ```
 
 k6 默认门禁：错误率 `< 1%`，常用路径 p95 `< 1s`。

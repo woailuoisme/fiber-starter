@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	auth "fiber-starter/internal/features/auth"
-	user "fiber-starter/internal/features/user"
+	auth "lfiber/internal/features/auth"
+	user "lfiber/internal/features/user"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"fiber-starter/tests/internal/testkit"
+	"lfiber/tests/internal/testkit"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

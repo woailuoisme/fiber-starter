@@ -1,24 +1,25 @@
 package monitoring
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 
-	helpers "fiber-starter/internal/support"
-	"fiber-starter/internal/support/appctx"
+	helpers "lfiber/internal/support"
 
 	"github.com/gofiber/contrib/v3/monitor"
+	swaggerui "github.com/gofiber/contrib/v3/swaggerui"
 	"github.com/gofiber/fiber/v3"
 )
 
 // RegisterRoutes registers public, non-versioned routes like home, docs, health, ready, and monitor.
 func RegisterRoutes(app *fiber.App, h *HealthController) {
 	app.Get("/", func(c fiber.Ctx) error {
-		return helpers.HandleSuccess(c, "Welcome to Fiber Starter API", fiber.Map{
+		return helpers.HandleSuccess(c, "Welcome to lfiber API", fiber.Map{
 			"version": "1.0.0",
 			"docs":    "/docs",
+			"scalar":  "/docs/scalar",
 			"openapi": "/openapi.json",
 			"health":  "/health",
 			"ready":   "/ready",
@@ -26,8 +27,39 @@ func RegisterRoutes(app *fiber.App, h *HealthController) {
 			"api":     "/api/v1",
 		})
 	})
-	app.Get("/openapi.json", func(c fiber.Ctx) error { return c.SendFile(openAPISpecPath()) })
-	app.Get("/docs", redocDocs)
+	swaggerSpec := mustReadSwaggerSpec()
+	swaggerHandler := swaggerui.New(swaggerui.Config{
+		BasePath:    "/",
+		FilePath:    "openapi.json",
+		FileContent: swaggerSpec,
+		Path:        "docs",
+		Title:       "lfiber API Reference",
+	})
+
+	app.Get("/docs", swaggerHandler)
+
+	app.Get("/docs/scalar", func(c fiber.Ctx) error {
+		c.Set(fiber.HeaderContentType, fiber.MIMETextHTMLCharsetUTF8)
+		return c.SendString(`<!doctype html>
+<html>
+  <head>
+    <title>Scalar API Reference</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { margin: 0; }
+    </style>
+  </head>
+  <body>
+    <script
+      id="api-reference"
+      data-url="/openapi.json">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference" crossorigin></script>
+  </body>
+</html>`)
+	})
+	app.Get("/openapi.json", swaggerHandler)
 	app.Get("/health", h.Health)
 	app.Get("/ready", h.Ready)
 	app.Get("/monitor", monitor.New())
@@ -52,52 +84,12 @@ func openAPISpecPath() string {
 	return filepath.Join("docs", "openapi.json")
 }
 
-func redocDocs(c fiber.Ctx) error {
-	specURL := "/openapi.json"
-	if rt := appctx.App(); rt != nil {
-		if cfg := rt.AppConfig(); cfg != nil && cfg.App.URL != "" {
-			specURL = strings.TrimSuffix(cfg.App.URL, "/") + "/openapi.json"
-		}
+func mustReadSwaggerSpec() []byte {
+	specPath := openAPISpecPath()
+	//nolint:gosec // specPath points to repo-generated Swagger output, not user input.
+	spec, err := os.ReadFile(specPath)
+	if err != nil {
+		panic(fmt.Errorf("failed to read swagger spec %q: %w", specPath, err))
 	}
-
-	c.Set(fiber.HeaderContentType, fiber.MIMETextHTMLCharsetUTF8)
-	html := strings.ReplaceAll(redocHTMLTemplate, "{{.SpecURL}}", specURL)
-	return c.SendString(html)
+	return spec
 }
-
-const redocHTMLTemplate = `<!doctype html>
-<html lang="en">
-<head>
-  <title>Fiber Starter API Reference</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body { margin: 0; padding: 0; }
-    /* Hide the "API docs by Redocly" watermark */
-    a[href^="https://github.com/Redocly/redoc"],
-    a[href^="https://redocly.com/redoc"],
-    a[href*="redocly.com"] {
-      display: none !important;
-    }
-  </style>
-</head>
-<body>
-  <redoc id="redoc-container"></redoc>
-  <script src="https://cdn.jsdelivr.net/npm/redoc@2.5.2/bundles/redoc.standalone.js"></script>
-  <script>
-    Redoc.init("{{.SpecURL}}", {
-      sortRequiredPropsFirst: true,
-      expandResponses: "200,201",
-      jsonSamplesExpandLevel: 3,
-      pathInMiddlePanel: true,
-      nativeScrollbars: true,
-      hideHostname: true,
-      lazyRendering: true,
-      hideDownloadButtons: true,
-      sanitize: true,
-      disableSearch: false,
-      minCharacterLengthToInitSearch: 2
-    }, document.getElementById('redoc-container'));
-  </script>
-</body>
-</html>`

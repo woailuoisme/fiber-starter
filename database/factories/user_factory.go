@@ -4,7 +4,7 @@ import (
 	"math/rand/v2"
 	"time"
 
-	userPkg "fiber-starter/internal/features/user"
+	userPkg "lfiber/internal/features/user"
 
 	"github.com/go-faker/faker/v4"
 	"golang.org/x/crypto/bcrypt"

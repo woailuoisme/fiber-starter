@@ -96,8 +96,8 @@ MUST 有对应测试或明确的验证记录。
 - 规划阶段 MUST 在 `plan.md` 的 Constitution Check 中声明本章程如何被满足。
 - 任务阶段 MUST 把测试、文档、性能和安全验证拆成可执行任务。
 - 实现阶段 MUST 优先保持现有外部行为兼容；必要破坏性变化必须写入任务和交付说明。
-- 合并前 SHOULD 运行 `rtk make check-all`、`rtk make coverage`、`rtk make docs`。
-- 影响性能或可用性的变更 SHOULD 运行 `rtk make k6-root` 和 `rtk make k6-root-load`。
+- 合并前 SHOULD 运行 `rtk just check-all`、`rtk just coverage`、`rtk just docs`。
+- 影响性能或可用性的变更 SHOULD 运行 `rtk just k6-root` 和 `rtk just k6-root-load`。
 - 如果某项门禁无法运行，交付说明 MUST 写明原因、风险和替代验证方式。
 
 ## Governance

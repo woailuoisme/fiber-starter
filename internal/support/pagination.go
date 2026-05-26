@@ -1,7 +1,7 @@
 package support
 
 import (
-	i18n "fiber-starter/internal/providers/i18n"
+	i18n "lfiber/internal/providers/i18n"
 
 	"github.com/gofiber/fiber/v3"
 )

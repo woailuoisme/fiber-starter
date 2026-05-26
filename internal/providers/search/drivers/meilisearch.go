@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/providers/search/contracts"
-	helpers "fiber-starter/internal/support"
+	"lfiber/configs"
+	"lfiber/internal/providers/search/contracts"
+	helpers "lfiber/internal/support"
 
 	"github.com/meilisearch/meilisearch-go"
 )

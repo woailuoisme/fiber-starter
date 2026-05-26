@@ -3,9 +3,9 @@ package storage
 import (
 	"fmt"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/providers/storage/contracts"
-	"fiber-starter/internal/providers/storage/drivers"
+	"lfiber/configs"
+	"lfiber/internal/providers/storage/contracts"
+	"lfiber/internal/providers/storage/drivers"
 )
 
 func createDisk(name string, cfg *configs.Config) (contracts.Disk, error) {

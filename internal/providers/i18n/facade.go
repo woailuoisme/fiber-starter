@@ -3,8 +3,8 @@ package i18n
 import (
 	"errors"
 
-	"fiber-starter/internal/providers/i18n/contracts"
-	"fiber-starter/internal/support/appctx"
+	"lfiber/internal/providers/i18n/contracts"
+	"lfiber/internal/support/appctx"
 
 	"github.com/gofiber/fiber/v3"
 )

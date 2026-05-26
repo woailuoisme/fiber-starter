@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	queueContracts "fiber-starter/internal/providers/queue/contracts"
+	queueContracts "lfiber/internal/providers/queue/contracts"
 )
 
 // Event represents a scheduled task with a cron expression

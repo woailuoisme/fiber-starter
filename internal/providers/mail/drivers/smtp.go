@@ -5,9 +5,9 @@ import (
 	"net/smtp"
 	"strings"
 
-	"fiber-starter/configs"
-	"fiber-starter/internal/providers/mail/contracts"
-	helpers "fiber-starter/internal/support"
+	"lfiber/configs"
+	"lfiber/internal/providers/mail/contracts"
+	helpers "lfiber/internal/support"
 
 	"go.uber.org/zap"
 )
