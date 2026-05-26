@@ -19,7 +19,12 @@ func ConfirmDestructive(in io.Reader, out io.Writer, opts DestructiveOptions) (b
 	if opts.Force {
 		return true, nil
 	}
-	if opts.NoInteraction || os.Getenv("CI") != "" || !isTerminal(in) || !isTerminal(out) {
+
+	isCI := os.Getenv("CI") != ""
+	isNonInteractive := opts.NoInteraction || isCI
+	isPipeOutput := !ui.IsTerminal(in) || !ui.IsTerminal(out)
+
+	if isNonInteractive || isPipeOutput {
 		return false, nil
 	}
 
@@ -42,13 +47,4 @@ func ConfirmDestructive(in io.Reader, out io.Writer, opts DestructiveOptions) (b
 
 func Cancelled(out io.Writer) {
 	ui.Warning(out, "Operation cancelled")
-}
-
-func isTerminal(value any) bool {
-	file, ok := value.(*os.File)
-	if !ok {
-		return false
-	}
-	info, err := file.Stat()
-	return err == nil && info.Mode()&os.ModeCharDevice != 0
 }

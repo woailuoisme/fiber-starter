@@ -71,8 +71,11 @@
 - `JWT_SECRET`、API key、密码、token、连接串等敏感值必须来自环境变量或密钥管理系统，源码默认值不得包含真实 secret。
 - 需要生成本地 JWT secret 时使用 `./artisan jwt:generate` 或 `rtk just jwt`，不要手写弱 secret；不要新增重复的 JWT 生成命令入口。
 - 日志与 readiness 错误必须使用 `internal/support/redaction.go` 的脱敏辅助函数。
+- 时区与时间格式规范：全局配置时区固定为 `Asia/Shanghai`（东八区）。为了保证可读性，日志时间戳的序列化格式必须统一使用 `2006-01-02 15:04:05`（年月日时分秒），这在 [internal/providers/logging/config.go](file:///Users/seaside/Projects/go/fiber-starter/internal/providers/logging/config.go) 中由自定义 `EncodeTime` 函数拦截。
+- 命令行命令规范与模块分组：新添加的 Cobra CLI 命令必须使用 `GroupID` 显式划分至 7 个核心的 Laravel 风格分组中：`app` (应用命令)、`database` (数据库命令)、`cache` (缓存命令)、`auth` (安全鉴权命令)、`queue` (队列命令)、`schedule` (计划任务) 或 `system` (系统与配置项)。严禁随意将命令丢入默认的无分组或通用的 `system` 组中。
+- 控制台着色与进度条规范：所有的命令行终端文字渲染、着色处理（如亮黄、青色、浅灰高亮等）以及 TTY/非 TTY 终端环境的检测，必须统一调用 [internal/console/ui/ui.go](file:///Users/seaside/Projects/go/fiber-starter/internal/console/ui/ui.go) 封装的语义样式器。在开发带有进度条指示器的命令（如长数据导入、Seeder 耗时填充）时，必须统一使用 `ui.NewProgressBar` 实例，严禁在各命令内部手工编写 `\r` 字符、直接硬编码 ANSI 转义字符，或者绕过 `ui` 包私自引入第三方着色库。
 - 非关键 provider 构建或健康检查失败时，服务应保持可启动并在 `/ready` 中报告 `degraded`；配置错误和关键依赖失败不能被静默吞掉。
-- HTTP 成功、错误和分页响应必须保持 `success`、`code`、`message`、`data`、`errors` 的公开信封；API 切片响应不得输出 JSON `null`。
+- HTTP 成功、错误 and 分页响应必须保持 `success`、`code`、`message`、`data`、`errors` 的公开信封；API 切片响应不得输出 JSON `null`。
 - 不要在项目脚本、justfile、文档或测试中随意写入本机专用绝对路径或缓存路径（如 `GOCACHE`、`/private/tmp/...`、用户目录）。需要项目级缓存时优先使用仓库已有且被 `.gitignore` 忽略的 `.cache/` 约定；只有用户明确要求、项目已有配置约定或命令运行时临时传参时才允许指定路径。
 
 ### 全局访问
