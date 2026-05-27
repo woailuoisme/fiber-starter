@@ -27,40 +27,32 @@ func Channel(name string) contracts.Logger {
 	return logging.Facade().Channel(name)
 }
 
-// Debug logs a message at debug level
-func Debug(msg string, fields ...zap.Field) {
+func writeLog(logFunc func(string, ...zap.Field), facadeFunc func(string, ...zap.Field), msg string, fields ...zap.Field) {
 	if appctx.App() == nil {
-		Logger.Debug(msg, fields...)
+		logFunc(msg, fields...)
 		return
 	}
-	logging.Facade().Debug(msg, fields...)
+	facadeFunc(msg, fields...)
+}
+
+// Debug logs a message at debug level
+func Debug(msg string, fields ...zap.Field) {
+	writeLog(Logger.Debug, logging.Facade().Debug, msg, fields...)
 }
 
 // Info logs a message at info level
 func Info(msg string, fields ...zap.Field) {
-	if appctx.App() == nil {
-		Logger.Info(msg, fields...)
-		return
-	}
-	logging.Facade().Info(msg, fields...)
+	writeLog(Logger.Info, logging.Facade().Info, msg, fields...)
 }
 
 // Warn logs a message at warn level
 func Warn(msg string, fields ...zap.Field) {
-	if appctx.App() == nil {
-		Logger.Warn(msg, fields...)
-		return
-	}
-	logging.Facade().Warn(msg, fields...)
+	writeLog(Logger.Warn, logging.Facade().Warn, msg, fields...)
 }
 
 // Error logs a message at error level
 func Error(msg string, fields ...zap.Field) {
-	if appctx.App() == nil {
-		Logger.Error(msg, fields...)
-		return
-	}
-	logging.Facade().Error(msg, fields...)
+	writeLog(Logger.Error, logging.Facade().Error, msg, fields...)
 }
 
 // LogError is an alias for Error
@@ -70,20 +62,12 @@ func LogError(msg string, fields ...zap.Field) {
 
 // Fatal logs a message at fatal level and exits
 func Fatal(msg string, fields ...zap.Field) {
-	if appctx.App() == nil {
-		Logger.Fatal(msg, fields...)
-		return
-	}
-	logging.Facade().Fatal(msg, fields...)
+	writeLog(Logger.Fatal, logging.Facade().Fatal, msg, fields...)
 }
 
 // Panic logs a message at panic level and panics
 func Panic(msg string, fields ...zap.Field) {
-	if appctx.App() == nil {
-		Logger.Panic(msg, fields...)
-		return
-	}
-	logging.Facade().Panic(msg, fields...)
+	writeLog(Logger.Panic, logging.Facade().Panic, msg, fields...)
 }
 
 // Sync flushes any buffered log entries

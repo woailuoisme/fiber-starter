@@ -113,18 +113,12 @@ func NewPaginationMeta(total int64, page, limit int) PaginationMeta {
 
 // JSON 发送成功响应。
 func JSON(c fiber.Ctx, data interface{}, message string) error {
-	if message == "" {
-		message = "success"
-	}
-	return c.Status(fiber.StatusOK).JSON(buildSuccessResponse(fiber.StatusOK, message, data))
+	return HandleSuccess(c, message, data)
 }
 
 // Created 发送创建成功响应。
 func Created(c fiber.Ctx, data interface{}, message string) error {
-	if message == "" {
-		message = "created"
-	}
-	return c.Status(fiber.StatusCreated).JSON(buildSuccessResponse(fiber.StatusCreated, message, data))
+	return HandleCreated(c, message, data)
 }
 
 // ErrorWithDebugger 带调试信息的错误响应。

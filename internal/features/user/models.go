@@ -21,7 +21,7 @@ type User struct {
 	EmailVerifiedAt *time.Time `bun:"email_verified_at" json:"email_verified_at,omitempty"`
 	CreatedAt       time.Time  `bun:"created_at,notnull" json:"created_at"`
 	UpdatedAt       time.Time  `bun:"updated_at,notnull" json:"updated_at"`
-	DeletedAt       *time.Time `bun:"deleted_at" json:"-"`
+	DeletedAt       *time.Time `bun:"deleted_at,soft_delete,nullzero" json:"-"`
 }
 
 // UserStatus 用户状态枚举

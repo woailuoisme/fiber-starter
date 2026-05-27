@@ -2,6 +2,7 @@ package jobs
 
 import (
 	monitoringJobs "lfiber/internal/features/monitoring/jobs"
+	"lfiber/internal/features/user"
 	userJobs "lfiber/internal/features/user/jobs"
 	queue "lfiber/internal/providers/queue"
 )
@@ -11,4 +12,6 @@ import (
 func Register() {
 	queue.Register(&userJobs.WelcomeEmailJob{})
 	queue.Register(&monitoringJobs.CleanupTempFilesJob{})
+	queue.Register(&user.UserImportJob{})
+	queue.Register(&user.UserExportJob{})
 }

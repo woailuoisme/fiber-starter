@@ -46,17 +46,21 @@ func NewAuthController(authService AuthService) *AuthController {
 //	@Produce		json
 //	@Param			request	body		RegisterRequest															true	"注册参数"
 //	@Success		201		{object}	support.APISuccessResponse{data=object{user=user.SafeUser,verification_required=bool}}	"注册成功"
+//	@Failure		400		{object}	support.APIResponse																		"请求参数错误"
+//	@Failure		409		{object}	support.APIResponse																		"邮箱已被注册"
+//	@Failure		422		{object}	support.APIResponse																		"数据校验失败"
+//	@Failure		500		{object}	support.APIResponse																		"服务器内部错误"
 //	@Router			/api/v1/auth/sign-up [post]
 func (c *AuthController) SignUp(ctx fiber.Ctx) error {
 	var req RegisterRequest
 
 	if err := req.BindAndValidate(ctx); err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	result, err := c.authService.Register(ctx.Context(), req.ToInput())
 	if err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	return helpers.HandleCreated(ctx, "Registered successfully", NewSignUpResource(result).ToResponse())
@@ -76,17 +80,21 @@ func (c *AuthController) Register(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		VerifySignUpRequest																								true	"验证参数"
 //	@Success		200		{object}	support.APISuccessResponse{data=object{user=user.SafeUser,tokens=object{access_token=string,refresh_token=string}}}	"验证成功"
+//	@Failure		400		{object}	support.APIResponse																								"验证码无效或已过期"
+//	@Failure		403		{object}	support.APIResponse																								"账号已被禁用"
+//	@Failure		404		{object}	support.APIResponse																								"用户不存在"
+//	@Failure		422		{object}	support.APIResponse																								"数据校验失败"
 //	@Router			/api/v1/auth/sign-up/verify [post]
 func (c *AuthController) VerifySignUp(ctx fiber.Ctx) error {
 	var req VerifySignUpRequest
 
 	if err := req.BindAndValidate(ctx); err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	result, err := c.authService.VerifySignUp(ctx.Context(), req.ToInput())
 	if err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	return helpers.HandleSuccess(ctx, "Email verified successfully", NewAuthResultResource(result).ToResponse())
@@ -101,17 +109,20 @@ func (c *AuthController) VerifySignUp(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		LoginRequest																									true	"登录参数"
 //	@Success		200		{object}	support.APISuccessResponse{data=object{user=user.SafeUser,tokens=object{access_token=string,refresh_token=string}}}	"登录成功"
+//	@Failure		401		{object}	support.APIResponse																									"邮箱或密码错误"
+//	@Failure		403		{object}	support.APIResponse																									"邮箱未验证或账号被禁用"
+//	@Failure		422		{object}	support.APIResponse																									"数据校验失败"
 //	@Router			/api/v1/auth/sign-in [post]
 func (c *AuthController) SignIn(ctx fiber.Ctx) error {
 	var req LoginRequest
 
 	if err := req.BindAndValidate(ctx); err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	result, err := c.authService.Login(ctx.Context(), req.ToInput())
 	if err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	return helpers.HandleSuccess(ctx, "Logged in successfully", NewAuthResultResource(result).ToResponse())
@@ -131,17 +142,20 @@ func (c *AuthController) Login(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		RefreshTokenRequest														true	"刷新参数"
 //	@Success		200		{object}	support.APISuccessResponse{data=object{access_token=string,refresh_token=string}}	"刷新成功"
+//	@Failure		401		{object}	support.APIResponse														"刷新令牌无效或已过期"
+//	@Failure		403		{object}	support.APIResponse														"账号已被禁用"
+//	@Failure		422		{object}	support.APIResponse														"数据校验失败"
 //	@Router			/api/v1/auth/refresh [post]
 func (c *AuthController) RefreshSession(ctx fiber.Ctx) error {
 	var req RefreshTokenRequest
 
 	if err := req.BindAndValidate(ctx); err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	tokens, err := c.authService.RefreshToken(ctx.Context(), req.RefreshToken)
 	if err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	return helpers.HandleSuccess(ctx, "Token refreshed successfully", NewAuthTokensResource(tokens).ToResponse())
@@ -161,20 +175,22 @@ func (c *AuthController) RefreshToken(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Security		Bearer
 //	@Success		200	{object}	support.APISuccessNoDataResponse	"注销成功"
+//	@Failure		400	{object}	support.APIResponse					"解析访问令牌失败"
+//	@Failure		401	{object}	support.APIResponse					"未授权的请求"
 //	@Router			/api/v1/auth/sign-out [post]
 func (c *AuthController) SignOut(ctx fiber.Ctx) error {
 	user := middleware.GetUserFromContext(ctx)
 	if user == nil {
-		return helpers.HandleAppError(ctx, exceptions.NewAuthenticationException("unauthenticated user"))
+		return exceptions.NewAuthenticationException("unauthenticated user")
 	}
 
 	token := middleware.GetTokenFromContext(ctx)
 	if token == "" {
-		return helpers.HandleAppError(ctx, exceptions.NewBadRequestException("failed to resolve access token"))
+		return exceptions.NewBadRequestException("failed to resolve access token")
 	}
 
 	if err := c.authService.Logout(ctx.Context(), token); err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	return helpers.HandleSuccess(ctx, "Logged out successfully", nil)
@@ -195,20 +211,23 @@ func (c *AuthController) Logout(ctx fiber.Ctx) error {
 //	@Security		Bearer
 //	@Param			request	body		ChangePasswordRequest	true	"修改参数"
 //	@Success		200		{object}	support.APISuccessNoDataResponse		"修改成功"
+//	@Failure		400		{object}	support.APIResponse						"旧密码错误"
+//	@Failure		401		{object}	support.APIResponse						"未授权的请求"
+//	@Failure		422		{object}	support.APIResponse						"数据校验失败"
 //	@Router			/api/v1/auth/change-password [post]
 func (c *AuthController) UpdatePassword(ctx fiber.Ctx) error {
 	userID := middleware.GetCurrentUserID(ctx)
 	if userID == 0 {
-		return helpers.HandleAppError(ctx, exceptions.NewAuthenticationException("unauthenticated user"))
+		return exceptions.NewAuthenticationException("unauthenticated user")
 	}
 
 	var req ChangePasswordRequest
 	if err := req.BindAndValidate(ctx); err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	if err := c.authService.ChangePassword(ctx.Context(), req.ToInput(userID)); err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	return helpers.HandleSuccess(ctx, "Password changed successfully", nil)
@@ -228,15 +247,16 @@ func (c *AuthController) ChangePassword(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		ResetPasswordRequest	true	"重置密码参数"
 //	@Success		200		{object}	support.APISuccessNoDataResponse		"成功"
+//	@Failure		422		{object}	support.APIResponse						"数据校验失败"
 //	@Router			/api/v1/auth/reset-password [post]
 func (c *AuthController) SendPasswordReset(ctx fiber.Ctx) error {
 	var req ResetPasswordRequest
 	if err := req.BindAndValidate(ctx); err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	if err := c.authService.RequestPasswordReset(ctx.Context(), req.ToInput()); err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	return helpers.HandleSuccess(ctx, "Password reset code sent", nil)
@@ -256,17 +276,19 @@ func (c *AuthController) ResetPassword(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		VerifyResetPasswordRequest								true	"验证重置密码参数"
 //	@Success		200		{object}	support.APISuccessResponse{data=object{reset_token=string}}	"验证成功"
+//	@Failure		400		{object}	support.APIResponse											"验证码无效或已过期"
+//	@Failure		422		{object}	support.APIResponse											"数据校验失败"
 //	@Router			/api/v1/auth/reset-password/verify [post]
 func (c *AuthController) VerifyPasswordReset(ctx fiber.Ctx) error {
 	var req VerifyResetPasswordRequest
 
 	if err := req.BindAndValidate(ctx); err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	resetToken, err := c.authService.VerifyPasswordReset(ctx.Context(), req.ToInput())
 	if err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	return helpers.HandleSuccess(ctx, "Password reset code verified successfully", fiber.Map{
@@ -283,15 +305,18 @@ func (c *AuthController) VerifyPasswordReset(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		ConfirmResetPasswordRequest	true	"确认重置密码参数"
 //	@Success		200		{object}	support.APISuccessNoDataResponse			"成功"
+//	@Failure		400		{object}	support.APIResponse							"重置令牌无效或已过期"
+//	@Failure		404		{object}	support.APIResponse							"用户不存在"
+//	@Failure		422		{object}	support.APIResponse							"数据校验失败"
 //	@Router			/api/v1/auth/reset-password/confirm [post]
 func (c *AuthController) ConfirmPasswordReset(ctx fiber.Ctx) error {
 	var req ConfirmResetPasswordRequest
 	if err := req.BindAndValidate(ctx); err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	if err := c.authService.ResetPassword(ctx.Context(), req.ToInput()); err != nil {
-		return helpers.HandleAppError(ctx, err)
+		return err
 	}
 
 	return helpers.HandleSuccess(ctx, "Password reset successfully", nil)
@@ -311,11 +336,12 @@ func (c *AuthController) ConfirmResetPassword(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Security		Bearer
 //	@Success		200	{object}	support.APISuccessResponse{data=object{user=user.SafeUser}}	"获取成功"
+//	@Failure		401	{object}	support.APIResponse											"身份凭证已失效"
 //	@Router			/api/v1/auth/session [get]
 func (c *AuthController) Session(ctx fiber.Ctx) error {
 	user := middleware.GetUserFromContext(ctx)
 	if user == nil {
-		return helpers.HandleAppError(ctx, exceptions.NewAuthenticationException("unauthenticated user"))
+		return exceptions.NewAuthenticationException("unauthenticated user")
 	}
 
 	if usr, ok := user.(*userModel.User); ok {

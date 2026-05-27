@@ -17,6 +17,7 @@ import (
 
 func TestDocsRoutes_ExposeSwaggerUIAndOpenAPISpec(t *testing.T) {
 	t.Setenv("I18N_LANGUAGE_DIR", testkit.RepoRoot(t)+"/lang")
+	t.Setenv("APP_DEBUG", "true")
 
 	runtime, err := providers.Build()
 	require.NoError(t, err)

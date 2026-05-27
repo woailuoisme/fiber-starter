@@ -65,6 +65,30 @@
                 }
               ]
             }
+          },
+          "400": {
+            "description": "请求参数错误",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "409": {
+            "description": "邮箱已被注册",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "422": {
+            "description": "数据校验失败",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "500": {
+            "description": "服务器内部错误",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
           }
         }
       }
@@ -97,35 +121,68 @@
           "200": {
             "description": "验证成功",
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/APISuccessResponse"
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true,
+                  "x-order": 0
                 },
-                {
+                "code": {
+                  "type": "integer",
+                  "example": 200,
+                  "x-order": 1
+                },
+                "message": {
+                  "type": "string",
+                  "example": "OK",
+                  "x-order": 2
+                },
+                "data": {
                   "type": "object",
                   "properties": {
-                    "data": {
+                    "tokens": {
                       "type": "object",
                       "properties": {
-                        "tokens": {
-                          "type": "object",
-                          "properties": {
-                            "access_token": {
-                              "type": "string"
-                            },
-                            "refresh_token": {
-                              "type": "string"
-                            }
-                          }
+                        "access_token": {
+                          "type": "string"
                         },
-                        "user": {
-                          "$ref": "#/definitions/SafeUser"
+                        "refresh_token": {
+                          "type": "string"
                         }
                       }
+                    },
+                    "user": {
+                      "$ref": "#/definitions/SafeUser"
                     }
-                  }
+                  },
+                  "x-order": 3
                 }
-              ]
+              }
+            }
+          },
+          "400": {
+            "description": "验证码无效或已过期",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "403": {
+            "description": "账号已被禁用",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "404": {
+            "description": "用户不存在",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "422": {
+            "description": "数据校验失败",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -159,35 +216,62 @@
           "200": {
             "description": "登录成功",
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/APISuccessResponse"
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true,
+                  "x-order": 0
                 },
-                {
+                "code": {
+                  "type": "integer",
+                  "example": 200,
+                  "x-order": 1
+                },
+                "message": {
+                  "type": "string",
+                  "example": "OK",
+                  "x-order": 2
+                },
+                "data": {
                   "type": "object",
                   "properties": {
-                    "data": {
+                    "tokens": {
                       "type": "object",
                       "properties": {
-                        "tokens": {
-                          "type": "object",
-                          "properties": {
-                            "access_token": {
-                              "type": "string"
-                            },
-                            "refresh_token": {
-                              "type": "string"
-                            }
-                          }
+                        "access_token": {
+                          "type": "string"
                         },
-                        "user": {
-                          "$ref": "#/definitions/SafeUser"
+                        "refresh_token": {
+                          "type": "string"
                         }
                       }
+                    },
+                    "user": {
+                      "$ref": "#/definitions/SafeUser"
                     }
-                  }
+                  },
+                  "x-order": 3
                 }
-              ]
+              }
+            }
+          },
+          "401": {
+            "description": "邮箱或密码错误",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "403": {
+            "description": "邮箱未验证或账号被禁用",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "422": {
+            "description": "数据校验失败",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -215,24 +299,39 @@
           "200": {
             "description": "获取成功",
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/APISuccessResponse"
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true,
+                  "x-order": 0
                 },
-                {
+                "code": {
+                  "type": "integer",
+                  "example": 200,
+                  "x-order": 1
+                },
+                "message": {
+                  "type": "string",
+                  "example": "OK",
+                  "x-order": 2
+                },
+                "data": {
                   "type": "object",
                   "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "user": {
-                          "$ref": "#/definitions/SafeUser"
-                        }
-                      }
+                    "user": {
+                      "$ref": "#/definitions/SafeUser"
                     }
-                  }
+                  },
+                  "x-order": 3
                 }
-              ]
+              }
+            }
+          },
+          "401": {
+            "description": "身份凭证已失效",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -266,27 +365,54 @@
           "200": {
             "description": "刷新成功",
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/APISuccessResponse"
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true,
+                  "x-order": 0
                 },
-                {
+                "code": {
+                  "type": "integer",
+                  "example": 200,
+                  "x-order": 1
+                },
+                "message": {
+                  "type": "string",
+                  "example": "OK",
+                  "x-order": 2
+                },
+                "data": {
                   "type": "object",
                   "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "access_token": {
-                          "type": "string"
-                        },
-                        "refresh_token": {
-                          "type": "string"
-                        }
-                      }
+                    "access_token": {
+                      "type": "string"
+                    },
+                    "refresh_token": {
+                      "type": "string"
                     }
-                  }
+                  },
+                  "x-order": 3
                 }
-              ]
+              }
+            }
+          },
+          "401": {
+            "description": "刷新令牌无效或已过期",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "403": {
+            "description": "账号已被禁用",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "422": {
+            "description": "数据校验失败",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -315,6 +441,18 @@
             "description": "注销成功",
             "schema": {
               "$ref": "#/definitions/APISuccessNoDataResponse"
+            }
+          },
+          "400": {
+            "description": "解析访问令牌失败",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "401": {
+            "description": "未授权的请求",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -355,6 +493,24 @@
             "schema": {
               "$ref": "#/definitions/APISuccessNoDataResponse"
             }
+          },
+          "400": {
+            "description": "旧密码错误",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "401": {
+            "description": "未授权的请求",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "422": {
+            "description": "数据校验失败",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
           }
         }
       }
@@ -388,6 +544,12 @@
             "description": "成功",
             "schema": {
               "$ref": "#/definitions/APISuccessNoDataResponse"
+            }
+          },
+          "422": {
+            "description": "数据校验失败",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -423,6 +585,24 @@
             "schema": {
               "$ref": "#/definitions/APISuccessNoDataResponse"
             }
+          },
+          "400": {
+            "description": "重置令牌无效或已过期",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "404": {
+            "description": "用户不存在",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "422": {
+            "description": "数据校验失败",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
           }
         }
       }
@@ -455,24 +635,45 @@
           "200": {
             "description": "验证成功",
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/APISuccessResponse"
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true,
+                  "x-order": 0
                 },
-                {
+                "code": {
+                  "type": "integer",
+                  "example": 200,
+                  "x-order": 1
+                },
+                "message": {
+                  "type": "string",
+                  "example": "OK",
+                  "x-order": 2
+                },
+                "data": {
                   "type": "object",
                   "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "reset_token": {
-                          "type": "string"
-                        }
-                      }
+                    "reset_token": {
+                      "type": "string"
                     }
-                  }
+                  },
+                  "x-order": 3
                 }
-              ]
+              }
+            }
+          },
+          "400": {
+            "description": "验证码无效或已过期",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "422": {
+            "description": "数据校验失败",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -500,19 +701,40 @@
           "200": {
             "description": "获取成功",
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/APISuccessResponse"
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true,
+                  "x-order": 0
                 },
-                {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/definitions/SafeUser"
-                    }
-                  }
+                "code": {
+                  "type": "integer",
+                  "example": 200,
+                  "x-order": 1
+                },
+                "message": {
+                  "type": "string",
+                  "example": "OK",
+                  "x-order": 2
+                },
+                "data": {
+                  "$ref": "#/definitions/SafeUser",
+                  "x-order": 3
                 }
-              ]
+              }
+            }
+          },
+          "401": {
+            "description": "身份凭证已失效",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "404": {
+            "description": "当前用户不存在",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -551,19 +773,40 @@
           "200": {
             "description": "更新成功",
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/APISuccessResponse"
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true,
+                  "x-order": 0
                 },
-                {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/definitions/SafeUser"
-                    }
-                  }
+                "code": {
+                  "type": "integer",
+                  "example": 200,
+                  "x-order": 1
+                },
+                "message": {
+                  "type": "string",
+                  "example": "OK",
+                  "x-order": 2
+                },
+                "data": {
+                  "$ref": "#/definitions/SafeUser",
+                  "x-order": 3
                 }
-              ]
+              }
+            }
+          },
+          "401": {
+            "description": "身份凭证已失效",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "422": {
+            "description": "数据校验失败",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -614,34 +857,55 @@
           "200": {
             "description": "搜索成功",
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/APISuccessResponse"
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true,
+                  "x-order": 0
                 },
-                {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "allOf": [
-                        {
-                          "$ref": "#/definitions/PaginatedResponse"
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "items": {
-                              "type": "array",
-                              "items": {
-                                "$ref": "#/definitions/SafeUser"
-                              }
-                            }
+                "code": {
+                  "type": "integer",
+                  "example": 200,
+                  "x-order": 1
+                },
+                "message": {
+                  "type": "string",
+                  "example": "OK",
+                  "x-order": 2
+                },
+                "data": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/PaginatedResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/definitions/SafeUser"
                           }
                         }
-                      ]
+                      }
                     }
-                  }
+                  ],
+                  "x-order": 3
                 }
-              ]
+              }
+            }
+          },
+          "401": {
+            "description": "未授权的请求",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "422": {
+            "description": "请求参数校验失败",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -667,6 +931,18 @@
             "description": "导出成功",
             "schema": {
               "type": "file"
+            }
+          },
+          "401": {
+            "description": "未授权的请求",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "500": {
+            "description": "电子表格生成或导出失败",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -703,24 +979,45 @@
           "200": {
             "description": "导入成功",
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/APISuccessResponse"
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true,
+                  "x-order": 0
                 },
-                {
+                "code": {
+                  "type": "integer",
+                  "example": 200,
+                  "x-order": 1
+                },
+                "message": {
+                  "type": "string",
+                  "example": "OK",
+                  "x-order": 2
+                },
+                "data": {
                   "type": "object",
                   "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "count": {
-                          "type": "integer"
-                        }
-                      }
+                    "count": {
+                      "type": "integer"
                     }
-                  }
+                  },
+                  "x-order": 3
                 }
-              ]
+              }
+            }
+          },
+          "400": {
+            "description": "上传的文件为空或数据解析错误",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "401": {
+            "description": "未授权的请求",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -763,34 +1060,61 @@
           "200": {
             "description": "获取成功",
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/APISuccessResponse"
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true,
+                  "x-order": 0
                 },
-                {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "allOf": [
-                        {
-                          "$ref": "#/definitions/PaginatedResponse"
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "items": {
-                              "type": "array",
-                              "items": {
-                                "$ref": "#/definitions/SafeUser"
-                              }
-                            }
+                "code": {
+                  "type": "integer",
+                  "example": 200,
+                  "x-order": 1
+                },
+                "message": {
+                  "type": "string",
+                  "example": "OK",
+                  "x-order": 2
+                },
+                "data": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/PaginatedResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/definitions/SafeUser"
                           }
                         }
-                      ]
+                      }
                     }
-                  }
+                  ],
+                  "x-order": 3
                 }
-              ]
+              }
+            }
+          },
+          "401": {
+            "description": "未授权的请求",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "422": {
+            "description": "请求参数校验失败",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "500": {
+            "description": "服务器内部错误",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -827,19 +1151,46 @@
           "200": {
             "description": "获取成功",
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/APISuccessResponse"
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true,
+                  "x-order": 0
                 },
-                {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/definitions/SafeUser"
-                    }
-                  }
+                "code": {
+                  "type": "integer",
+                  "example": 200,
+                  "x-order": 1
+                },
+                "message": {
+                  "type": "string",
+                  "example": "OK",
+                  "x-order": 2
+                },
+                "data": {
+                  "$ref": "#/definitions/SafeUser",
+                  "x-order": 3
                 }
-              ]
+              }
+            }
+          },
+          "400": {
+            "description": "用户 ID 格式错误",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "401": {
+            "description": "未授权的请求",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "404": {
+            "description": "用户不存在",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -883,19 +1234,52 @@
           "200": {
             "description": "更新成功",
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/APISuccessResponse"
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true,
+                  "x-order": 0
                 },
-                {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/definitions/SafeUser"
-                    }
-                  }
+                "code": {
+                  "type": "integer",
+                  "example": 200,
+                  "x-order": 1
+                },
+                "message": {
+                  "type": "string",
+                  "example": "OK",
+                  "x-order": 2
+                },
+                "data": {
+                  "$ref": "#/definitions/SafeUser",
+                  "x-order": 3
                 }
-              ]
+              }
+            }
+          },
+          "400": {
+            "description": "用户 ID 格式错误",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "401": {
+            "description": "未授权的请求",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "404": {
+            "description": "用户不存在",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "422": {
+            "description": "数据校验失败",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -931,6 +1315,24 @@
             "description": "删除成功",
             "schema": {
               "$ref": "#/definitions/APISuccessNoDataResponse"
+            }
+          },
+          "400": {
+            "description": "用户 ID 格式错误",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "401": {
+            "description": "未授权的请求",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "404": {
+            "description": "用户不存在",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
             }
           }
         }
@@ -986,38 +1388,76 @@
     }
   },
   "definitions": {
-    "APISuccessNoDataResponse": {
+    "APIResponse": {
       "type": "object",
       "properties": {
+        "success": {
+          "type": "boolean",
+          "example": true,
+          "x-order": 0
+        },
         "code": {
           "type": "integer",
-          "example": 200
+          "example": 200,
+          "x-order": 1
         },
         "message": {
           "type": "string",
-          "example": "OK"
+          "example": "OK",
+          "x-order": 2
         },
+        "data": {
+          "x-order": 3
+        },
+        "errors": {
+          "x-order": 4
+        },
+        "exception": {
+          "$ref": "#/definitions/ExceptionInfo",
+          "x-order": 5
+        }
+      }
+    },
+    "APISuccessNoDataResponse": {
+      "type": "object",
+      "properties": {
         "success": {
           "type": "boolean",
-          "example": true
+          "example": true,
+          "x-order": 0
+        },
+        "code": {
+          "type": "integer",
+          "example": 200,
+          "x-order": 1
+        },
+        "message": {
+          "type": "string",
+          "example": "OK",
+          "x-order": 2
         }
       }
     },
     "APISuccessResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "example": 200
-        },
-        "data": {},
-        "message": {
-          "type": "string",
-          "example": "OK"
-        },
         "success": {
           "type": "boolean",
-          "example": true
+          "example": true,
+          "x-order": 0
+        },
+        "code": {
+          "type": "integer",
+          "example": 200,
+          "x-order": 1
+        },
+        "message": {
+          "type": "string",
+          "example": "OK",
+          "x-order": 2
+        },
+        "data": {
+          "x-order": 3
         }
       }
     },
@@ -1050,6 +1490,36 @@
         },
         "token": {
           "type": "string"
+        }
+      }
+    },
+    "ExceptionInfo": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "memory_usage": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "query_count": {
+          "type": "integer"
+        },
+        "request_time": {
+          "description": "milliseconds",
+          "type": "number"
+        },
+        "trace": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

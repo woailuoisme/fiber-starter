@@ -1,11 +1,7 @@
 package monitoring
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"runtime"
-
+	"lfiber/docs"
 	helpers "lfiber/internal/support"
 	"lfiber/internal/support/otel"
 
@@ -99,31 +95,6 @@ func RegisterRoutes(app *fiber.App, h *HealthController) {
 	}
 }
 
-func openAPISpecPath() string {
-	var candidates []string
-	if _, file, _, ok := runtime.Caller(0); ok {
-		root := filepath.Clean(filepath.Join(filepath.Dir(file), "..", "..", ".."))
-		candidates = append(candidates, filepath.Join(root, "docs", "openapi.json"))
-	}
-	candidates = append(
-		candidates,
-		filepath.Join("docs", "openapi.json"),
-		filepath.Join("..", "docs", "openapi.json"),
-	)
-	for _, p := range candidates {
-		if _, err := os.Stat(p); err == nil {
-			return p
-		}
-	}
-	return filepath.Join("docs", "openapi.json")
-}
-
 func mustReadSwaggerSpec() []byte {
-	specPath := openAPISpecPath()
-	//nolint:gosec // specPath points to repo-generated Swagger output, not user input.
-	spec, err := os.ReadFile(specPath)
-	if err != nil {
-		panic(fmt.Errorf("failed to read swagger spec %q: %w", specPath, err))
-	}
-	return spec
+	return docs.OpenAPISpec
 }

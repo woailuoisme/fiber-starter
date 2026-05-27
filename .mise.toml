@@ -1,0 +1,11 @@
+[tools]
+go = "1.26.3"
+air = "latest"
+golangci-lint = "latest"
+atlas = "latest"
+ripgrep = "latest"
+fd = "latest"
+sd = "latest"
+
+[env]
+_.file = ".env"

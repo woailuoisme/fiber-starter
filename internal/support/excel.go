@@ -32,8 +32,8 @@ type ToModel interface {
 // Excel Excel工具类
 type Excel struct{}
 
-// Download 下载Excel文件
-func (e *Excel) Download(c fiber.Ctx, export any, filename string) error {
+// WriteTo 将数据写入任意 io.Writer 流中，解耦 HTTP 框架。
+func (e *Excel) WriteTo(w io.Writer, export any) error {
 	f := excelize.NewFile()
 	defer func() {
 		if err := f.Close(); err != nil {
@@ -83,12 +83,17 @@ func (e *Excel) Download(c fiber.Ctx, export any, filename string) error {
 
 	f.SetActiveSheet(index)
 
+	return f.Write(w)
+}
+
+// Download 下载Excel文件
+func (e *Excel) Download(c fiber.Ctx, export any, filename string) error {
 	// 设置响应头
 	c.Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 	c.Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
 
 	// 将文件写入响应
-	if err := f.Write(c.Response().BodyWriter()); err != nil {
+	if err := e.WriteTo(c.Response().BodyWriter(), export); err != nil {
 		return err
 	}
 

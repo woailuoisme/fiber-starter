@@ -16,7 +16,7 @@ import (
 // 作用：把已知异常映射成统一的 JSON 响应格式并设置正确的 HTTP 状态码。
 // 日志记录由 logger 中间件在响应完成后统一完成，此处不做任何日志输出。
 func HandleHTTPError(c fiber.Ctx, err error) error {
-	if apiErr := unwrapAPIException(err); apiErr != nil {
+	if apiErr, ok := exceptions.GetAPIException(err); ok {
 		return handleAPIException(c, apiErr)
 	}
 
@@ -33,38 +33,6 @@ func HandleHTTPError(c fiber.Ctx, err error) error {
 	}
 
 	return handleUnknownError(c, err)
-}
-
-func unwrapAPIException(err error) *exceptions.APIException {
-	if apiErr, ok := errors.AsType[*exceptions.APIException](err); ok {
-		return apiErr
-	}
-	if valErr, ok := errors.AsType[*exceptions.ValidationException](err); ok {
-		return valErr.APIException
-	}
-	if authErr, ok := errors.AsType[*exceptions.AuthenticationException](err); ok {
-		return authErr.APIException
-	}
-	if authzErr, ok := errors.AsType[*exceptions.AuthorizationException](err); ok {
-		return authzErr.APIException
-	}
-	if notFoundErr, ok := errors.AsType[*exceptions.NotFoundException](err); ok {
-		return notFoundErr.APIException
-	}
-	if badReqErr, ok := errors.AsType[*exceptions.BadRequestException](err); ok {
-		return badReqErr.APIException
-	}
-	if conflictErr, ok := errors.AsType[*exceptions.ConflictException](err); ok {
-		return conflictErr.APIException
-	}
-	if serverErr, ok := errors.AsType[*exceptions.ServerException](err); ok {
-		return serverErr.APIException
-	}
-	if svcUnavailableErr, ok := errors.AsType[*exceptions.ServiceUnavailableException](err); ok {
-		return svcUnavailableErr.APIException
-	}
-
-	return nil
 }
 
 func handleAPIException(c fiber.Ctx, apiErr *exceptions.APIException) error {

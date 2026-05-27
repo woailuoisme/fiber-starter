@@ -96,7 +96,6 @@ func (r *UserRepository) Update(ctx context.Context, user *User) error {
 		Model(user).
 		Column("name", "email", "password", "avatar", "phone", "status", "email_verified_at", "updated_at").
 		WherePK().
-		Where("deleted_at IS NULL").
 		Exec(ctx)
 	return err
 }
@@ -106,7 +105,7 @@ func (r *UserRepository) UpdatePassword(ctx context.Context, id int64, password 
 		Model((*User)(nil)).
 		Set("password = ?", password).
 		Set("updated_at = ?", updatedAt).
-		Where("id = ? AND deleted_at IS NULL", id).
+		Where("id = ?", id).
 		Exec(ctx)
 	return err
 }
@@ -116,17 +115,15 @@ func (r *UserRepository) ResetPasswordByEmail(ctx context.Context, email, passwo
 		Model((*User)(nil)).
 		Set("password = ?", password).
 		Set("updated_at = ?", updatedAt).
-		Where("email = ? AND deleted_at IS NULL", email).
+		Where("email = ?", email).
 		Exec(ctx)
 	return err
 }
 
-func (r *UserRepository) SoftDelete(ctx context.Context, id int64, deletedAt, updatedAt time.Time) error {
-	_, err := r.db.NewUpdate().
+func (r *UserRepository) SoftDelete(ctx context.Context, id int64) error {
+	_, err := r.db.NewDelete().
 		Model((*User)(nil)).
-		Set("deleted_at = ?", deletedAt).
-		Set("updated_at = ?", updatedAt).
-		Where("id = ? AND deleted_at IS NULL", id).
+		Where("id = ?", id).
 		Exec(ctx)
 	return err
 }
@@ -138,8 +135,7 @@ func (r *UserRepository) DeleteAll(ctx context.Context) error {
 
 func (r *UserRepository) selectUsers() *bun.SelectQuery {
 	return r.db.NewSelect().
-		Model((*User)(nil)).
-		Where("deleted_at IS NULL")
+		Model((*User)(nil))
 }
 
 func searchPattern(search string) string {

@@ -241,6 +241,9 @@ func GetAPIException(err error) (*APIException, bool) {
 	if apiErr, ok := errors.AsType[*ServerException](err); ok {
 		return apiErr.APIException, true
 	}
+	if apiErr, ok := errors.AsType[*ServiceUnavailableException](err); ok {
+		return apiErr.APIException, true
+	}
 	if apiErr, ok := errors.AsType[*APIException](err); ok {
 		return apiErr, true
 	}

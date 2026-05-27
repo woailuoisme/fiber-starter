@@ -104,6 +104,7 @@ coverage.txt
 coverage.html
 coverage.out
 coverage.xml
+/coverage/
 /tests/coverage/
 /test-results/
 /.test-results/
@@ -134,6 +135,7 @@ coverage.xml
 # Local Development
 # ------------------------------------------
 .local/
+.mise.local.toml
 
 # ------------------------------------------
 # AI & Agent Tools
@@ -152,6 +154,7 @@ coverage.xml
 !.agents/skills/bun-orm/
 
 .cursor
+.antigravitycli
 
 # .specify (Selectively allow memory configuration)
 !.specify/

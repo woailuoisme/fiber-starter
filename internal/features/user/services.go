@@ -105,7 +105,7 @@ func (s *userService) GetUserByID(ctx context.Context, id int64) (*User, error) 
 	user, err := repo.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("user not found")
+			return nil, exceptions.NewNotFoundException("user not found")
 		}
 		helpers.LogError("Failed to query user", zap.Error(err), zap.Int64("id", id))
 		return nil, fmt.Errorf("failed to query user: %w", err)
@@ -124,7 +124,7 @@ func (s *userService) GetUserByEmail(ctx context.Context, email string) (*User, 
 	user, err := repo.GetByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("user not found")
+			return nil, exceptions.NewNotFoundException("user not found")
 		}
 		helpers.LogError("Failed to query user", zap.Error(err), zap.String("email", email))
 		return nil, fmt.Errorf("failed to query user: %w", err)
@@ -156,7 +156,7 @@ func (s *userService) UpdateUser(ctx context.Context, id int64, input UpdateUser
 		current, err := repo.GetByID(ctx, id)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return errors.New("user not found")
+				return exceptions.NewNotFoundException("user not found")
 			}
 			helpers.LogError("Failed to query user", zap.Error(err), zap.Int64("id", id))
 			return fmt.Errorf("failed to query user: %w", err)
@@ -185,11 +185,10 @@ func (s *userService) DeleteUser(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	now := helpers.UtcNow()
 
-	if err := repo.SoftDelete(ctx, id, now, now); err != nil {
+	if err := repo.SoftDelete(ctx, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New("user not found")
+			return exceptions.NewNotFoundException("user not found")
 		}
 		helpers.LogError("Failed to delete user", zap.Error(err), zap.Int64("id", id))
 		return fmt.Errorf("failed to delete user: %w", err)

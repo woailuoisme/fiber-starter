@@ -16,7 +16,8 @@ func RegisterRoutes(router fiber.Router) {
 	rt := appctx.App()
 
 	userService := NewUserService(rt.ConnectionValue())
-	userController := NewUserController(userService)
+	userDataExchange := NewUserDataExchange(rt.ConnectionValue())
+	userController := NewUserController(userService, userDataExchange)
 	jwtProtected := middleware.JWTProtected(rt.AppConfig(), rt.CacheStore())
 
 	usersRouter := middleware.NewTimeoutRouter(
@@ -27,6 +28,7 @@ func RegisterRoutes(router fiber.Router) {
 	usersRouter.Get("/", jwtProtected, userController.GetUsers)
 	usersRouter.Get("/me", jwtProtected, userController.GetCurrentUser)
 	usersRouter.Get("/search", jwtProtected, userController.SearchUsers)
+	usersRouter.Get("/:id", jwtProtected, userController.GetUser)
 	usersRouter.Put("/:id", jwtProtected, userController.UpdateUser)
 	usersRouter.Delete("/:id", jwtProtected, userController.DeleteUser)
 	usersRouter.Put("/profile", jwtProtected, userController.UpdateProfile)

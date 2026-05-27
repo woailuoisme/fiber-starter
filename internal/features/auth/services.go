@@ -191,7 +191,7 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) (SignUp
 			existing.Status == userPkg.UserStatusBanned ||
 			existing.Status == userPkg.UserStatusInactive
 		if isRegistered {
-			return errors.New("email already registered")
+			return exceptions.NewConflictException("email already registered")
 		}
 
 		existing.Name = user.Name
@@ -247,13 +247,13 @@ func (s *authService) VerifySignUp(ctx context.Context, input VerifyCodeInput) (
 		user, err := userRepo.GetByEmail(ctx, input.Email)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return errors.New("user not found")
+				return exceptions.NewNotFoundException("user not found")
 			}
 			return fmt.Errorf("failed to query user: %w", err)
 		}
 
 		if user.Status == userPkg.UserStatusBanned || user.Status == userPkg.UserStatusSuspended || user.Status == userPkg.UserStatusInactive {
-			return errors.New("user account has been disabled")
+			return exceptions.NewAuthorizationException("user account has been disabled")
 		}
 
 		now := helpers.UtcNow()
@@ -302,21 +302,21 @@ func (s *authService) Login(ctx context.Context, input LoginInput) (AuthResult, 
 	user, err := userRepo.GetByEmail(ctx, input.Email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return AuthResult{}, errors.New("invalid email or password")
+			return AuthResult{}, exceptions.NewAuthenticationException("invalid email or password")
 		}
 		helpers.LogError("Failed to query user", zap.Error(err))
 		return AuthResult{}, fmt.Errorf("failed to query user: %w", err)
 	}
 
 	if user.Status == userPkg.UserStatusPending {
-		return AuthResult{}, errors.New("email verification required")
+		return AuthResult{}, exceptions.NewAuthorizationException("email verification required")
 	}
 	if user.Status == userPkg.UserStatusInactive || user.Status == userPkg.UserStatusSuspended || user.Status == userPkg.UserStatusBanned {
-		return AuthResult{}, errors.New("user account has been disabled")
+		return AuthResult{}, exceptions.NewAuthorizationException("user account has been disabled")
 	}
 
 	if ok := hash.Check(input.Password, user.Password); !ok {
-		return AuthResult{}, errors.New("invalid email or password")
+		return AuthResult{}, exceptions.NewAuthenticationException("invalid email or password")
 	}
 
 	accessToken, refreshToken, err := s.issueSessionTokens(user)
@@ -337,7 +337,7 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (To
 	ctx = serviceContext(ctx)
 	claims, err := middleware.ValidateToken(refreshToken, s.config)
 	if err != nil {
-		return TokenPair{}, errors.New("invalid refresh token")
+		return TokenPair{}, exceptions.NewAuthenticationException("invalid refresh token")
 	}
 
 	cacheKey := fmt.Sprintf("refresh_token:%d", claims.UserID)
@@ -346,7 +346,7 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (To
 		return TokenPair{}, serviceUnavailable(err)
 	}
 	if cachedToken != refreshToken {
-		return TokenPair{}, errors.New("refresh token has expired")
+		return TokenPair{}, exceptions.NewAuthenticationException("refresh token has expired")
 	}
 
 	user, err := s.getUserByID(ctx, claims.UserID)
@@ -354,10 +354,10 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (To
 		return TokenPair{}, err
 	}
 	if user.Status == userPkg.UserStatusPending {
-		return TokenPair{}, errors.New("email verification required")
+		return TokenPair{}, exceptions.NewAuthorizationException("email verification required")
 	}
 	if user.Status == userPkg.UserStatusInactive || user.Status == userPkg.UserStatusSuspended || user.Status == userPkg.UserStatusBanned {
-		return TokenPair{}, errors.New("user account has been disabled")
+		return TokenPair{}, exceptions.NewAuthorizationException("user account has been disabled")
 	}
 
 	accessToken, newRefreshToken, err := s.issueSessionTokens(user)
@@ -372,7 +372,7 @@ func (s *authService) Logout(ctx context.Context, token string) error {
 	_ = serviceContext(ctx)
 	claims, err := middleware.ValidateToken(token, s.config)
 	if err != nil {
-		return errors.New("invalid token")
+		return exceptions.NewAuthenticationException("invalid token")
 	}
 
 	cacheKey := fmt.Sprintf("refresh_token:%d", claims.UserID)
@@ -398,13 +398,13 @@ func (s *authService) ChangePassword(ctx context.Context, input ChangePasswordIn
 	user, err := userRepo.GetByID(ctx, input.UserID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New("user not found")
+			return exceptions.NewNotFoundException("user not found")
 		}
 		return fmt.Errorf("user not found: %w", err)
 	}
 
 	if ok := hash.Check(input.CurrentPassword, user.Password); !ok {
-		return errors.New("incorrect current password")
+		return exceptions.NewAuthenticationException("incorrect current password")
 	}
 
 	hashedPassword, err := hash.Make(input.NewPassword)
@@ -501,7 +501,7 @@ func (s *authService) VerifyPasswordReset(ctx context.Context, input VerifyCodeI
 	}
 
 	if resetToken == "" {
-		return PasswordResetToken{}, errors.New("failed to create password reset token")
+		return PasswordResetToken{}, exceptions.NewServerException("failed to create password reset token")
 	}
 
 	return PasswordResetToken{Token: resetToken}, nil
@@ -510,7 +510,7 @@ func (s *authService) VerifyPasswordReset(ctx context.Context, input VerifyCodeI
 func (s *authService) ResetPassword(ctx context.Context, input ConfirmPasswordResetInput) error {
 	userID, email, err := s.parsePasswordResetToken(input.Token)
 	if err != nil {
-		return err
+		return exceptions.NewBadRequestException(err.Error())
 	}
 
 	ctx = serviceContext(ctx)
@@ -522,12 +522,12 @@ func (s *authService) ResetPassword(ctx context.Context, input ConfirmPasswordRe
 	user, err := userRepo.GetByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New("user not found")
+			return exceptions.NewNotFoundException("user not found")
 		}
 		return fmt.Errorf("user not found: %w", err)
 	}
 	if user.Email != email {
-		return errors.New("invalid reset token")
+		return exceptions.NewBadRequestException("invalid reset token")
 	}
 
 	cacheKey := fmt.Sprintf("password_reset_token:%s", input.Token)
@@ -536,7 +536,7 @@ func (s *authService) ResetPassword(ctx context.Context, input ConfirmPasswordRe
 		return serviceUnavailable(err)
 	}
 	if cachedValue != fmt.Sprintf("%d|%s", user.ID, user.Email) {
-		return errors.New("invalid reset token")
+		return exceptions.NewBadRequestException("invalid reset token")
 	}
 
 	hashedPassword, err := hash.Make(input.NewPassword)
@@ -651,7 +651,7 @@ func (s *authService) validateOTP(authRepo *AuthRepository, email string, purpos
 	otp, err := authRepo.GetLatestOTPByEmailPurpose(ctx, email, purpose)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("invalid verification code")
+			return nil, exceptions.NewBadRequestException("invalid verification code")
 		}
 		return nil, fmt.Errorf("failed to query otp: %w", err)
 	}
@@ -661,7 +661,7 @@ func (s *authService) validateOTP(authRepo *AuthRepository, email string, purpos
 		if err := authRepo.ConsumeOTP(ctx, otp.ID, now, now); err != nil {
 			return nil, fmt.Errorf("failed to consume expired otp: %w", err)
 		}
-		return nil, errors.New("verification code has expired")
+		return nil, exceptions.NewBadRequestException("verification code has expired")
 	}
 
 	if !equalOTP(hashOTPCode(s.otpSecret(), email, purpose, code), otp.CodeHash) {
@@ -672,9 +672,9 @@ func (s *authService) validateOTP(authRepo *AuthRepository, email string, purpos
 			if err := authRepo.ConsumeOTP(ctx, otp.ID, now, now); err != nil {
 				return nil, fmt.Errorf("failed to lock otp: %w", err)
 			}
-			return nil, errors.New("verification attempts exceeded")
+			return nil, exceptions.NewBadRequestException("verification attempts exceeded")
 		}
-		return nil, errors.New("invalid verification code")
+		return nil, exceptions.NewBadRequestException("invalid verification code")
 	}
 
 	return otp, nil

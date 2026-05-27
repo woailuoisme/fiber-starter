@@ -259,6 +259,7 @@ docs:
     @swag init --pd --st --parseInternal --packagePrefix lfiber --md docs/md -d cmd/app,internal -g main.go -o docs --ot json
     @python3 scripts/swagger/reorder_swagger.py docs/swagger.json
     @cp docs/swagger.json docs/openapi.json
+    @touch docs/docs.go
     @echo "Documentation generated at docs/openapi.json"
 
 _check-k6:
