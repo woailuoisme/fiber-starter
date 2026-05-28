@@ -9,6 +9,7 @@ import (
 	"lfiber/internal/features/user"
 	providers "lfiber/internal/providers"
 	helpers "lfiber/internal/support"
+	"lfiber/pkg/logviewer"
 
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"
@@ -33,6 +34,9 @@ func SetupApplicationRoutes(app *fiber.App) error {
 	user.RegisterRoutes(v1Group)
 
 	registerRealtimeRoutes(app, middleware.JWTProtected(rt.Config, rt.Cache))
+
+	// 4. Register Log Viewer
+	logviewer.Register(app.Group("/logs"), rt.Config.Security.LogViewer, "storage/logs")
 
 	if rt.Config.App.Debug {
 		helpers.Info("registered_route_entries", zap.Int("total", len(app.GetRoutes())))

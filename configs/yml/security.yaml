@@ -10,3 +10,15 @@ security:
     enabled: false
     lower_threshold: 0.85
     upper_threshold: 0.95
+  circuit_breaker:
+    enabled: ${CIRCUIT_BREAKER_ENABLED:false}
+    failure_threshold: ${CIRCUIT_BREAKER_FAILURE_THRESHOLD:5}
+    timeout: ${CIRCUIT_BREAKER_TIMEOUT:10}
+    success_threshold: ${CIRCUIT_BREAKER_SUCCESS_THRESHOLD:5}
+    half_open_max_concurrent: ${CIRCUIT_BREAKER_HALF_OPEN_MAX_CONCURRENT:1}
+  log_viewer:
+    enabled: ${LOG_VIEWER_ENABLED:false}
+    path: "${LOG_VIEWER_PATH:storage/logs}"
+    username: "${LOG_VIEWER_USERNAME:}"
+    password: "${LOG_VIEWER_PASSWORD:}"
+    allow_delete: ${LOG_VIEWER_ALLOW_DELETE:false}

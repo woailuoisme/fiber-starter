@@ -53,6 +53,8 @@ type (
 	RateLimitConfig            = internal.RateLimitConfig
 	LimiterConfig              = internal.LimiterConfig
 	LoadShedConfig             = internal.LoadShedConfig
+	CircuitBreakerConfig       = internal.CircuitBreakerConfig
+	LogViewerConfig            = internal.LogViewerConfig
 	I18nConfig                 = internal.I18nConfig
 	SearchConfig               = internal.SearchConfig
 	HashConfig                 = internal.HashConfig
@@ -88,7 +90,7 @@ func LoadConfig() (*Config, *koanf.Koanf, error) {
 	}
 
 	cfg := &internal.Config{}
-	if err := k.Unmarshal("", cfg); err != nil {
+	if err := k.UnmarshalWithConf("", cfg, koanf.UnmarshalConf{Tag: "mapstructure"}); err != nil {
 		return nil, nil, err
 	}
 	applyUnmarshalFallbacks(k, cfg)
@@ -159,7 +161,7 @@ func LoadDatabaseConfig() (*DatabaseConfig, error) {
 	if err := k.Load(confmap.Provider(internal.EnvConfigMap(), "."), nil); err != nil {
 		return nil, err
 	}
-	if err := k.Unmarshal("database", dbConfig); err != nil {
+	if err := k.UnmarshalWithConf("database", dbConfig, koanf.UnmarshalConf{Tag: "mapstructure"}); err != nil {
 		return nil, err
 	}
 

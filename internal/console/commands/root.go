@@ -16,8 +16,8 @@ import (
 	routecmd "lfiber/internal/console/commands/route"
 	schedulecmd "lfiber/internal/console/commands/schedule"
 	servecmd "lfiber/internal/console/commands/serve"
-	artisan "lfiber/internal/providers/artisan"
 	"lfiber/internal/console/ui"
+	artisan "lfiber/internal/providers/artisan"
 
 	"github.com/spf13/cobra"
 )

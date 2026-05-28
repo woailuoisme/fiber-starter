@@ -16,6 +16,7 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
+	"github.com/uptrace/bun/extra/bunotel"
 	"go.uber.org/zap"
 )
 
@@ -117,6 +118,18 @@ func (c *Connection) BunDB() (*bun.DB, error) {
 
 	if c.bunDB == nil {
 		c.bunDB = newBunDB(db, c.GetDriverName())
+		if c.bunDB != nil {
+			// Register custom QueryHook for log/slow query detection
+			c.bunDB.AddQueryHook(NewQueryHook(c.config, c.name))
+
+			// Register OTEL tracing query hook if enabled
+			if c.config != nil && c.config.OTEL.TraceEnabled {
+				c.bunDB.AddQueryHook(bunotel.NewQueryHook(
+					bunotel.WithDBName(c.name),
+					bunotel.WithFormattedQueries(false), // 默认隐藏具体 SQL 参数值以保障安全性
+				))
+			}
+		}
 	}
 	if c.bunDB == nil {
 		return nil, fmt.Errorf("unsupported database driver: %s", c.GetDriverName())

@@ -11,8 +11,8 @@ import (
 	"lfiber/configs"
 	command "lfiber/internal/console/commands"
 	"lfiber/internal/console/commands/commandutil"
-	artisan "lfiber/internal/providers/artisan"
 	"lfiber/internal/providers"
+	artisan "lfiber/internal/providers/artisan"
 	cacheDrivers "lfiber/internal/providers/cache/drivers"
 
 	"github.com/stretchr/testify/assert"

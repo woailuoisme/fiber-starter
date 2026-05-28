@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Viewer - 实时日志大盘</title>
+    <!-- 引入本地 Vendor 资源 -->
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideInFromTop {
+            from { transform: translateY(-0.5rem); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes slideInFromBottom {
+            from { transform: translateY(0.5rem); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes zoomIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .animate-in.fade-in {
+            animation: fadeIn 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-in.fade-in.slide-in-from-top-2 {
+            animation: slideInFromTop 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-in.fade-in.slide-in-from-bottom-2 {
+            animation: slideInFromBottom 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-in.fade-in.zoom-in-95 {
+            animation: zoomIn 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+    <link rel="stylesheet" href="assets/vendor/fontawesome.7.2.0.min.css">
+    <link rel="stylesheet" href="assets/vendor/fontawesome-solid.7.2.0.min.css">
+    <script src="assets/vendor/tailwind-browser.4.3.0.global.js"></script>
+    <script src="assets/vendor/alpine.3.15.12.min.js" defer></script>
+
+</head>
+<body class="h-full overflow-hidden bg-black text-neutral-100 antialiased font-sans" x-data="logViewer">
+    <div class="h-full flex overflow-hidden bg-black animate-in fade-in duration-200">
+        <aside class="w-80 shrink-0 border-r border-neutral-800 bg-neutral-950 flex flex-col">
+            <div class="h-14 px-4 border-b border-neutral-800 flex items-center justify-between">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="size-7 rounded-md border border-neutral-700 bg-neutral-900 flex items-center justify-center text-neutral-300">
+                        <i class="fa-solid fa-terminal fa-fw text-xs" aria-hidden="true"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h1 class="text-sm font-semibold text-white truncate">Log Viewer</h1>
+                        <p class="text-[11px] text-neutral-500 font-mono truncate">lfiber runtime</p>
+                    </div>
+                </div>
+                <button @click="fetchFiles()"
+                        class="size-8 rounded-md border border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600 hover:text-white transition-colors"
+                        title="刷新文件列表">
+                    <i class="fa-solid fa-rotate-right fa-fw text-xs" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div class="px-4 py-3 border-b border-neutral-800 flex items-center justify-between">
+                <span class="text-xs font-medium text-neutral-300">日志文件</span>
+                <span class="text-[11px] text-neutral-500 font-mono" x-text="files.length + ' files'"></span>
+            </div>
+
+            <div class="flex-1 min-h-0 overflow-y-auto p-2 space-y-1">
+                <template x-for="file in files" :key="file.name">
+                    <button @click="selectFile(file.name)"
+                            :class="activeFile === file.name ? 'bg-neutral-900 border-neutral-600 text-white' : 'border-transparent text-neutral-400 hover:bg-neutral-950 hover:border-neutral-800 hover:text-neutral-200'"
+                            class="w-full rounded-md border px-3 py-2 text-left transition-colors">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <i :class="activeFile === file.name ? 'text-white' : 'text-neutral-600'" class="fa-solid fa-file-lines fa-fw text-xs shrink-0" aria-hidden="true"></i>
+                            <span class="text-sm font-medium truncate" x-text="file.name"></span>
+                        </div>
+                        <div class="mt-1 flex items-center justify-between gap-2 text-[11px] text-neutral-500 font-mono">
+                            <span class="truncate" x-text="file.modified"></span>
+                            <span class="shrink-0" x-text="formatBytes(file.size)"></span>
+                        </div>
+                    </button>
+                </template>
+
+                <template x-if="files.length === 0">
+                    <div class="px-4 py-12 text-center text-xs text-neutral-500">
+                        暂无日志文件 (*.log)
+                    </div>
+                </template>
+            </div>
+        </aside>
+
+        <main class="flex-1 min-w-0 flex flex-col overflow-hidden">
+            <header class="h-14 shrink-0 border-b border-neutral-800 bg-black px-5 flex items-center justify-between gap-4">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 text-sm font-medium text-white">
+                        <span x-text="activeFile || '选择日志文件'"></span>
+                        <span x-show="loading" class="text-[11px] text-neutral-500 font-normal">loading</span>
+                    </div>
+                    <div class="mt-0.5 text-[11px] text-neutral-500 font-mono" x-show="totalMatches > 0">
+                        <span x-text="totalMatches"></span> matched lines
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                    <button @click="copyActiveFileName()"
+                            :disabled="!activeFile"
+                            :class="activeFile ? 'text-neutral-300 hover:text-white hover:border-neutral-600' : 'text-neutral-700 cursor-not-allowed'"
+                            class="h-8 px-3 rounded-md border border-neutral-800 bg-black text-xs transition-colors">
+                        <i class="fa-solid fa-copy fa-fw mr-1" aria-hidden="true"></i>
+                        <span>文件名</span>
+                    </button>
+                    <button @click="downloadFile()"
+                            :disabled="!activeFile"
+                            :class="activeFile ? 'text-neutral-300 hover:text-white hover:border-neutral-600' : 'text-neutral-700 cursor-not-allowed'"
+                            class="h-8 px-3 rounded-md border border-neutral-800 bg-black text-xs transition-colors">
+                        <i class="fa-solid fa-download fa-fw mr-1" aria-hidden="true"></i>
+                        <span>下载</span>
+                    </button>
+                    <button @click="deleteFile()"
+                            :disabled="!activeFile"
+                            :class="activeFile ? 'text-red-400 hover:text-red-300 hover:border-red-900' : 'text-neutral-700 cursor-not-allowed'"
+                            class="h-8 px-3 rounded-md border border-neutral-800 bg-black text-xs transition-colors">
+                        <i class="fa-solid fa-trash-can fa-fw mr-1" aria-hidden="true"></i>
+                        <span>删除</span>
+                    </button>
+                </div>
+            </header>
+
+            <section class="shrink-0 border-b border-neutral-800 bg-neutral-950/70 px-5 py-4">
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
+                    <div class="rounded-md border border-neutral-800 bg-black px-3 py-2">
+                        <div class="text-[11px] text-neutral-500">TOTAL</div>
+                        <div class="mt-1 text-lg font-semibold font-mono text-white" x-text="stats.total || '-' "></div>
+                    </div>
+                    <div class="rounded-md border border-neutral-800 bg-black px-3 py-2">
+                        <div class="text-[11px] text-neutral-500">INFO</div>
+                        <div class="mt-1 text-lg font-semibold font-mono text-emerald-400" x-text="stats.info || '-' "></div>
+                    </div>
+                    <div class="rounded-md border border-neutral-800 bg-black px-3 py-2">
+                        <div class="text-[11px] text-neutral-500">WARN</div>
+                        <div class="mt-1 text-lg font-semibold font-mono text-amber-400" x-text="stats.warn || '-' "></div>
+                    </div>
+                    <div class="rounded-md border border-neutral-800 bg-black px-3 py-2">
+                        <div class="text-[11px] text-neutral-500">ERROR / FATAL</div>
+                        <div class="mt-1 text-lg font-semibold font-mono text-red-400" x-text="(stats.error + stats.fatal) || '-' "></div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+                    <div class="relative w-full sm:max-w-xl">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-neutral-600 text-xs" aria-hidden="true"></i>
+                        <input type="text"
+                               x-model.debounce.300ms="search"
+                               placeholder="Filter logs..."
+                               class="w-full h-9 rounded-md border border-neutral-800 bg-black pl-8 pr-3 text-sm text-neutral-100 placeholder-neutral-600 outline-none transition-colors focus:border-neutral-500">
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" @keydown.escape.window="open = false"
+                                    class="h-9 min-w-[10rem] rounded-md border border-neutral-800 bg-black pl-3 pr-8 text-sm text-left outline-none transition-colors focus:border-neutral-500 flex items-center gap-2"
+                                    type="button">
+                                <span x-show="!level" class="text-neutral-200">All levels</span>
+                                <span x-show="level" :class="levelClass(level)" class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold border" x-text="level"></span>
+                                <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 text-[10px] pointer-events-none" aria-hidden="true"></i>
+                            </button>
+                            <div x-show="open" @click.outside="open = false" x-transition
+                                 class="absolute top-full left-0 mt-1 z-20 w-full min-w-[10rem] rounded-md border border-neutral-800 bg-neutral-950 py-1 shadow-xl"
+                                 style="display: none;">
+                                <button @click="level = ''; open = false" type="button"
+                                        :class="level === '' ? 'bg-neutral-900' : 'hover:bg-neutral-900'"
+                                        class="w-full px-3 py-1.5 text-left text-sm text-neutral-300 transition-colors flex items-center justify-between">
+                                    <span>All levels</span>
+                                    <span class="text-[11px] text-neutral-500 font-mono" x-text="stats.total || 0"></span>
+                                </button>
+                                <template x-for="l in ['INFO','WARN','ERROR','FATAL','DEBUG']" :key="l">
+                                    <button @click="level = l; open = false" type="button"
+                                            :class="level === l ? 'bg-neutral-900' : 'hover:bg-neutral-900'"
+                                            class="w-full px-3 py-1.5 text-left transition-colors flex items-center justify-between gap-2">
+                                        <span :class="levelClass(l)" class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold border" x-text="l"></span>
+                                        <span class="text-[11px] text-neutral-500 font-mono" x-text="getLevelCount(l)"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                        <button @click="fetchEntries(1)"
+                                :disabled="!activeFile || loading"
+                                :class="activeFile && !loading ? 'text-neutral-300 hover:text-white hover:border-neutral-600' : 'text-neutral-700 cursor-not-allowed'"
+                                class="h-9 px-3 rounded-md border border-neutral-800 bg-black text-sm transition-colors">
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="flex-1 min-h-0 overflow-hidden bg-black p-5 relative">
+                <div x-show="errorMsg" x-transition class="mb-3 rounded-md border border-red-950 bg-red-950/20 px-3 py-2 text-sm text-red-300 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <span x-text="errorMsg"></span>
+                    <button @click="errorMsg = ''" class="text-red-400 hover:text-red-200" title="关闭">
+                        <i class="fa-solid fa-xmark fa-fw" aria-hidden="true"></i>
+                    </button>
+                </div>
+
+                <div x-ref="scrollContainer" @scroll.passive="handleScroll($event)" class="h-full min-h-0 overflow-auto rounded-md border border-neutral-800 bg-black">
+                    <table class="w-full table-fixed text-left text-sm">
+                        <thead class="sticky top-0 z-10 bg-neutral-950 border-b border-neutral-800 text-[11px] uppercase text-neutral-500">
+                            <tr>
+                                <th class="w-24 px-3 py-2 font-medium">Level</th>
+                                <th class="w-44 px-3 py-2 font-medium">Time</th>
+                                <th class="w-56 px-3 py-2 font-medium">Caller</th>
+                                <th class="px-3 py-2 font-medium">Message</th>
+                                <th class="w-20 px-3 py-2 text-right font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-neutral-900 font-mono text-xs">
+                            <tr :style="'height: ' + paddingTop + 'px; border: none; pointer-events: none;'"><td colspan="5" class="p-0"></td></tr>
+                            <template x-for="(entry, index) in entries" :key="entry.id || (startIndex + index)">
+                                <tr @click="showDetail(entry)" class="group hover:bg-neutral-950 cursor-pointer transition-colors h-9" style="height: 36px; max-height: 36px;">
+                                    <td class="px-3 py-1.5 align-middle">
+                                        <span :class="levelClass(entry.level)" class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold border" x-text="entry.level"></span>
+                                    </td>
+                                    <td class="px-3 py-1.5 align-middle text-neutral-500 truncate" x-text="entry.timestamp"></td>
+                                    <td class="px-3 py-1.5 align-middle text-neutral-600 truncate" x-text="entry.caller"></td>
+                                    <td class="px-3 py-1.5 align-middle text-neutral-300 truncate" x-text="entry.message"></td>
+                                    <td class="px-3 py-1.5 align-middle text-right">
+                                        <button @click.stop="copyEntryMessage(entry)"
+                                                class="rounded border border-transparent px-2 py-0.5 text-neutral-600 hover:border-neutral-700 hover:text-neutral-200 transition-colors"
+                                                title="复制日志消息">
+                                            <i class="fa-solid fa-copy fa-fw" aria-hidden="true"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                            <tr :style="'height: ' + paddingBottom + 'px; border: none; pointer-events: none;'"><td colspan="5" class="p-0"></td></tr>
+
+                            <template x-if="loading">
+                                <tr>
+                                    <td colspan="5" class="p-4">
+                                        <div class="space-y-3">
+                                            <div class="h-3 rounded bg-neutral-900 animate-pulse w-3/4"></div>
+                                            <div class="h-3 rounded bg-neutral-900 animate-pulse w-5/6"></div>
+                                            <div class="h-3 rounded bg-neutral-900 animate-pulse w-1/2"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+
+                            <template x-if="!loading && allEntries.length === 0">
+                                <tr>
+                                    <td colspan="5" class="py-20 text-center text-xs text-neutral-600">
+                                        <span x-text="activeFile ? '没有找到符合筛选条件的日志数据。' : '请先在左侧选择需要查看的日志文件。'"></span>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <footer class="h-12 shrink-0 border-t border-neutral-800 bg-black px-5 flex items-center justify-between text-xs text-neutral-500">
+                <div>
+                    <span x-show="totalMatches > 0">
+                        Showing <span class="font-mono text-neutral-300" x-text="allEntries.length > 0 ? 1 : 0"></span>-<span class="font-mono text-neutral-300" x-text="allEntries.length"></span> of <span class="font-mono text-neutral-300" x-text="totalMatches"></span>
+                    </span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button @click="changePage(startPage - 1)"
+                            :disabled="startPage <= 1 || loading"
+                            :class="startPage > 1 && !loading ? 'text-neutral-300 hover:text-white hover:border-neutral-600' : 'text-neutral-700 cursor-not-allowed'"
+                            class="h-8 px-3 rounded-md border border-neutral-800 bg-black transition-colors">
+                        Previous
+                    </button>
+                    <span class="h-8 px-3 rounded-md border border-neutral-800 bg-neutral-950 flex items-center font-mono text-neutral-300" x-text="startPage === endPage ? 'Page ' + startPage : 'Page ' + startPage + '-' + endPage"></span>
+                    <button @click="changePage(endPage + 1)"
+                            :disabled="endPage * limit >= totalMatches || loading"
+                            :class="endPage * limit < totalMatches && !loading ? 'text-neutral-300 hover:text-white hover:border-neutral-600' : 'text-neutral-700 cursor-not-allowed'"
+                            class="h-8 px-3 rounded-md border border-neutral-800 bg-black transition-colors">
+                        Next
+                    </button>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <div x-show="toast"
+         x-transition
+         class="fixed bottom-4 right-4 z-[60] rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200"
+         style="display: none;"
+         x-text="toast"></div>
+
+    <div x-show="detailEntry"
+         x-transition
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-hidden"
+         style="display: none;">
+        <div @click.outside="closeDetail()"
+             class="w-full max-w-5xl max-h-[86vh] overflow-hidden rounded-lg border border-neutral-800 bg-black shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+            <header class="h-14 shrink-0 border-b border-neutral-800 px-4 flex items-center justify-between gap-4">
+                <div class="min-w-0">
+                    <h2 class="text-sm font-semibold text-white">日志详情</h2>
+                    <p class="mt-0.5 text-[11px] text-neutral-500 font-mono truncate" x-text="detailEntry ? detailEntry.timestamp : ''"></p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button @click="copyEntryMessage(detailEntry)"
+                            class="h-8 px-3 rounded-md border border-neutral-800 text-xs text-neutral-300 hover:border-neutral-600 hover:text-white transition-colors">
+                        <i class="fa-solid fa-copy fa-fw mr-1" aria-hidden="true"></i>Message
+                    </button>
+                    <button @click="copyDetailJSON()"
+                            class="h-8 px-3 rounded-md border border-neutral-800 text-xs text-neutral-300 hover:border-neutral-600 hover:text-white transition-colors">
+                        <i class="fa-solid fa-code fa-fw mr-1" aria-hidden="true"></i>JSON
+                    </button>
+                    <button @click="closeDetail()" class="size-8 rounded-md border border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-white transition-colors" title="关闭">
+                        <i class="fa-solid fa-xmark fa-fw" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2">
+                        <div class="text-[11px] uppercase text-neutral-500">Level</div>
+                        <div class="mt-1"><span :class="detailEntry ? levelClass(detailEntry.level) : ''" class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold border" x-text="detailEntry ? detailEntry.level : ''"></span></div>
+                    </div>
+                    <div class="rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2">
+                        <div class="text-[11px] uppercase text-neutral-500">Caller</div>
+                        <div class="mt-1 text-xs text-neutral-300 font-mono truncate" x-text="detailEntry ? detailEntry.caller : ''"></div>
+                    </div>
+                    <div class="rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2">
+                        <div class="text-[11px] uppercase text-neutral-500">File</div>
+                        <div class="mt-1 text-xs text-neutral-300 font-mono truncate" x-text="activeFile || '-' "></div>
+                    </div>
+                </div>
+
+                <section class="rounded-md border border-neutral-800 bg-neutral-950 overflow-hidden">
+                    <div class="h-10 border-b border-neutral-800 px-3 flex items-center justify-between">
+                        <span class="text-xs font-medium text-neutral-300">Message</span>
+                        <button @click="copyEntryMessage(detailEntry)" class="text-xs text-neutral-500 hover:text-white transition-colors">Copy</button>
+                    </div>
+                    <pre class="p-3 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-6 text-neutral-200 font-mono" x-text="detailEntry ? detailEntry.message : ''"></pre>
+                </section>
+
+                <section x-show="detailEntry && detailEntry.context" class="rounded-md border border-neutral-800 bg-neutral-950 overflow-hidden">
+                    <div class="h-10 border-b border-neutral-800 px-3 flex items-center justify-between">
+                        <span class="text-xs font-medium text-neutral-300">Context</span>
+                        <button @click="copyContextJSON()" class="text-xs text-neutral-500 hover:text-white transition-colors">Copy</button>
+                    </div>
+                    <pre class="p-3 max-h-80 overflow-auto text-xs leading-6 font-mono"><code x-html="detailEntry ? highlightJSON(detailEntry.context) : ''"></code></pre>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('logViewer', () => ({
+                files: [],
+                activeFile: '',
+                entries: [],
+                totalMatches: 0,
+                page: 1,
+                limit: 100,
+                search: '',
+                level: '',
+                stats: { total: 0, info: 0, warn: 0, error: 0 },
+                loading: false,
+                detailEntry: null,
+                errorMsg: '',
+                toast: '',
+                toastTimer: null,
+
+                // 虚拟滚动与无限加载新增状态
+                allEntries: [],
+                scrollTop: 0,
+                containerHeight: 0,
+                rowHeight: 36,
+                bufferRows: 10,
+                paddingTop: 0,
+                paddingBottom: 0,
+                startIndex: 0,
+                startPage: 1,
+                endPage: 1,
+
+                async init() {
+                    this.$watch('search', () => this.fetchEntries(1));
+                    this.$watch('level', () => this.fetchEntries(1));
+
+                    await this.fetchFiles();
+                    if (this.files.length > 0) {
+                        this.selectFile(this.files[0].name);
+                    }
+                },
+
+                async fetchFiles() {
+                    try {
+                        const res = await fetch('api/files');
+                        if (!res.ok) throw new Error('无法加载日志文件列表');
+                        const payload = await res.json();
+                        this.files = (payload.data && payload.data.files) || [];
+                    } catch (err) {
+                        this.errorMsg = err.message;
+                    }
+                },
+
+                async fetchEntries(targetPage = 1, append = false) {
+                    if (!this.activeFile) return;
+                    this.loading = true;
+                    this.page = targetPage;
+                    this.errorMsg = '';
+                    try {
+                        const params = new URLSearchParams({
+                            file: this.activeFile,
+                            page: this.page,
+                            limit: this.limit,
+                            search: this.search,
+                            level: this.level
+                        });
+                        const res = await fetch('api/entries?' + params.toString());
+                        if (!res.ok) {
+                            const payload = await res.json().catch(() => ({}));
+                            throw new Error(payload.message || '无法获取日志内容');
+                        }
+                        const payload = await res.json();
+                        const data = payload.data || {};
+                        
+                        const newEntries = data.entries || [];
+                        if (append) {
+                            this.allEntries = [...this.allEntries, ...newEntries];
+                        } else {
+                            this.allEntries = newEntries;
+                            this.$nextTick(() => {
+                                if (this.$refs.scrollContainer) {
+                                    this.$refs.scrollContainer.scrollTop = 0;
+                                    this.scrollTop = 0;
+                                }
+                            });
+                        }
+                        
+                        this.totalMatches = data.total_matches || 0;
+                        this.stats = data.stats || { total: 0, info: 0, warn: 0, error: 0 };
+                        
+                        this.updateVirtualScroll();
+                    } catch (err) {
+                        this.errorMsg = err.message;
+                        if (!append) {
+                            this.allEntries = [];
+                            this.entries = [];
+                            this.totalMatches = 0;
+                        }
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                handleScroll(e) {
+                    const el = e.target;
+                    this.scrollTop = el.scrollTop;
+                    this.containerHeight = el.clientHeight;
+                    
+                    this.updateVirtualScroll();
+                    
+                    const threshold = 150;
+                    if (el.scrollHeight - el.scrollTop - el.clientHeight < threshold) {
+                        this.fetchNextPage();
+                    }
+                },
+
+                updateVirtualScroll() {
+                    if (!this.$refs.scrollContainer) return;
+                    if (this.containerHeight === 0) {
+                        this.containerHeight = this.$refs.scrollContainer.clientHeight || 500;
+                    }
+                    const totalCount = this.allEntries.length;
+                    const visibleCount = Math.ceil(this.containerHeight / this.rowHeight) + this.bufferRows;
+                    
+                    let start = Math.floor(this.scrollTop / this.rowHeight) - Math.floor(this.bufferRows / 2);
+                    if (start < 0) start = 0;
+                    
+                    let end = start + visibleCount;
+                    if (end > totalCount) {
+                        end = totalCount;
+                        start = Math.max(0, end - visibleCount);
+                    }
+                    
+                    this.startIndex = start;
+                    this.paddingTop = start * this.rowHeight;
+                    this.paddingBottom = Math.max(0, (totalCount - end) * this.rowHeight);
+                    this.entries = this.allEntries.slice(start, end);
+                },
+
+                async fetchNextPage() {
+                    if (this.loading || this.allEntries.length >= this.totalMatches) return;
+                    const nextPage = Math.floor(this.allEntries.length / this.limit) + 1;
+                    await this.fetchEntries(nextPage, true);
+                },
+
+                selectFile(name) {
+                    this.activeFile = name;
+                    this.fetchEntries(1, false);
+                },
+
+                async deleteFile() {
+                    if (!this.activeFile) return;
+                    if (!confirm('确定要删除日志文件 ' + this.activeFile + ' 吗？此操作不可撤销。')) return;
+                    try {
+                        const res = await fetch('api/files/' + this.activeFile, { method: 'DELETE' });
+                        if (!res.ok) throw new Error('删除失败');
+
+                        this.activeFile = '';
+                        this.entries = [];
+                        this.totalMatches = 0;
+                        this.stats = { total: 0, info: 0, warn: 0, error: 0 };
+
+                        await this.fetchFiles();
+                        if (this.files.length > 0) {
+                            this.selectFile(this.files[0].name);
+                        }
+                    } catch (err) {
+                        this.errorMsg = err.message;
+                    }
+                },
+
+                downloadFile() {
+                    if (!this.activeFile) return;
+                    window.location.href = 'api/files/' + this.activeFile + '/download';
+                },
+
+                showDetail(entry) {
+                    this.detailEntry = entry;
+                },
+
+                closeDetail() {
+                    this.detailEntry = null;
+                },
+
+                copyActiveFileName() {
+                    if (!this.activeFile) return;
+                    this.copyText(this.activeFile, '文件名已复制');
+                },
+
+                copyEntryMessage(entry) {
+                    if (!entry) return;
+                    this.copyText(entry.message || '', '日志消息已复制');
+                },
+
+                copyDetailJSON() {
+                    if (!this.detailEntry) return;
+                    this.copyText(JSON.stringify(this.detailEntry, null, 2), '完整日志 JSON 已复制');
+                },
+
+                copyContextJSON() {
+                    if (!this.detailEntry || !this.detailEntry.context) return;
+                    this.copyText(JSON.stringify(this.detailEntry.context, null, 2), '上下文 JSON 已复制');
+                },
+
+                async copyText(value, successMessage) {
+                    try {
+                        if (!value) throw new Error('没有可复制的内容');
+                        await navigator.clipboard.writeText(value);
+                        this.showToast(successMessage);
+                    } catch {
+                        this.showToast('复制失败');
+                    }
+                },
+
+                showToast(message) {
+                    this.toast = message;
+                    if (this.toastTimer) clearTimeout(this.toastTimer);
+                    this.toastTimer = setTimeout(() => {
+                        this.toast = '';
+                    }, 1600);
+                },
+
+                getLevelCount(l) {
+                    if (l === 'INFO') return this.stats.info || 0;
+                    if (l === 'WARN') return this.stats.warn || 0;
+                    if (l === 'ERROR') return this.stats.error || 0;
+                    if (l === 'FATAL') return this.stats.fatal || 0;
+                    if (l === 'DEBUG') return this.stats.debug || 0;
+                    return 0;
+                },
+
+                levelClass(level) {
+                    if (level === 'INFO') return 'bg-emerald-950 text-emerald-300 border-emerald-900';
+                    if (level === 'WARN') return 'bg-amber-950 text-amber-300 border-amber-900';
+                    if (level === 'ERROR' || level === 'FATAL') return 'bg-red-950 text-red-300 border-red-900';
+                    if (level === 'DEBUG') return 'bg-sky-950 text-sky-300 border-sky-900';
+                    return 'bg-neutral-900 text-neutral-300 border-neutral-700';
+                },
+
+                formatBytes(bytes) {
+                    if (bytes === 0) return '0 B';
+                    const k = 1024;
+                    const sizes = ['B', 'KB', 'MB', 'GB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                },
+
+                changePage(p) {
+                    if (p < 1 || p * this.limit - this.limit >= this.totalMatches) return;
+                    this.fetchEntries(p);
+                },
+
+                highlightJSON(obj) {
+                    if (!obj) return '';
+                    const jsonStr = JSON.stringify(obj, null, 2);
+                    let html = jsonStr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    return html.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, function (match) {
+                        let cls = 'text-amber-300';
+                        if (/^"/.test(match)) {
+                            cls = /:$/.test(match) ? 'text-blue-300' : 'text-emerald-300';
+                        } else if (/true|false/.test(match)) {
+                            cls = 'text-sky-300';
+                        } else if (/null/.test(match)) {
+                            cls = 'text-neutral-500';
+                        }
+                        return '<span class="' + cls + '">' + match + '</span>';
+                    });
+                }
+            }));
+        });
+    </script>
+</body>
+</html>

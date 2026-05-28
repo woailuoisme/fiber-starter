@@ -344,9 +344,27 @@ type DeviceConfig struct {
 }
 
 type SecurityConfig struct {
-	CORS      CORSConfig      `mapstructure:"cors"`
-	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
-	LoadShed  LoadShedConfig  `mapstructure:"load_shed"`
+	CORS           CORSConfig           `mapstructure:"cors"`
+	RateLimit      RateLimitConfig      `mapstructure:"rate_limit"`
+	LoadShed       LoadShedConfig       `mapstructure:"load_shed"`
+	CircuitBreaker CircuitBreakerConfig `mapstructure:"circuit_breaker"`
+	LogViewer      LogViewerConfig      `mapstructure:"log_viewer"`
+}
+
+type LogViewerConfig struct {
+	Enabled     bool   `mapstructure:"enabled"`
+	Path        string `mapstructure:"path"`
+	Username    string `mapstructure:"username"`
+	Password    string `mapstructure:"password"`
+	AllowDelete bool   `mapstructure:"allow_delete"`
+}
+
+type CircuitBreakerConfig struct {
+	Enabled               bool `mapstructure:"enabled"`
+	FailureThreshold      int  `mapstructure:"failure_threshold"`
+	Timeout               int  `mapstructure:"timeout"` // Timeout in seconds
+	SuccessThreshold      int  `mapstructure:"success_threshold"`
+	HalfOpenMaxConcurrent int  `mapstructure:"half_open_max_concurrent"`
 }
 
 type LoadShedConfig struct {

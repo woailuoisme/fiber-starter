@@ -172,6 +172,11 @@ func EnvConfigMap() map[string]any {
 		"SECURITY_LOAD_SHED_ENABLED":    "security.load_shed.enabled",
 		"SECURITY_LOAD_SHED_LOWER":      "security.load_shed.lower_threshold",
 		"SECURITY_LOAD_SHED_UPPER":      "security.load_shed.upper_threshold",
+		"LOG_VIEWER_ENABLED":            "security.log_viewer.enabled",
+		"LOG_VIEWER_PATH":               "security.log_viewer.path",
+		"LOG_VIEWER_USERNAME":           "security.log_viewer.username",
+		"LOG_VIEWER_PASSWORD":           "security.log_viewer.password",
+		"LOG_VIEWER_ALLOW_DELETE":       "security.log_viewer.allow_delete",
 
 		// Dependency criticality
 		"SERVICE_DATABASE_CRITICAL": "services.dependencies.database.critical",
@@ -292,18 +297,23 @@ func EnvConfigMap() map[string]any {
 	setFloat("OTEL_TRACE_SAMPLE_RATIO", "otel.trace_sample_ratio")
 
 	if val := strings.TrimSpace(os.Getenv("I18N_SUPPORTED_LANGUAGES")); val != "" {
-		var supported []string
-		for _, part := range strings.Split(val, ",") {
-			if s := strings.TrimSpace(part); s != "" {
-				supported = append(supported, s)
-			}
-		}
+		supported := splitCommaList(val)
 		if len(supported) > 0 {
 			m["i18n.supported_languages"] = supported
 		}
 	}
 
 	return m
+}
+
+func splitCommaList(value string) []string {
+	var parts []string
+	for _, part := range strings.Split(value, ",") {
+		if s := strings.TrimSpace(part); s != "" {
+			parts = append(parts, s)
+		}
+	}
+	return parts
 }
 
 func setConnTuningEnv(m map[string]any, conn string) {

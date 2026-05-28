@@ -486,7 +486,7 @@ func (j *dummyJob) TaskName() string             { return "dummy-job" }
 func (j *dummyJob) QueueName() string            { return "default" }
 
 type fakeApp struct {
-	artisan       artisanContracts.Artisan
+	artisan        artisanContracts.Artisan
 	auth           authContracts.Manager
 	authorization  authorizationContracts.Authorizer
 	cacheManager   cacheContracts.Manager
@@ -499,7 +499,7 @@ type fakeApp struct {
 }
 
 func (a *fakeApp) AppConfig() *configs.Config                    { return nil }
-func (a *fakeApp) ArtisanService() artisanContracts.Artisan       { return a.artisan }
+func (a *fakeApp) ArtisanService() artisanContracts.Artisan      { return a.artisan }
 func (a *fakeApp) ConfigRepository() configContracts.Repository  { return nil }
 func (a *fakeApp) DatabaseManager() databaseContracts.Manager    { return nil }
 func (a *fakeApp) ConnectionValue() databaseContracts.Connection { return nil }

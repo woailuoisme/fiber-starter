@@ -15,6 +15,7 @@ require (
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/goccy/go-json v0.10.6
 	github.com/gofiber/contrib/v3/casbin v1.0.6
+	github.com/gofiber/contrib/v3/circuitbreaker v1.0.7
 	github.com/gofiber/contrib/v3/i18n v1.0.6
 	github.com/gofiber/contrib/v3/jwt v1.1.5
 	github.com/gofiber/contrib/v3/loadshed v1.1.4
@@ -46,6 +47,7 @@ require (
 	github.com/uptrace/bun v1.2.18
 	github.com/uptrace/bun/dialect/pgdialect v1.2.18
 	github.com/uptrace/bun/dialect/sqlitedialect v1.2.18
+	github.com/uptrace/bun/extra/bunotel v1.2.18
 	github.com/valyala/fasthttp v1.71.0
 	github.com/xuri/excelize/v2 v2.10.1
 	go.opentelemetry.io/otel v1.43.0
@@ -185,6 +187,7 @@ require (
 	github.com/uptrace/bun/dialect/mssqldialect v1.2.15 // indirect
 	github.com/uptrace/bun/dialect/mysqldialect v1.2.15 // indirect
 	github.com/uptrace/bun/dialect/oracledialect v1.2.15 // indirect
+	github.com/uptrace/opentelemetry-go-extra/otelsql v0.3.2 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect

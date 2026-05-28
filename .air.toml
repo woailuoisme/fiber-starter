@@ -3,63 +3,88 @@ testdata_dir = "testdata"
 tmp_dir = "tmp"
 
 [build]
-  # 编译命令与二进制输出路径
-  cmd = "go build -o ./tmp/main ./cmd/app"
-  bin = "tmp/main"
-  
-  # 监控的文件类型与忽略的文件后缀
-  include_ext = ["go"]
-  exclude_ext = ["_test.go"]
-  
-  # 监控的源码目录与忽略的非核心目录
-  include_dir = ["internal", "configs", "routes", "database", "lang","docs"]
-  exclude_dir = ["assets", "tmp", "vendor", "testdata", "build", "coverage", "deploy", "storage/logs"]
-  exclude_file = []
-  
-  # 额外监控的环境变量配置文件
-  include_file = [".env", ".env.local", ".env.development", ".env.development.local", ".env.production", ".env.production.local", ".env.test", ".env.test.local"]
-  
-  # 编译防抖延迟（毫秒）与运行配置
-  delay = 1000
-  stop_on_root = false
-  send_interrupt = false
-  kill_delay = "0s"
-  bin_args = []
-  env = {}
-  
-  # 二进制启动参数 (运行 serve 子命令)
-  args_bin = ["serve"]
-  
-  # 编译和生命周期钩子
-  run_before = []
-  run_after = []
-  log = "build-errors.log"
-  
-  # 轮询模式与热重启延迟
-  poll = false
-  poll_interval = 0
-  rerun = false
-  rerun_delay = 500
+# 编译命令与二进制输出路径
+cmd = "go build -o ./tmp/main ./cmd/app"
+bin = "tmp/main"
+
+# 监控的文件类型与忽略的文件后缀
+include_ext = ["go"]
+exclude_ext = ["_test.go"]
+
+# 监控的源码目录与忽略的非核心目录
+include_dir = [
+  "internal",
+  "configs",
+  "routes",
+  "database",
+  "lang",
+  "docs",
+  "pkg",
+]
+exclude_dir = [
+  "assets",
+  "tmp",
+  "vendor",
+  "testdata",
+  "build",
+  "coverage",
+  "deploy",
+  "storage/logs",
+]
+exclude_file = []
+
+# 额外监控的配置文件与嵌入静态资源
+include_file = [
+  ".env",
+  ".env.local",
+  ".env.development",
+  ".env.development.local",
+  ".env.production",
+  ".env.production.local",
+  ".env.test",
+  ".env.test.local",
+  "pkg/logviewer/assets/index.html",
+]
+
+# 编译防抖延迟（毫秒）与运行配置
+delay = 1000
+stop_on_root = false
+send_interrupt = false
+kill_delay = "0s"
+bin_args = []
+env = {}
+
+# 二进制启动参数 (运行 serve 子命令)
+args_bin = ["serve"]
+
+# 编译和生命周期钩子
+run_before = []
+run_after = []
+log = "build-errors.log"
+
+# 轮询模式与热重启延迟
+poll = false
+poll_interval = 0
+rerun = false
+rerun_delay = 500
 
 [color]
-  # 控制台各模块日志配色
-  main = "magenta"
-  watcher = "cyan"
-  build = "yellow"
-  runner = "green"
+# 控制台各模块日志配色
+main = "magenta"
+watcher = "cyan"
+build = "yellow"
+runner = "green"
 
 [log]
-  # 日志时间与显示范围
-  time = true
-  main_only = false
+# 日志时间与显示范围
+time = true
+main_only = false
 
 [misc]
-  # 退出时是否清理二进制缓存
-  clean_on_exit = false
+# 退出时是否清理二进制缓存
+clean_on_exit = false
 
 [screen]
-  # 重启时清屏与保留滚动历史
-  clear_on_rebuild = false
-  keep_scroll = true
-
-
+# 重启时清屏与保留滚动历史
+clear_on_rebuild = false
+keep_scroll = true

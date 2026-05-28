@@ -72,6 +72,7 @@ func testArtisanRoot() *cobra.Command {
 		SilenceErrors: true,
 		SilenceUsage:  true,
 	}
+	root.AddGroup(&cobra.Group{ID: "system", Title: "System Commands"})
 	root.AddCommand(&cobra.Command{
 		Use:     "demo:ok <value>",
 		Short:   "Demo command",
