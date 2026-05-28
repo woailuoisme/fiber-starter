@@ -164,7 +164,7 @@ cli:
     @{{ APP_RUN }} --help
 
 # 初始化项目
-init: install-tools deps
+init: deps
     @[ -f .env ] || cp .env.example .env
 
 # 同步并整理依赖
@@ -180,22 +180,16 @@ deps:
 
 # 类似 npm ncu：列出直接依赖可升级版本
 outdated:
-    @sh scripts/mod-gcu.sh list
+    @sh scripts/go-upgrade.sh list
 
 # 类似 npm ncu -u：更新直接依赖到最新版本
 upgrade:
-    @sh scripts/mod-gcu.sh up
+    @sh scripts/go-upgrade.sh up
 
 # 只升级直接依赖的 patch 版本
-mod-gcu-up-patch:
-    @sh scripts/mod-gcu.sh patch
+upgrade-patch:
+    @sh scripts/go-upgrade.sh patch
 
-# 安装开发工具
-install-tools:
-    @{{ GO }} install github.com/air-verse/air@latest
-    @{{ GO }} install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-    @command -v atlas >/dev/null 2>&1 || curl -sSf https://atlasgo.sh | sh -s -- --yes -o /usr/local/bin/atlas
-    @{{ GO }} install github.com/swaggo/swag/cmd/swag@latest
 
 # 生成 PostgreSQL 迁移（NAME=xxx）
 atlas-diff-postgres name=NAME:

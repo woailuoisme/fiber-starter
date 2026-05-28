@@ -1,8 +1,8 @@
 [tools]
 go = "1.26.3"
-air = "latest"
-golangci-lint = "latest"
-atlas = "latest"
+air = "1"
+golangci-lint = "2"
+atlas = "0"
 ripgrep = "latest"
 fd = "latest"
 sd = "latest"

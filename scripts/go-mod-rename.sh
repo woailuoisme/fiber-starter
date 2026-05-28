@@ -4,8 +4,8 @@ set -eu
 usage() {
 	cat <<'EOF'
 Usage:
-  scripts/module-rename.sh rename <new-module> [old-module]
-  scripts/module-rename.sh copy <srcmod> <dstmod> [dir]
+  scripts/go-mod-rename.sh rename <new-module> [old-module]
+  scripts/go-mod-rename.sh copy <srcmod> <dstmod> [dir]
 
 Modes:
   rename  Rewrite the current repository in place to use a new module path.
@@ -59,12 +59,18 @@ case "$mode" in
 
 		go mod edit -module "$new_module"
 
-		files=$(git grep -lF --full-name -- "$old_module" 2>/dev/null || true)
+		# 使用 git grep -lFz 以 null 字节分隔输出，防止特殊文件名解析出错
+		files=$(git grep -lFz --full-name -- "$old_module" 2>/dev/null || true)
 		if [ -n "$files" ]; then
-			printf '%s\n' "$files" | while IFS= read -r file; do
-				[ -n "$file" ] || continue
-				OLD_MODULE="$old_module" NEW_MODULE="$new_module" perl -0pi -e 's/\Q$ENV{OLD_MODULE}\E/$ENV{NEW_MODULE}/g' "$file"
-			done
+			# 优先使用高效的 Rust 工具 sd 进行批量文本替换；若未安装，平滑降级回退到 perl
+			if command -v sd >/dev/null 2>&1; then
+				printf '%s' "$files" | xargs -0 sd -F "$old_module" "$new_module"
+			else
+				printf '%s' "$files" | tr '\0' '\n' | while IFS= read -r file; do
+					[ -n "$file" ] || continue
+					OLD_MODULE="$old_module" NEW_MODULE="$new_module" perl -0pi -e 's/\Q$ENV{OLD_MODULE}\E/$ENV{NEW_MODULE}/g' "$file"
+				done
+			fi
 		fi
 
 		go mod tidy

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# 部署打包脚本
-# 用法: ./scripts/deploy.sh [staging|production]
+# 编译与打包发布包的脚本
+# 用法: ./scripts/build-release.sh [staging|production]
 
 set -euo pipefail
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
@@ -13,11 +13,8 @@ if [ -f ".buildconfig" ]; then
     set +a
 fi
 
-if [ -n "${GOFLAGS:-}" ]; then
-    export GOFLAGS="$GOFLAGS -mod=mod"
-else
-    export GOFLAGS="-mod=mod"
-fi
+# 确保 Go 编译时优先使用本地 go.mod 依赖模式
+export GOFLAGS="${GOFLAGS:-} -mod=mod"
 
 BUILD_DIR=${BUILD_DIR:-build}
 SERVER_BINARY_NAME=${SERVER_BINARY_NAME:-lfiber}

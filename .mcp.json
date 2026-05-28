@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "code-review-graph": {
+      "command": "uvx",
+      "args": [
+        "code-review-graph",
+        "serve"
+      ],
+      "cwd": "/Users/seaside/Projects/go/fiber-starter",
+      "type": "stdio"
+    },
+    "codegraph": {
+      "command": "codegraph",
+      "args": [
+        "serve",
+        "--mcp"
+      ],
+      "cwd": "/Users/seaside/Projects/go/fiber-starter",
+      "type": "stdio"
+    }
+  }
+}

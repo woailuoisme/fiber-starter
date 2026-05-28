@@ -161,3 +161,6 @@ coverage.xml
 !.specify/memory/
 .specify/memory/*
 !.specify/memory/constitution.md
+# Added by code-review-graph
+.code-review-graph/
+.codegraph
