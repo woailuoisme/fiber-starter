@@ -1,7 +1,30 @@
 #!/bin/bash
 
-# 编译与打包发布包的脚本
-# 用法: ./scripts/build-release.sh [staging|production]
+# ==============================================================================
+# Go Fiber 应用程序编译与打包发布包脚本 (build-release.sh)
+# ==============================================================================
+#
+# 1. 主要功能 (Core Features):
+#    - 【环境配置加载】: 自动加载并应用本地的 `.buildconfig` 文件配置项。
+#    - 【代码质量门禁】: 打包前强制调用 `just check` (Lint 自动格式化/修复) 及 `just test` (测试套件运行)，
+#                       确保只有质量合格、测试通过的代码才会被编译并打包。
+#    - 【跨平台编译】: 基于当前 Git 的最新 tag、commit hash 和构建时间，利用 LDFLAGS 注入到主程序中，
+#                     交叉编译面向 Linux 平台的 amd64 二进制文件 (压缩大小并移除符号表)。
+#    - 【文件结构收集】: 创建隔离的临时目录，收敛二进制文件、运行时配置文件 (configs)、
+#                       数据库模型与迁移定义 (database) 及 .env.example 模板文件。
+#    - 【归档打包】: 将收集的资源归档并输出为标准 .tar.gz 发布包，便于后续分发与部署。
+#
+# 2. 命令行用法 (Usage):
+#    ./scripts/build-release.sh [staging|production]
+#
+# 3. 输出产物 (Artifacts):
+#    - 构建物路径: deploy/release-<environment>.tar.gz (例如: deploy/release-production.tar.gz)
+#    - 包内结构 (Archive Contents):
+#        ├── lfiber (主二进制文件)
+#        ├── configs/ (所有运行时 yaml 配置目录)
+#        ├── database/ (所有数据库迁移脚本与 seed 文件)
+#        └── .env.example (环境变量配置模板)
+# ==============================================================================
 
 set -euo pipefail
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
