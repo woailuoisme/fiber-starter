@@ -41,6 +41,7 @@ import (
 	storageContracts "lfiber/internal/providers/storage/contracts"
 	helpers "lfiber/internal/support"
 	"lfiber/internal/support/appctx"
+	medialibrary "lfiber/pkg/medialibrary"
 )
 
 // Runtime holds the application infrastructure dependencies (Providers).
@@ -69,6 +70,7 @@ type Runtime struct {
 	Translator      i18nContracts.Translator
 	Log             loggingContracts.Logger
 	RateLimiter     ratelimiterContracts.Limiter
+	MediaLibrary    *medialibrary.Service
 	Degraded        map[string]string
 }
 
@@ -208,6 +210,21 @@ func Build() (*Runtime, error) {
 				rt.Storage = storageManager
 			}
 			return err
+		}},
+		{"medialibrary", true, func() error {
+			if rt.Connection == nil || rt.Storage == nil {
+				return errors.New("database connection or storage is not registered")
+			}
+			bunDB, err := rt.Connection.BunDB()
+			if err != nil {
+				return fmt.Errorf("get bun db: %w", err)
+			}
+			defaultDisk := "local"
+			if cfg.Storage.Driver != "" {
+				defaultDisk = cfg.Storage.Driver
+			}
+			rt.MediaLibrary = medialibrary.NewService(bunDB, rt.Storage, defaultDisk)
+			return nil
 		}},
 		{"notification", true, func() error {
 			notificationManager, notificationService, err := notification.RegisterNotification(rt.EmailService)

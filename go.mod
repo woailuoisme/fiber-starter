@@ -6,8 +6,10 @@ require (
 	ariga.io/atlas-provider-bun v0.0.3
 	github.com/BurntSushi/toml v1.6.0
 	github.com/casbin/casbin/v2 v2.135.0
+	github.com/chai2010/webp v1.4.0
 	github.com/charmbracelet/huh v1.0.0
 	github.com/charmbracelet/lipgloss v1.1.0
+	github.com/disintegration/gift v1.2.1
 	github.com/dromara/carbon/v2 v2.6.16
 	github.com/fatih/color v1.19.0
 	github.com/go-faker/faker/v4 v4.7.0
@@ -59,6 +61,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.43.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/crypto v0.52.0
+	golang.org/x/image v0.41.0
 	golang.org/x/text v0.37.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1

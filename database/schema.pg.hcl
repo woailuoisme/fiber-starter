@@ -175,3 +175,108 @@ table "auth_otps" {
     expr = "max_attempts > 0"
   }
 }
+
+table "media" {
+  schema = schema.public
+
+  column "id" {
+    type           = bigint
+    null           = false
+    identity {
+      generated = "BY DEFAULT"
+    }
+  }
+
+  column "model_type" {
+    type = varchar(255)
+    null = false
+  }
+
+  column "model_id" {
+    type = varchar(255)
+    null = false
+  }
+
+  column "uuid" {
+    type = varchar(36)
+    null = false
+  }
+
+  column "collection_name" {
+    type = varchar(255)
+    null = false
+  }
+
+  column "name" {
+    type = varchar(255)
+    null = false
+  }
+
+  column "file_name" {
+    type = varchar(255)
+    null = false
+  }
+
+  column "mime_type" {
+    type = varchar(255)
+    null = false
+  }
+
+  column "disk" {
+    type = varchar(255)
+    null = false
+  }
+
+  column "size" {
+    type = bigint
+    null = false
+  }
+
+  column "manipulations" {
+    type    = jsonb
+    null    = false
+    default = sql("'{}'::jsonb")
+  }
+
+  column "custom_properties" {
+    type    = jsonb
+    null    = false
+    default = sql("'{}'::jsonb")
+  }
+
+  column "responsive_images" {
+    type    = jsonb
+    null    = false
+    default = sql("'{}'::jsonb")
+  }
+
+  column "order_column" {
+    type = integer
+    null = true
+  }
+
+  column "created_at" {
+    type    = timestamptz
+    null    = false
+    default = sql("CURRENT_TIMESTAMP")
+  }
+
+  column "updated_at" {
+    type    = timestamptz
+    null    = false
+    default = sql("CURRENT_TIMESTAMP")
+  }
+
+  primary_key {
+    columns = [column.id]
+  }
+
+  index "idx_media_model" {
+    columns = [column.model_type, column.model_id]
+  }
+
+  index "idx_media_uuid" {
+    unique  = true
+    columns = [column.uuid]
+  }
+}

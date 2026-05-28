@@ -171,3 +171,106 @@ table "auth_otps" {
     expr = "max_attempts > 0"
   }
 }
+
+table "media" {
+  schema = schema.main
+
+  column "id" {
+    type           = integer
+    null           = false
+    auto_increment = true
+  }
+
+  column "model_type" {
+    type = text
+    null = false
+  }
+
+  column "model_id" {
+    type = text
+    null = false
+  }
+
+  column "uuid" {
+    type = text
+    null = false
+  }
+
+  column "collection_name" {
+    type = text
+    null = false
+  }
+
+  column "name" {
+    type = text
+    null = false
+  }
+
+  column "file_name" {
+    type = text
+    null = false
+  }
+
+  column "mime_type" {
+    type = text
+    null = false
+  }
+
+  column "disk" {
+    type = text
+    null = false
+  }
+
+  column "size" {
+    type = integer
+    null = false
+  }
+
+  column "manipulations" {
+    type    = text
+    null    = false
+    default = "{}"
+  }
+
+  column "custom_properties" {
+    type    = text
+    null    = false
+    default = "{}"
+  }
+
+  column "responsive_images" {
+    type    = text
+    null    = false
+    default = "{}"
+  }
+
+  column "order_column" {
+    type = integer
+    null = true
+  }
+
+  column "created_at" {
+    type    = datetime
+    null    = false
+    default = sql("CURRENT_TIMESTAMP")
+  }
+
+  column "updated_at" {
+    type    = datetime
+    null    = false
+    default = sql("CURRENT_TIMESTAMP")
+  }
+
+  primary_key {
+    columns = [column.id]
+  }
+
+  index "idx_media_model" {
+    columns = [column.model_type, column.model_id]
+  }
+
+  index "idx_media_uuid" {
+    unique  = true
+    columns = [column.uuid]
+  }
+}
