@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"lfiber/configs"
+	artisanContracts "lfiber/internal/providers/artisan/contracts"
 	authContracts "lfiber/internal/providers/auth/contracts"
 	authorizationContracts "lfiber/internal/providers/authorization/contracts"
 	cacheContracts "lfiber/internal/providers/cache/contracts"
@@ -29,6 +30,10 @@ type HealthChecker interface {
 type ConfigProvider interface {
 	AppConfig() *configs.Config
 	ConfigRepository() configContracts.Repository
+}
+
+type ArtisanProvider interface {
+	ArtisanService() artisanContracts.Artisan
 }
 
 type DatabaseProvider interface {
@@ -96,6 +101,7 @@ type RateLimiterProvider interface {
 // Application is the shared application container contract used by facade packages.
 type Application interface {
 	ConfigProvider
+	ArtisanProvider
 	DatabaseProvider
 	CacheProvider
 	AuthProvider

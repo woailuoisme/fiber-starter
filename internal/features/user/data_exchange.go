@@ -8,6 +8,7 @@ import (
 
 	database "lfiber/internal/providers/database/contracts"
 	queue "lfiber/internal/providers/queue"
+	queueContracts "lfiber/internal/providers/queue/contracts"
 	helpers "lfiber/internal/support"
 	"lfiber/internal/support/appctx"
 
@@ -129,19 +130,15 @@ func (s *userDataExchange) QueueExport(ctx context.Context, storagePath string) 
 
 // UserImportJob handles asynchronous importing of users.
 type UserImportJob struct {
+	queueContracts.JobMeta
 	StoragePath string `json:"storage_path"`
 }
 
 func NewUserImportJob(storagePath string) *UserImportJob {
-	return &UserImportJob{StoragePath: storagePath}
-}
-
-func (j *UserImportJob) TaskName() string {
-	return "user_import"
-}
-
-func (j *UserImportJob) QueueName() string {
-	return "default"
+	return &UserImportJob{
+		JobMeta:     queueContracts.NewJobMeta("user_import", "default"),
+		StoragePath: storagePath,
+	}
 }
 
 func (j *UserImportJob) Handle(ctx context.Context) error {
@@ -180,19 +177,15 @@ func (j *UserImportJob) Handle(ctx context.Context) error {
 
 // UserExportJob handles asynchronous exporting of users.
 type UserExportJob struct {
+	queueContracts.JobMeta
 	StoragePath string `json:"storage_path"`
 }
 
 func NewUserExportJob(storagePath string) *UserExportJob {
-	return &UserExportJob{StoragePath: storagePath}
-}
-
-func (j *UserExportJob) TaskName() string {
-	return "user_export"
-}
-
-func (j *UserExportJob) QueueName() string {
-	return "default"
+	return &UserExportJob{
+		JobMeta:     queueContracts.NewJobMeta("user_export", "default"),
+		StoragePath: storagePath,
+	}
 }
 
 func (j *UserExportJob) Handle(ctx context.Context) error {

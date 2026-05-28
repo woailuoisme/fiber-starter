@@ -3,6 +3,7 @@ package middleware
 import (
 	"time"
 
+	"lfiber/internal/common/routing"
 	helpers "lfiber/internal/support"
 
 	"github.com/gofiber/fiber/v3"
@@ -65,17 +66,23 @@ func (r *TimeoutRouter) register(register routeRegister, path string, handlers .
 	lastIdx := len(handlers) - 1
 	lastHandler := TimeoutHandlerWithDuration(handlers[lastIdx], r.duration)
 
+	var route fiber.Router
 	if len(handlers) == 1 {
-		return register(path, lastHandler)
+		route = register(path, lastHandler)
+	} else {
+		args := make([]any, len(handlers))
+		for i := 0; i < lastIdx; i++ {
+			args[i] = handlers[i]
+		}
+		args[lastIdx] = lastHandler
+
+		route = register(path, args[0], args[1:]...)
 	}
 
-	args := make([]any, len(handlers))
-	for i := 0; i < lastIdx; i++ {
-		args[i] = handlers[i]
+	if name := routing.NameForHandler(handlers[lastIdx]); name != "" {
+		route.Name(name)
 	}
-	args[lastIdx] = lastHandler
-
-	return register(path, args[0], args[1:]...)
+	return route
 }
 
 // Get 注册 GET 路由，最后一个 handler 自动获得超时保护。

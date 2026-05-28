@@ -4,29 +4,24 @@ import (
 	"context"
 
 	mail "lfiber/internal/providers/mail"
+	queueContracts "lfiber/internal/providers/queue/contracts"
 	helpers "lfiber/internal/support"
 
 	"go.uber.org/zap"
 )
 
 type WelcomeEmailJob struct {
+	queueContracts.JobMeta
 	Email string `json:"email"`
 	Name  string `json:"name"`
 }
 
 func NewWelcomeEmailJob(email, name string) *WelcomeEmailJob {
 	return &WelcomeEmailJob{
-		Email: email,
-		Name:  name,
+		JobMeta: queueContracts.NewJobMeta("send_welcome_email", "default"),
+		Email:   email,
+		Name:    name,
 	}
-}
-
-func (j *WelcomeEmailJob) TaskName() string {
-	return "send_welcome_email"
-}
-
-func (j *WelcomeEmailJob) QueueName() string {
-	return "default"
 }
 
 func (j *WelcomeEmailJob) Handle(ctx context.Context) error {

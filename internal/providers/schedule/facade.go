@@ -10,6 +10,32 @@ import (
 
 var ErrContainerNotInitialized = errors.New("application container not initialized")
 
+// Registry is the feature-facing schedule registration surface.
+type Registry interface {
+	Job(job queueContracts.Job) *contracts.Event
+	Call(fn func() error) *contracts.Event
+	Command(command string, args ...string) *contracts.Event
+}
+
+type defaultRegistry struct{}
+
+// DefaultRegistry returns a registry backed by the default scheduler service.
+func DefaultRegistry() Registry {
+	return defaultRegistry{}
+}
+
+func (defaultRegistry) Job(job queueContracts.Job) *contracts.Event {
+	return Job(job)
+}
+
+func (defaultRegistry) Call(fn func() error) *contracts.Event {
+	return Call(fn)
+}
+
+func (defaultRegistry) Command(command string, args ...string) *contracts.Event {
+	return Command(command, args...)
+}
+
 // service returns the default scheduler service instance from the container.
 func service() contracts.Scheduler {
 	if app := appctx.App(); app != nil {

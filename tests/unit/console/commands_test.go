@@ -11,6 +11,7 @@ import (
 	"lfiber/configs"
 	command "lfiber/internal/console/commands"
 	"lfiber/internal/console/commands/commandutil"
+	artisan "lfiber/internal/providers/artisan"
 	"lfiber/internal/providers"
 	cacheDrivers "lfiber/internal/providers/cache/drivers"
 
@@ -165,6 +166,17 @@ func TestRootCommand_HasLaravelStyleCommands(t *testing.T) {
 		assert.Contains(t, out, name)
 	}
 	assert.Contains(t, out, "--no-interaction")
+}
+
+func TestArtisanCall_UsesConsoleRootCommand(t *testing.T) {
+	service, err := artisan.Register(command.NewRootCommand)
+	require.NoError(t, err)
+
+	result, err := service.Call("hash:make", "secret-value")
+	require.NoError(t, err)
+	assert.Equal(t, 0, result.ExitCode)
+	assert.NotEmpty(t, strings.TrimSpace(result.Output))
+	assert.Empty(t, result.ErrorOutput)
 }
 
 func TestConfigShow_AllowsDefaultsWithoutEnvFile(t *testing.T) {

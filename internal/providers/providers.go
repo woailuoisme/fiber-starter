@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"lfiber/configs"
+	artisan "lfiber/internal/providers/artisan"
+	artisanContracts "lfiber/internal/providers/artisan/contracts"
 	auth "lfiber/internal/providers/auth"
 	authContracts "lfiber/internal/providers/auth/contracts"
 	authorization "lfiber/internal/providers/authorization"
@@ -44,6 +46,7 @@ import (
 // Runtime holds the application infrastructure dependencies (Providers).
 type Runtime struct {
 	Config          *configs.Config
+	Artisan         artisanContracts.Artisan
 	ConfigRepo      configContracts.Repository
 	Database        databaseContracts.Manager
 	Connection      databaseContracts.Connection
@@ -106,6 +109,13 @@ func Build() (*Runtime, error) {
 			configRepo, err := config.RegisterConfig(k)
 			if err == nil {
 				rt.ConfigRepo = configRepo
+			}
+			return err
+		}},
+		{"artisan", true, func() error {
+			artisanService, err := artisan.Register()
+			if err == nil {
+				rt.Artisan = artisanService
 			}
 			return err
 		}},
@@ -327,6 +337,8 @@ func (rt *Runtime) DegradedProviders() map[string]string {
 }
 
 func (rt *Runtime) AppConfig() *configs.Config { return rt.Config }
+
+func (rt *Runtime) ArtisanService() artisanContracts.Artisan { return rt.Artisan }
 
 func (rt *Runtime) ConfigRepository() configContracts.Repository { return rt.ConfigRepo }
 

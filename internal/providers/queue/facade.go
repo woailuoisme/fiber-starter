@@ -10,6 +10,22 @@ import (
 
 var ErrContainerNotInitialized = errors.New("application container not initialized")
 
+// Registry is the feature-facing queue job registration surface.
+type Registry interface {
+	Job(job contracts.Job)
+}
+
+type registryFunc func(contracts.Job)
+
+func (f registryFunc) Job(job contracts.Job) {
+	f(job)
+}
+
+// DefaultRegistry returns a registry backed by the default queue service.
+func DefaultRegistry() Registry {
+	return registryFunc(Register)
+}
+
 // service returns the default queue service instance from the container.
 func service() contracts.Queue {
 	if app := appctx.App(); app != nil {

@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 
+	queueContracts "lfiber/internal/providers/queue/contracts"
 	helpers "lfiber/internal/support"
 
 	"go.uber.org/zap"
@@ -10,23 +11,17 @@ import (
 
 // ReminderNotificationJob 模拟一个提醒通知任务
 type ReminderNotificationJob struct {
+	queueContracts.JobMeta
 	UserID  int64  `json:"user_id"`
 	Message string `json:"message"`
 }
 
 func NewReminderNotificationJob(userID int64, message string) *ReminderNotificationJob {
 	return &ReminderNotificationJob{
+		JobMeta: queueContracts.NewJobMeta("reminder_notification", "default"),
 		UserID:  userID,
 		Message: message,
 	}
-}
-
-func (j *ReminderNotificationJob) TaskName() string {
-	return "reminder_notification"
-}
-
-func (j *ReminderNotificationJob) QueueName() string {
-	return "default"
 }
 
 func (j *ReminderNotificationJob) Handle(ctx context.Context) error {
