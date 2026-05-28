@@ -1,0 +1,26 @@
+["pagination.showing"]
+other = "Showing {{.From}} to {{.To}} of {{.Total}} entries"
+
+["pagination.per_page"]
+other = "Per page"
+
+["pagination.items"]
+other = "items"
+
+["pagination.page"]
+other = "Page"
+
+["pagination.of"]
+other = "of"
+
+["pagination.first"]
+other = "First"
+
+["pagination.last"]
+other = "Last"
+
+["pagination.next"]
+other = "Next"
+
+["pagination.previous"]
+other = "Previous"

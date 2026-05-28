@@ -1,0 +1,8 @@
+["app.name"]
+other = "Lunchbox Vending System"
+
+["app.welcome"]
+other = "Welcome to Lunchbox Vending System"
+
+["app.description"]
+other = "Enterprise-grade vending machine management system."

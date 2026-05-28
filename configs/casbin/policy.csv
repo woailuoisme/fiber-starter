@@ -1,0 +1,8 @@
+p, super_admin, users, list
+p, super_admin, users, read
+p, super_admin, users, update
+p, super_admin, users, delete
+p, super_admin, users, export
+p, super_admin, users, import
+
+g, user:1, super_admin

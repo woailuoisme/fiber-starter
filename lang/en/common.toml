@@ -1,0 +1,77 @@
+["common.yes"]
+other = "Yes"
+
+["common.no"]
+other = "No"
+
+["common.ok"]
+other = "OK"
+
+["common.cancel"]
+other = "Cancel"
+
+["common.save"]
+other = "Save"
+
+["common.delete"]
+other = "Delete"
+
+["common.edit"]
+other = "Edit"
+
+["common.create"]
+other = "Create"
+
+["common.update"]
+other = "Update"
+
+["common.search"]
+other = "Search"
+
+["common.filter"]
+other = "Filter"
+
+["common.sort"]
+other = "Sort"
+
+["common.export"]
+other = "Export"
+
+["common.import"]
+other = "Import"
+
+["common.refresh"]
+other = "Refresh"
+
+["common.back"]
+other = "Back"
+
+["common.next"]
+other = "Next"
+
+["common.previous"]
+other = "Previous"
+
+["common.submit"]
+other = "Submit"
+
+["common.reset"]
+other = "Reset"
+
+["common.close"]
+other = "Close"
+
+["common.loading"]
+other = "Loading..."
+
+["common.no_data"]
+other = "No data available."
+
+["common.confirm"]
+other = "Confirm"
+
+["common.warning"]
+other = "Warning"
+
+["common.info"]
+other = "Info"

@@ -31,9 +31,3 @@ services:
       critical: ${SERVICE_STORAGE_CRITICAL:false}
     realtime:
       critical: ${SERVICE_REALTIME_CRITICAL:false}
-
-otel:
-  enabled: ${OTEL_ENABLED:false}
-  service_name: ${OTEL_SERVICE_NAME:lfiber}
-  exporter_type: grpc
-  endpoint: ${OTEL_ENDPOINT:localhost:4317}

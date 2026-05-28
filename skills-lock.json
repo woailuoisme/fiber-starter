@@ -25,6 +25,12 @@
       "skillPath": "skills/engineering/diagnose/SKILL.md",
       "computedHash": "15939a26f86edec2d4862042b8564e5a062cb81d04e047a0cea6305c8830b5f5"
     },
+    "fiber-logging-and-project-structure": {
+      "source": "oimiragieo/agent-studio",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/fiber-logging-and-project-structure/SKILL.md",
+      "computedHash": "8181c34bf68e3a5569a94c58293b96d63d80a5187c268c2ae7ba7a0f3f356455"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",

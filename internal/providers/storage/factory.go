@@ -44,6 +44,9 @@ func createDisk(name string, cfg *configs.Config) (contracts.Disk, error) {
 	case "s3", "garage", "minio", "r2", "oss":
 		return drivers.NewS3Driver(cfg, driver), nil
 
+	case "noop", "null":
+		return drivers.NewNoopDisk(), nil
+
 	default:
 		return nil, fmt.Errorf("storage driver [%s] is not supported", driver)
 	}

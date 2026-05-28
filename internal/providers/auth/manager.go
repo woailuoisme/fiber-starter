@@ -12,29 +12,30 @@ import (
 
 // Manager manages authentication guards and user providers
 type Manager struct {
-	cfg          *configs.Config
-	db           database.Connection
-	hasher       hashContracts.Hasher
-	guards       map[string]contracts.Guard
-	modelCreator func() any
-	mu           sync.RWMutex
+	cfg           *configs.Config
+	db            database.Connection
+	hasher        hashContracts.Hasher
+	guards        map[string]contracts.Guard
+	modelCreators map[string]func() any
+	mu            sync.RWMutex
 }
 
 // NewManager creates a new auth manager instance
 func NewManager(cfg *configs.Config, db database.Connection, hasher hashContracts.Hasher) *Manager {
 	return &Manager{
-		cfg:    cfg,
-		db:     db,
-		hasher: hasher,
-		guards: make(map[string]contracts.Guard),
+		cfg:           cfg,
+		db:            db,
+		hasher:        hasher,
+		guards:        make(map[string]contracts.Guard),
+		modelCreators: make(map[string]func() any),
 	}
 }
 
-// SetModelCreator sets the model creator function
-func (m *Manager) SetModelCreator(creator func() any) {
+// SetModelCreator sets the model creator function for a specific provider
+func (m *Manager) SetModelCreator(provider string, creator func() any) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.modelCreator = creator
+	m.modelCreators[provider] = creator
 }
 
 // Guard returns an authentication guard by name
@@ -62,22 +63,23 @@ func (m *Manager) resolve(name string) contracts.Guard {
 	if !ok {
 		// If not found, use a default configuration or return a basic JWT guard
 		provider := drivers.NewDatabaseUserProvider(m.db, "users", m.hasher)
-		provider.SetModelCreator(m.modelCreator)
+		provider.SetModelCreator(m.modelCreators["users"])
 		return drivers.NewJWTGuard(provider)
 	}
 
 	// Resolve the user provider for this guard
-	providerCfg := m.cfg.Auth.Providers[guardCfg.Provider]
+	providerName := guardCfg.Provider
+	providerCfg := m.cfg.Auth.Providers[providerName]
 	var provider contracts.UserProvider
 
 	switch providerCfg.Driver {
 	case "database":
 		dbProvider := drivers.NewDatabaseUserProvider(m.db, providerCfg.Table, m.hasher)
-		dbProvider.SetModelCreator(m.modelCreator)
+		dbProvider.SetModelCreator(m.modelCreators[providerName])
 		provider = dbProvider
 	default:
 		dbProvider := drivers.NewDatabaseUserProvider(m.db, "users", m.hasher)
-		dbProvider.SetModelCreator(m.modelCreator)
+		dbProvider.SetModelCreator(m.modelCreators["users"])
 		provider = dbProvider
 	}
 

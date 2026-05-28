@@ -10,6 +10,19 @@ import (
 	"golang.org/x/text/language"
 )
 
+const localeOverrideKey = "i18n.locale_override"
+
+func resolveOverrideLanguage(c fiber.Ctx, cfg configs.I18nConfig) string {
+	if c == nil {
+		return ""
+	}
+	locale, _ := c.Locals(localeOverrideKey).(string)
+	if locale == "" {
+		return ""
+	}
+	return matchSupportedLanguage(locale, cfg.SupportedLanguages)
+}
+
 func resolveQueryLanguage(c fiber.Ctx, cfg configs.I18nConfig) string {
 	if c == nil {
 		return ""
@@ -176,6 +189,9 @@ func SetLanguage(c fiber.Ctx, cfg configs.I18nConfig, lang string) error {
 
 // GetCurrentLanguage returns the active language for the request.
 func GetCurrentLanguage(c fiber.Ctx, cfg configs.I18nConfig) string {
+	if current := resolveOverrideLanguage(c, cfg); current != "" {
+		return current
+	}
 	if current := resolveQueryLanguage(c, cfg); current != "" {
 		return current
 	}

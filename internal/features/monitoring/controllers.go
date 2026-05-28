@@ -41,7 +41,6 @@ func (h *HealthController) Health(c fiber.Ctx) error {
 //	@Tags			系统监控
 //	@Produce		json
 //	@Success		200	{object}	map[string]interface{}	"服务正常"
-//	@Failure		503	{object}	map[string]interface{}	"服务不可用"
 //	@Router			/ready [get]
 func (h *HealthController) Ready(c fiber.Ctx) error {
 	agg := health.NewAggregator(h.app)

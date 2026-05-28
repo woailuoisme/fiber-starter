@@ -61,13 +61,15 @@ API 一致性、性能与高可用、安全运维等不可协商规则。所有 
 
 ### 观测与工具
 
-- **OpenTelemetry**：分布式追踪与监控 (Otlp/gRPC)
+- **OpenTelemetry**：基于 Fiber 官方 contrib 中间件的分布式追踪与 Prometheus 指标
 - **Zap**：高性能日志库
 - **Excelize v2**：Excel 导入导出
 - **Resend**：邮件发送 SDK
 - **Validator**: 数据验证
 - **Carbon**: 时间处理
 - **Swagger UI + Swagger 2.0 JSON**: API 规范展示
+
+OpenTelemetry 通过 `OTEL_TRACE_ENABLED` 和 `OTEL_METRICS_ENABLED` 分别控制追踪与指标；`OTEL_TRACE_SAMPLE_RATIO` 控制采样比例，`OTEL_OTLP_INSECURE` 控制 OTLP gRPC 是否使用明文连接。本项目不再使用 `OTEL_ENABLED` 总开关。
 
 ## Fiber 启动配置
 
@@ -127,10 +129,10 @@ SERVICE_REALTIME_CRITICAL=false
 
 ### 目录结构
 
-本项目代码采用受 Laravel 启发的 Feature-First 架构：
+本项目代码采用受 Laravel 启发的 Feature-First 架构，业务特性内部保持扁平单包结构：
 
 - **`cmd/app/`**: 单一入口点，HTTP 服务通过 `serve` 子命令启动。
-- **`internal/features/`**: 业务特性切片，每个特性自包含路由、请求 DTO、控制器/handler、服务、仓储和模型。
+- **`internal/features/`**: 业务特性切片，每个特性自包含 `routes.go`、`controllers.go`、`services.go`、`repository.go`、`requests.go` 和 `models.go` 等文件，不在特性内部再拆嵌套分层子包。
 - **`internal/providers/`**: 基础设施 provider，管理数据库、缓存、邮件、队列、搜索、存储、日志、验证、限流等生命周期。
 - **`internal/bootstrap/`**: 应用启动引导、HTTP app 创建、路由注册和运行器。
 - **`internal/common/`**: 共享异常、请求绑定、全局中间件和队列基础设施。

@@ -1,6 +1,6 @@
 i18n:
   enabled: true
-  default_language: ${APP_LOCALE:zh-CN}
+  default_language: ${APP_LOCALE:en}
   supported_languages:
     - en
     - zh-CN

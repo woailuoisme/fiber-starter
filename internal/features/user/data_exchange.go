@@ -219,3 +219,71 @@ func (j *UserExportJob) Handle(ctx context.Context) error {
 	helpers.Info("UserExportJob completed successfully", zap.String("path", j.StoragePath))
 	return nil
 }
+
+// UserImport 用户导入类
+type UserImport struct{}
+
+// Model 将行数据转换为模型
+func (i *UserImport) Model(row []string) any {
+	if len(row) < 3 {
+		return nil
+	}
+
+	// 假设 Excel 列顺序为：姓名, 邮箱, 电话
+	// 注意：这里跳过了 ID，因为通常导入是新增或通过邮箱匹配
+	user := &User{
+		Name:  row[0],
+		Email: row[1],
+	}
+
+	if len(row) > 2 && row[2] != "" {
+		phone := row[2]
+		user.Phone = &phone
+	}
+
+	// 默认状态
+	user.Status = UserStatusActive
+
+	return user
+}
+
+// UserExport 用户导出类
+type UserExport struct {
+	Users []User
+}
+
+// Collection 获取导出数据
+func (e *UserExport) Collection() any {
+	return e.Users
+}
+
+// Headings 设置表头
+func (e *UserExport) Headings() []string {
+	return []string{
+		"ID",
+		"Name",
+		"Email",
+		"Phone",
+		"Status",
+		"Created At",
+	}
+}
+
+// Map 映射每行数据
+func (e *UserExport) Map(item any) []any {
+	user := item.(User)
+
+	phone := ""
+	if user.Phone != nil {
+		phone = *user.Phone
+	}
+
+	return []any{
+		user.ID,
+		user.Name,
+		user.Email,
+		phone,
+		user.Status,
+		user.CreatedAt.Format("2006-01-02 15:04:05"),
+	}
+}

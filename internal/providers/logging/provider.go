@@ -31,6 +31,13 @@ func Register(cfg configs.LoggerConfig) (loggingContracts.Logger, error) {
 		config:   cfg,
 	}
 	service.loggers["default"] = built
+
+	// 桥接日志到底层的配置加载包，避免循环依赖，使底层的 env 加载也能走定义的 log facade
+	configs.SetLogger(
+		func(msg string) { service.Info(msg) },
+		func(msg string) { service.Warn(msg) },
+	)
+
 	return service, nil
 }
 

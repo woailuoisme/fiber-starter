@@ -1,6 +1,6 @@
 logger:
   level: ${LOG_LEVEL:info}
-  channel: ${LOG_CHANNEL:stack}
+  output: ${LOGGER_OUTPUT:stack}
   max_size: 100
   max_age: 30
   max_backups: 10

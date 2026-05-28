@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"lfiber/configs"
+	requests "lfiber/internal/common/requests"
 	helpers "lfiber/internal/support"
 
 	json "github.com/goccy/go-json"
@@ -37,6 +38,7 @@ func NewHTTPApp(cfg *configs.Config) *fiber.App {
 		Immutable:         fiberCfg.Immutable,
 		JSONEncoder:       json.Marshal,
 		JSONDecoder:       json.Unmarshal,
+		StructValidator:   requests.NewStructValidator(),
 		ErrorHandler:      helpers.HandleHTTPError,
 	})
 }

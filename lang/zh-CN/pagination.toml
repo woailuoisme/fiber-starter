@@ -1,0 +1,26 @@
+["pagination.showing"]
+other = "显示 {{.From}} 到 {{.To}}，共 {{.Total}} 条记录"
+
+["pagination.per_page"]
+other = "每页"
+
+["pagination.items"]
+other = "条"
+
+["pagination.page"]
+other = "页"
+
+["pagination.of"]
+other = "共"
+
+["pagination.first"]
+other = "首页"
+
+["pagination.last"]
+other = "末页"
+
+["pagination.next"]
+other = "下一页"
+
+["pagination.previous"]
+other = "上一页"

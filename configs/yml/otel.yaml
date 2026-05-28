@@ -9,6 +9,10 @@ otel:
   exporter_type: ${OTEL_EXPORTER_TYPE:stdout}
   # OTLP Collector 的 gRPC 接收地址 (仅在 exporter_type 为 otlp 且开启 trace_enabled 时生效)
   endpoint: ${OTEL_ENDPOINT:localhost:4317}
+  # 本地 Collector 通常使用明文 gRPC；生产环境如使用 TLS 可设为 false
+  otlp_insecure: ${OTEL_OTLP_INSECURE:true}
+  # Trace 采样比例，1.0 表示全量采样，0.1 表示采样 10%
+  trace_sample_ratio: ${OTEL_TRACE_SAMPLE_RATIO:1.0}
   # 是否开启 Prometheus 性能指标度量暴露 (/metrics)
   metrics_enabled: ${OTEL_METRICS_ENABLED:false}
   # Prometheus 抓取指标的 HTTP 路由路径

@@ -3,7 +3,6 @@ package configs
 
 import (
 	"fmt"
-	"log"
 
 	"lfiber/configs/internal"
 
@@ -26,6 +25,7 @@ type (
 	DBSeederConfig             = internal.DBSeederConfig
 	DBRedisConfig              = internal.DBRedisConfig
 	AuthConfig                 = internal.AuthConfig
+	AuthorizationConfig        = internal.AuthorizationConfig
 	GuardConfig                = internal.GuardConfig
 	ProviderConfig             = internal.ProviderConfig
 	JWTConfig                  = internal.JWTConfig
@@ -81,7 +81,7 @@ func LoadConfig() (*Config, *koanf.Koanf, error) {
 		return nil, nil, err
 	}
 	if err := internal.LoadConfigFiles(k); err != nil {
-		log.Printf("Warning: failed to load config files from configs/: %v", err)
+		internal.LogWarn(fmt.Sprintf("Warning: failed to load config files from configs/: %v", err))
 	}
 	if err := k.Load(confmap.Provider(internal.EnvConfigMap(), "."), nil); err != nil {
 		return nil, nil, err
@@ -123,6 +123,25 @@ func applyUnmarshalFallbacks(k *koanf.Koanf, cfg *internal.Config) {
 	if cfg.Notification.Telegram.ParseMode == "" {
 		cfg.Notification.Telegram.ParseMode = k.String("notification.telegram.parse_mode")
 	}
+	if cfg.Logger.Output == "" {
+		cfg.Logger.Output = k.String("logger.channel")
+	}
+	cfg.OTEL.TraceEnabled = k.Bool("otel.trace_enabled")
+	if cfg.OTEL.ServiceName == "" {
+		cfg.OTEL.ServiceName = k.String("otel.service_name")
+	}
+	if cfg.OTEL.ExporterType == "" {
+		cfg.OTEL.ExporterType = k.String("otel.exporter_type")
+	}
+	if cfg.OTEL.Endpoint == "" {
+		cfg.OTEL.Endpoint = k.String("otel.endpoint")
+	}
+	cfg.OTEL.OTLPInsecure = k.Bool("otel.otlp_insecure")
+	cfg.OTEL.TraceSampleRatio = k.Float64("otel.trace_sample_ratio")
+	cfg.OTEL.MetricsEnabled = k.Bool("otel.metrics_enabled")
+	if cfg.OTEL.MetricsPath == "" {
+		cfg.OTEL.MetricsPath = k.String("otel.metrics_path")
+	}
 }
 
 // LoadDatabaseConfig specifically loads the database configuration, useful for migration tools.
@@ -135,7 +154,7 @@ func LoadDatabaseConfig() (*DatabaseConfig, error) {
 		return nil, err
 	}
 	if err := internal.LoadConfigFiles(k); err != nil {
-		log.Printf("Warning: failed to load config files from configs/: %v", err)
+		internal.LogWarn(fmt.Sprintf("Warning: failed to load config files from configs/: %v", err))
 	}
 	if err := k.Load(confmap.Provider(internal.EnvConfigMap(), "."), nil); err != nil {
 		return nil, err
@@ -149,4 +168,10 @@ func LoadDatabaseConfig() (*DatabaseConfig, error) {
 	}
 
 	return dbConfig, nil
+}
+
+// SetLogger 允许高层注入日志接口以避免循环依赖
+func SetLogger(infoLog, warnLog func(string)) {
+	internal.LogInfo = infoLog
+	internal.LogWarn = warnLog
 }

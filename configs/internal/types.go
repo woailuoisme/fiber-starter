@@ -105,27 +105,33 @@ type ProviderConfig struct {
 }
 
 type Config struct {
-	App          AppConfig          `mapstructure:"app"`
-	Database     DatabaseConfig     `mapstructure:"database"`
-	Auth         AuthConfig         `mapstructure:"auth"`
-	JWT          JWTConfig          `mapstructure:"jwt"`
-	Redis        RedisConfig        `mapstructure:"redis"`
-	Logger       LoggerConfig       `mapstructure:"logger"`
-	Cache        CacheConfig        `mapstructure:"cache"`
-	Mail         MailConfig         `mapstructure:"mail"`
-	Notification NotificationConfig `mapstructure:"notification"`
-	Queue        QueueConfig        `mapstructure:"queue"`
-	Storage      StorageConfig      `mapstructure:"storage"`
-	WebSocket    WebSocketConfig    `mapstructure:"websocket"`
-	Payment      PaymentConfig      `mapstructure:"payment"`
-	Business     BusinessConfig     `mapstructure:"business"`
-	Security     SecurityConfig     `mapstructure:"security"`
-	I18n         I18nConfig         `mapstructure:"i18n"`
-	Search       SearchConfig       `mapstructure:"search"`
-	Hash         HashConfig         `mapstructure:"hash"`
-	OTEL         OTELConfig         `mapstructure:"otel"`
-	Limiter      LimiterConfig      `mapstructure:"limiter"`
-	Services     ServicesConfig     `mapstructure:"services"`
+	App           AppConfig           `mapstructure:"app"`
+	Database      DatabaseConfig      `mapstructure:"database"`
+	Auth          AuthConfig          `mapstructure:"auth"`
+	Authorization AuthorizationConfig `mapstructure:"authorization"`
+	JWT           JWTConfig           `mapstructure:"jwt"`
+	Redis         RedisConfig         `mapstructure:"redis"`
+	Logger        LoggerConfig        `mapstructure:"logger"`
+	Cache         CacheConfig         `mapstructure:"cache"`
+	Mail          MailConfig          `mapstructure:"mail"`
+	Notification  NotificationConfig  `mapstructure:"notification"`
+	Queue         QueueConfig         `mapstructure:"queue"`
+	Storage       StorageConfig       `mapstructure:"storage"`
+	WebSocket     WebSocketConfig     `mapstructure:"websocket"`
+	Payment       PaymentConfig       `mapstructure:"payment"`
+	Business      BusinessConfig      `mapstructure:"business"`
+	Security      SecurityConfig      `mapstructure:"security"`
+	I18n          I18nConfig          `mapstructure:"i18n"`
+	Search        SearchConfig        `mapstructure:"search"`
+	Hash          HashConfig          `mapstructure:"hash"`
+	OTEL          OTELConfig          `mapstructure:"otel"`
+	Limiter       LimiterConfig       `mapstructure:"limiter"`
+	Services      ServicesConfig      `mapstructure:"services"`
+}
+
+type AuthorizationConfig struct {
+	ModelFile  string `mapstructure:"model_file"`
+	PolicyFile string `mapstructure:"policy_file"`
 }
 
 type ServicesConfig struct {
@@ -366,12 +372,14 @@ type LimiterConfig struct {
 }
 
 type OTELConfig struct {
-	TraceEnabled   bool   `mapstructure:"trace_enabled"` // 是否启用链路追踪 (Tracer 引擎)
-	ServiceName    string `mapstructure:"service_name"`
-	ExporterType   string `mapstructure:"exporter_type"`   // exporter_type 可选值: stdout (开发调试输出至控制台), otlp (生产推荐推送至 OTel Collector)
-	Endpoint       string `mapstructure:"endpoint"`        // OTLP Collector 的 gRPC 地址，仅当 ExporterType 为 otlp 且开启 trace_enabled 时生效
-	MetricsEnabled bool   `mapstructure:"metrics_enabled"` // 是否启用 Prometheus 指标监控 (/metrics)
-	MetricsPath    string `mapstructure:"metrics_path"`    // Prometheus 抓取指标的路由路径
+	TraceEnabled     bool    `mapstructure:"trace_enabled"` // 是否启用链路追踪 (Tracer 引擎)
+	ServiceName      string  `mapstructure:"service_name"`
+	ExporterType     string  `mapstructure:"exporter_type"`      // exporter_type 可选值: stdout (开发调试输出至控制台), otlp (生产推荐推送至 OTel Collector)
+	Endpoint         string  `mapstructure:"endpoint"`           // OTLP Collector 的 gRPC 地址，仅当 ExporterType 为 otlp 且开启 trace_enabled 时生效
+	OTLPInsecure     bool    `mapstructure:"otlp_insecure"`      // 是否使用非 TLS OTLP gRPC 连接，适合本地 Collector
+	TraceSampleRatio float64 `mapstructure:"trace_sample_ratio"` // Trace 采样比例，范围 0.0-1.0
+	MetricsEnabled   bool    `mapstructure:"metrics_enabled"`    // 是否启用 Prometheus 指标监控 (/metrics)
+	MetricsPath      string  `mapstructure:"metrics_path"`       // Prometheus 抓取指标的路由路径
 }
 
 type I18nConfig struct {

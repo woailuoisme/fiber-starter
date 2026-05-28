@@ -1,0 +1,62 @@
+["fields.email"]
+other = "邮箱"
+
+["fields.password"]
+other = "密码"
+
+["fields.name"]
+other = "姓名"
+
+["fields.username"]
+other = "用户名"
+
+["fields.phone"]
+other = "电话"
+
+["fields.address"]
+other = "地址"
+
+["fields.city"]
+other = "城市"
+
+["fields.country"]
+other = "国家"
+
+["fields.zipcode"]
+other = "邮编"
+
+["fields.description"]
+other = "描述"
+
+["fields.title"]
+other = "标题"
+
+["fields.content"]
+other = "内容"
+
+["fields.status"]
+other = "状态"
+
+["fields.type"]
+other = "类型"
+
+["fields.amount"]
+other = "金额"
+
+["fields.quantity"]
+other = "数量"
+
+["fields.price"]
+other = "价格"
+
+["fields.total"]
+other = "总计"
+
+["fields.avatar"]
+other = "头像"
+
+["fields.created_at"]
+other = "创建时间"
+
+["fields.updated_at"]
+other = "更新时间"

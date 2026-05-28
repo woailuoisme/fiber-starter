@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"lfiber/configs"
-	requests "lfiber/internal/common/requests"
 	user "lfiber/internal/features/user"
 	providers "lfiber/internal/providers"
 	helpers "lfiber/internal/support"
@@ -28,7 +27,7 @@ func Boot() (*Kernel, func(), error) {
 	}
 
 	// Inject model creator to auth manager to avoid circular dependency
-	rt.Auth.SetModelCreator(func() any {
+	rt.Auth.SetModelCreator("users", func() any {
 		return &user.User{}
 	})
 
@@ -40,7 +39,6 @@ func Boot() (*Kernel, func(), error) {
 	// Inject providers into legacy support packages
 	helpers.Init(rt.Log)
 	helpers.InitStorage(rt.Storage)
-	requests.InitValidator(rt.Validation)
 
 	cleanup := func() {
 		_ = rt.Log.Sync()

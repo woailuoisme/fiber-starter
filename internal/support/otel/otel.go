@@ -3,6 +3,7 @@ package otel
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"lfiber/configs"
 	helpers "lfiber/internal/support"
@@ -25,6 +26,8 @@ var GlobalPrometheusExporter *prometheus.Exporter
 // InitOTEL 初始化 OpenTelemetry 追踪器和/或指标度量器。
 // 返回一个关闭函数，应在应用程序退出时调用。
 func InitOTEL(cfg *configs.Config) (func(context.Context) error, error) {
+	GlobalPrometheusExporter = nil
+
 	if !cfg.OTEL.TraceEnabled && !cfg.OTEL.MetricsEnabled {
 		return func(context.Context) error { return nil }, nil
 	}
@@ -39,12 +42,18 @@ func InitOTEL(cfg *configs.Config) (func(context.Context) error, error) {
 	var err error
 
 	if cfg.OTEL.TraceEnabled {
-		switch cfg.OTEL.ExporterType {
+		exporterType := strings.ToLower(strings.TrimSpace(cfg.OTEL.ExporterType))
+		switch exporterType {
 		case "otlp":
+			opts := []otlptracegrpc.Option{
+				otlptracegrpc.WithEndpoint(cfg.OTEL.Endpoint),
+			}
+			if cfg.OTEL.OTLPInsecure {
+				opts = append(opts, otlptracegrpc.WithInsecure())
+			}
 			traceExporter, err = otlptracegrpc.New(
 				context.Background(),
-				otlptracegrpc.WithEndpoint(cfg.OTEL.Endpoint),
-				otlptracegrpc.WithInsecure(),
+				opts...,
 			)
 		case "stdout":
 			fallthrough
@@ -58,7 +67,7 @@ func InitOTEL(cfg *configs.Config) (func(context.Context) error, error) {
 
 		// Initialize TracerProvider
 		tp = sdktrace.NewTracerProvider(
-			sdktrace.WithSampler(sdktrace.AlwaysSample()),
+			sdktrace.WithSampler(sdktrace.ParentBased(sdktrace.TraceIDRatioBased(traceSampleRatio(cfg.OTEL.TraceSampleRatio)))),
 			sdktrace.WithBatcher(traceExporter),
 			sdktrace.WithResource(res),
 		)
@@ -89,9 +98,10 @@ func InitOTEL(cfg *configs.Config) (func(context.Context) error, error) {
 
 	helpers.Info(
 		"otel_initialized",
-		zap.String("exporter_type", cfg.OTEL.ExporterType),
+		zap.String("exporter_type", strings.ToLower(strings.TrimSpace(cfg.OTEL.ExporterType))),
 		zap.Bool("trace_enabled", cfg.OTEL.TraceEnabled),
 		zap.Bool("metrics_enabled", cfg.OTEL.MetricsEnabled),
+		zap.Float64("trace_sample_ratio", traceSampleRatio(cfg.OTEL.TraceSampleRatio)),
 	)
 
 	return func(ctx context.Context) error {
@@ -112,4 +122,15 @@ func InitOTEL(cfg *configs.Config) (func(context.Context) error, error) {
 		}
 		return shutdownErr
 	}, nil
+}
+
+func traceSampleRatio(value float64) float64 {
+	switch {
+	case value < 0:
+		return 0
+	case value > 1:
+		return 1
+	default:
+		return value
+	}
 }

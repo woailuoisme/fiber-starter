@@ -1,0 +1,80 @@
+["modules.user.profile"]
+other = "个人资料"
+
+["modules.user.settings"]
+other = "设置"
+
+["modules.user.account"]
+other = "账户"
+
+["modules.user.change_password"]
+other = "修改密码"
+
+["modules.device.name"]
+other = "设备名称"
+
+["modules.device.code"]
+other = "设备编号"
+
+["modules.device.location"]
+other = "设备位置"
+
+["modules.device.status"]
+other = "设备状态"
+
+["modules.device.online"]
+other = "在线"
+
+["modules.device.offline"]
+other = "离线"
+
+["modules.device.maintenance"]
+other = "维护中"
+
+["modules.product.name"]
+other = "商品名称"
+
+["modules.product.price"]
+other = "价格"
+
+["modules.product.stock"]
+other = "库存"
+
+["modules.product.category"]
+other = "分类"
+
+["modules.product.description"]
+other = "商品描述"
+
+["modules.product.image"]
+other = "商品图片"
+
+["modules.order.number"]
+other = "订单号"
+
+["modules.order.status"]
+other = "订单状态"
+
+["modules.order.total"]
+other = "订单总额"
+
+["modules.order.created_at"]
+other = "下单时间"
+
+["modules.order.paid_at"]
+other = "支付时间"
+
+["modules.order.pending"]
+other = "待支付"
+
+["modules.order.paid"]
+other = "已支付"
+
+["modules.order.completed"]
+other = "已完成"
+
+["modules.order.cancelled"]
+other = "已取消"
+
+["modules.order.refunded"]
+other = "已退款"

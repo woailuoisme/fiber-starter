@@ -1,20 +1,10 @@
 package auth
 
-import (
-	requests "lfiber/internal/common/requests"
-
-	"github.com/gofiber/fiber/v3"
-)
-
 // RegisterRequest 用户注册请求
 type RegisterRequest struct {
 	Name     string `json:"name" validate:"required,min=2,max=100" example:"Alice"`
 	Email    string `json:"email" validate:"required,email" example:"user@example.com"`
 	Password string `json:"password" validate:"required,min=8" example:"password123"`
-}
-
-func (r *RegisterRequest) BindAndValidate(c fiber.Ctx) error {
-	return requests.BindAndValidateBody(c, r)
 }
 
 func (r RegisterRequest) ToInput() RegisterInput {
@@ -27,10 +17,6 @@ type VerifySignUpRequest struct {
 	Code  string `json:"code" validate:"required,len=6" example:"123456"`
 }
 
-func (r *VerifySignUpRequest) BindAndValidate(c fiber.Ctx) error {
-	return requests.BindAndValidateBody(c, r)
-}
-
 func (r VerifySignUpRequest) ToInput() VerifyCodeInput {
 	return VerifyCodeInput(r)
 }
@@ -39,10 +25,6 @@ func (r VerifySignUpRequest) ToInput() VerifyCodeInput {
 type LoginRequest struct {
 	Email    string `json:"email" validate:"required,email" example:"user@example.com"`
 	Password string `json:"password" validate:"required" example:"password123"`
-}
-
-func (r *LoginRequest) BindAndValidate(c fiber.Ctx) error {
-	return requests.BindAndValidateBody(c, r)
 }
 
 func (r LoginRequest) ToInput() LoginInput {
@@ -54,18 +36,10 @@ type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" validate:"required" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."` //nolint:lll
 }
 
-func (r *RefreshTokenRequest) BindAndValidate(c fiber.Ctx) error {
-	return requests.BindAndValidateBody(c, r)
-}
-
 // ChangePasswordRequest 修改密码请求
 type ChangePasswordRequest struct {
 	CurrentPassword string `json:"current_password" validate:"required"`
 	NewPassword     string `json:"new_password" validate:"required,min=8"`
-}
-
-func (r *ChangePasswordRequest) BindAndValidate(c fiber.Ctx) error {
-	return requests.BindAndValidateBody(c, r)
 }
 
 func (r ChangePasswordRequest) ToInput(userID int64) ChangePasswordInput {
@@ -81,10 +55,6 @@ type ResetPasswordRequest struct {
 	Email string `json:"email" validate:"required,email"`
 }
 
-func (r *ResetPasswordRequest) BindAndValidate(c fiber.Ctx) error {
-	return requests.BindAndValidateBody(c, r)
-}
-
 func (r ResetPasswordRequest) ToInput() PasswordResetRequestInput {
 	return PasswordResetRequestInput(r)
 }
@@ -95,10 +65,6 @@ type VerifyResetPasswordRequest struct {
 	Code  string `json:"code" validate:"required,len=6"`
 }
 
-func (r *VerifyResetPasswordRequest) BindAndValidate(c fiber.Ctx) error {
-	return requests.BindAndValidateBody(c, r)
-}
-
 func (r VerifyResetPasswordRequest) ToInput() VerifyCodeInput {
 	return VerifyCodeInput(r)
 }
@@ -107,10 +73,6 @@ func (r VerifyResetPasswordRequest) ToInput() VerifyCodeInput {
 type ConfirmResetPasswordRequest struct {
 	Token    string `json:"token" validate:"required"`
 	Password string `json:"password" validate:"required,min=8"`
-}
-
-func (r *ConfirmResetPasswordRequest) BindAndValidate(c fiber.Ctx) error {
-	return requests.BindAndValidateBody(c, r)
 }
 
 func (r ConfirmResetPasswordRequest) ToInput() ConfirmPasswordResetInput {

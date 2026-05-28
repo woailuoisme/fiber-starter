@@ -42,6 +42,41 @@ func TestConfigs_EnvExpansion(t *testing.T) {
 	assert.Equal(t, expectedName, cfg.App.Name)
 }
 
+func TestConfigs_LoggerOutputUsesCanonicalEnv(t *testing.T) {
+	t.Setenv("LOGGER_OUTPUT", "stderr")
+	t.Setenv("LOG_CHANNEL", "daily")
+
+	cfg, _, err := configs.LoadConfig()
+	require.NoError(t, err)
+
+	assert.Equal(t, "stderr", cfg.Logger.Output)
+}
+
+func TestConfigs_LoggerOutputSupportsLegacyChannelEnv(t *testing.T) {
+	t.Setenv("LOGGER_OUTPUT", "")
+	t.Setenv("LOG_CHANNEL", "single")
+
+	cfg, _, err := configs.LoadConfig()
+	require.NoError(t, err)
+
+	assert.Equal(t, "single", cfg.Logger.Output)
+}
+
+func TestConfigs_OTELFlags(t *testing.T) {
+	t.Setenv("OTEL_TRACE_ENABLED", "true")
+	t.Setenv("OTEL_METRICS_ENABLED", "true")
+	t.Setenv("OTEL_TRACE_SAMPLE_RATIO", "0.25")
+	t.Setenv("OTEL_OTLP_INSECURE", "false")
+
+	cfg, _, err := configs.LoadConfig()
+	require.NoError(t, err)
+
+	assert.True(t, cfg.OTEL.TraceEnabled)
+	assert.True(t, cfg.OTEL.MetricsEnabled)
+	assert.InEpsilon(t, 0.25, cfg.OTEL.TraceSampleRatio, 0.001)
+	assert.False(t, cfg.OTEL.OTLPInsecure)
+}
+
 func TestConfigs_Database(t *testing.T) {
 	t.Setenv("DB_CONNECTION", "sqlite")
 

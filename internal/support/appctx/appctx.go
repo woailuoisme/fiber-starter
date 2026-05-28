@@ -5,6 +5,7 @@ import (
 
 	"lfiber/configs"
 	authContracts "lfiber/internal/providers/auth/contracts"
+	authorizationContracts "lfiber/internal/providers/authorization/contracts"
 	cacheContracts "lfiber/internal/providers/cache/contracts"
 	configContracts "lfiber/internal/providers/config/contracts"
 	databaseContracts "lfiber/internal/providers/database/contracts"
@@ -18,7 +19,6 @@ import (
 	scheduleContracts "lfiber/internal/providers/schedule/contracts"
 	searchContracts "lfiber/internal/providers/search/contracts"
 	storageContracts "lfiber/internal/providers/storage/contracts"
-	validationContracts "lfiber/internal/providers/validation/contracts"
 )
 
 // HealthChecker is an interface for components that can be checked for health.
@@ -43,6 +43,10 @@ type CacheProvider interface {
 
 type AuthProvider interface {
 	AuthManager() authContracts.Manager
+}
+
+type AuthorizationProvider interface {
+	AuthorizationService() authorizationContracts.Authorizer
 }
 
 type MailProvider interface {
@@ -81,10 +85,6 @@ type I18nProvider interface {
 	TranslatorService() i18nContracts.Translator
 }
 
-type ValidationProvider interface {
-	ValidationService() validationContracts.Factory
-}
-
 type LoggingProvider interface {
 	LogService() loggingContracts.Logger
 }
@@ -99,6 +99,7 @@ type Application interface {
 	DatabaseProvider
 	CacheProvider
 	AuthProvider
+	AuthorizationProvider
 	MailProvider
 	QueueProvider
 	ScheduleProvider
@@ -107,7 +108,6 @@ type Application interface {
 	HashProvider
 	NotificationProvider
 	I18nProvider
-	ValidationProvider
 	LoggingProvider
 	RateLimiterProvider
 }

@@ -1,0 +1,80 @@
+["modules.user.profile"]
+other = "Profile"
+
+["modules.user.settings"]
+other = "Settings"
+
+["modules.user.account"]
+other = "Account"
+
+["modules.user.change_password"]
+other = "Change Password"
+
+["modules.device.name"]
+other = "Device Name"
+
+["modules.device.code"]
+other = "Device Code"
+
+["modules.device.location"]
+other = "Location"
+
+["modules.device.status"]
+other = "Status"
+
+["modules.device.online"]
+other = "Online"
+
+["modules.device.offline"]
+other = "Offline"
+
+["modules.device.maintenance"]
+other = "Maintenance"
+
+["modules.product.name"]
+other = "Product Name"
+
+["modules.product.price"]
+other = "Price"
+
+["modules.product.stock"]
+other = "Stock"
+
+["modules.product.category"]
+other = "Category"
+
+["modules.product.description"]
+other = "Description"
+
+["modules.product.image"]
+other = "Image"
+
+["modules.order.number"]
+other = "Order Number"
+
+["modules.order.status"]
+other = "Status"
+
+["modules.order.total"]
+other = "Total"
+
+["modules.order.created_at"]
+other = "Created At"
+
+["modules.order.paid_at"]
+other = "Paid At"
+
+["modules.order.pending"]
+other = "Pending"
+
+["modules.order.paid"]
+other = "Paid"
+
+["modules.order.completed"]
+other = "Completed"
+
+["modules.order.cancelled"]
+other = "Cancelled"
+
+["modules.order.refunded"]
+other = "Refunded"

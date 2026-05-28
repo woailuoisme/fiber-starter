@@ -7,11 +7,12 @@
 - **`internal/`**: 核心应用逻辑目录。
   - **`features/`**: 业务特性切片目录。每个业务模块自成一体，独立自治。每个特性通常包含：
     - `routes.go`: 该特性的 HTTP 路由注册定义。
-    - `controllers/` 或业务文件: 接收请求、处理响应及 HTTP 控制器逻辑。
-    - `services/` 或领域文件: 承载该特性的核心领域与业务逻辑。
+    - `controllers.go`: 接收请求、处理响应及 HTTP 控制器逻辑。
+    - `services.go`: 承载该特性的核心领域与业务逻辑。
     - `repository.go`: 封装针对数据库/数据持久层的 CRUD 交互。
     - `requests.go`: 承载 HTTP 请求体与 DTO 的定义及参数校验规则。
-    - `models/`: 属于该特性的数据库领域模型与实体定义。
+    - `models.go`: 属于该特性的数据库领域模型与实体定义。
+    - 特性目录保持扁平单包结构，不在特性内部再拆 `controllers/`、`services/`、`repositories/` 子包。
   - **`providers/`**: 统一的基础设施服务适配器层。集中提供对缓存、数据库、搜索、存储、邮件、队列等的生命周期和初始化管理。
   - **`bootstrap/`**: 应用的启动引导。包含全局容器拼装、依赖注入上下文搭建与 Fiber 引擎的底层装载。
   - **`common/`**: 共享核心类库。如全局异常拦截器、API 统一响应格式包装、公用路由中间件等。
@@ -22,7 +23,6 @@
   - `internal/`: 封装加载逻辑，用于处理环境变量注入 `${VAR:default}` 与默认值映射。
   - `config.go`: 提供全局配置实体类型导出的公共门面。
 - **`database/`**: 数据库迁移文件 (Atlas CLI 管理)、数据种子 (Seeders) 和测试数据工厂。
-- **`routes/`**: 顶层全局核心路由配置入口（绑定 V1, V2 等 API 路由）。
 - **`docs/`**: 由 API 自动生成的 Swagger 2.0 协议规范文件（用于提供 Swagger UI 调试界面）。
 - **`tests/`**: 全局集中测试中心。
   - `unit/`: 独立、零外部依赖的单元测试。
@@ -71,6 +71,7 @@
 - `JWT_SECRET`、API key、密码、token、连接串等敏感值必须来自环境变量或密钥管理系统，源码默认值不得包含真实 secret。
 - 需要生成本地 JWT secret 时使用 `./lfiber jwt:generate` 或 `rtk just jwt`，不要手写弱 secret；不要新增重复的 JWT 生成命令入口。
 - 日志与 readiness 错误必须使用 `internal/support/redaction.go` 的脱敏辅助函数。
+- OpenTelemetry 追踪和指标分别由 `OTEL_TRACE_ENABLED` 与 `OTEL_METRICS_ENABLED` 控制；不要新增 `OTEL_ENABLED` 总开关。HTTP OTEL 必须通过 Fiber 官方 `github.com/gofiber/contrib/v3/otel` 中间件接入，并保留健康检查、文档和 `/metrics` 的跳过规则。
 - 时区与时间格式规范：全局配置时区固定为 `Asia/Shanghai`（东八区）。为了保证可读性，日志时间戳的序列化格式必须统一使用 `2006-01-02 15:04:05`（年月日时分秒），这在 [internal/providers/logging/config.go](file:///Users/seaside/Projects/go/fiber-starter/internal/providers/logging/config.go) 中由自定义 `EncodeTime` 函数拦截。
 - 命令行命令规范与模块分组：新添加的 Cobra CLI 命令必须使用 `GroupID` 显式划分至 7 个核心的 Laravel 风格分组中：`app` (应用命令)、`database` (数据库命令)、`cache` (缓存命令)、`auth` (安全鉴权命令)、`queue` (队列命令)、`schedule` (计划任务) 或 `system` (系统与配置项)。严禁随意将命令丢入默认的无分组或通用的 `system` 组中。
 - 控制台着色与进度条规范：所有的命令行终端文字渲染、着色处理（如亮黄、青色、浅灰高亮等）以及 TTY/非 TTY 终端环境的检测，必须统一调用 [internal/console/ui/ui.go](file:///Users/seaside/Projects/go/fiber-starter/internal/console/ui/ui.go) 封装的语义样式器。在开发带有进度条指示器的命令（如长数据导入、Seeder 耗时填充）时，必须统一使用 `ui.NewProgressBar` 实例，严禁在各命令内部手工编写 `\r` 字符、直接硬编码 ANSI 转义字符，或者绕过 `ui` 包私自引入第三方着色库。

@@ -2,10 +2,10 @@ package user
 
 import (
 	"fmt"
-	"strconv"
 
 	exceptions "lfiber/internal/common/exceptions"
 	middleware "lfiber/internal/common/middleware"
+	requests "lfiber/internal/common/requests"
 	helpers "lfiber/internal/support"
 
 	"github.com/gofiber/fiber/v3"
@@ -35,15 +35,13 @@ func NewUserController(userService UserService, exchange UserDataExchange) *User
 //	@Security		Bearer
 //	@Param			request	query		UserListRequest												true	"分页过滤参数"
 //	@Success		200		{object}	support.APISuccessResponse{data=support.PaginatedResponse{items=[]user.SafeUser}}	"获取成功"
-//	@Failure		401		{object}	support.APIResponse																			"未授权的请求"
-//	@Failure		422		{object}	support.APIResponse																			"请求参数校验失败"
-//	@Failure		500		{object}	support.APIResponse																			"服务器内部错误"
 //	@Router			/api/v1/users [get]
 func (c *UserController) GetUsers(ctx fiber.Ctx) error {
 	var req UserListRequest
-	if err := req.BindAndValidate(ctx); err != nil {
+	if err := requests.Query(ctx, &req); err != nil {
 		return helpers.HandleAppError(ctx, err)
 	}
+	req.Normalize()
 	page, err := c.userService.ListUsers(ctx.Context(), req.ToQuery())
 	if err != nil {
 		return helpers.HandleInternalServerError(ctx, err.Error())
@@ -62,18 +60,14 @@ func (c *UserController) GetUsers(ctx fiber.Ctx) error {
 //	@Security		Bearer
 //	@Param			id	path		int					true	"用户ID"
 //	@Success		200	{object}	support.APISuccessResponse{data=user.SafeUser}	"获取成功"
-//	@Failure		400	{object}	support.APIResponse								"用户 ID 格式错误"
-//	@Failure		401	{object}	support.APIResponse								"未授权的请求"
-//	@Failure		404	{object}	support.APIResponse								"用户不存在"
 //	@Router			/api/v1/users/{id} [get]
 func (c *UserController) GetUser(ctx fiber.Ctx) error {
-	idStr := ctx.Params("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		return exceptions.NewBadRequestException("Invalid user ID")
+	var params UserURIRequest
+	if err := requests.URI(ctx, &params); err != nil {
+		return err
 	}
 
-	user, err := c.userService.GetUserByID(ctx.Context(), id)
+	user, err := c.userService.GetUserByID(ctx.Context(), params.ID)
 	if err != nil {
 		return err
 	}
@@ -92,24 +86,19 @@ func (c *UserController) GetUser(ctx fiber.Ctx) error {
 //	@Param			id		path		int						true	"用户ID"
 //	@Param			request	body		UpdateProfileRequest	true	"修改参数"
 //	@Success		200		{object}	support.APISuccessResponse{data=user.SafeUser}	"更新成功"
-//	@Failure		400		{object}	support.APIResponse								"用户 ID 格式错误"
-//	@Failure		401		{object}	support.APIResponse								"未授权的请求"
-//	@Failure		404		{object}	support.APIResponse								"用户不存在"
-//	@Failure		422		{object}	support.APIResponse								"数据校验失败"
 //	@Router			/api/v1/users/{id} [put]
 func (c *UserController) UpdateUser(ctx fiber.Ctx) error {
-	idStr := ctx.Params("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		return exceptions.NewBadRequestException("Invalid user ID")
-	}
-
-	var req UpdateProfileRequest
-	if err := req.BindAndValidate(ctx); err != nil {
+	var params UserURIRequest
+	if err := requests.URI(ctx, &params); err != nil {
 		return err
 	}
 
-	user, err := c.userService.UpdateUser(ctx.Context(), id, req.ToInput())
+	var req UpdateProfileRequest
+	if err := requests.Body(ctx, &req); err != nil {
+		return err
+	}
+
+	user, err := c.userService.UpdateUser(ctx.Context(), params.ID, req.ToInput())
 	if err != nil {
 		return err
 	}
@@ -127,18 +116,14 @@ func (c *UserController) UpdateUser(ctx fiber.Ctx) error {
 //	@Security		Bearer
 //	@Param			id	path		int					true	"用户ID"
 //	@Success		200	{object}	support.APISuccessNoDataResponse	"删除成功"
-//	@Failure		400	{object}	support.APIResponse					"用户 ID 格式错误"
-//	@Failure		401	{object}	support.APIResponse					"未授权的请求"
-//	@Failure		404	{object}	support.APIResponse					"用户不存在"
 //	@Router			/api/v1/users/{id} [delete]
 func (c *UserController) DeleteUser(ctx fiber.Ctx) error {
-	idStr := ctx.Params("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		return exceptions.NewBadRequestException("Invalid user ID")
+	var params UserURIRequest
+	if err := requests.URI(ctx, &params); err != nil {
+		return err
 	}
 
-	if err := c.userService.DeleteUser(ctx.Context(), id); err != nil {
+	if err := c.userService.DeleteUser(ctx.Context(), params.ID); err != nil {
 		return err
 	}
 
@@ -155,8 +140,6 @@ func (c *UserController) DeleteUser(ctx fiber.Ctx) error {
 //	@Security		Bearer
 //	@Param			request	body		UpdateProfileRequest	true	"更新个人资料参数"
 //	@Success		200		{object}	support.APISuccessResponse{data=user.SafeUser}	"更新成功"
-//	@Failure		401		{object}	support.APIResponse								"身份凭证已失效"
-//	@Failure		422		{object}	support.APIResponse								"数据校验失败"
 //	@Router			/api/v1/users/profile [put]
 func (c *UserController) UpdateProfile(ctx fiber.Ctx) error {
 	userID := middleware.GetCurrentUserID(ctx)
@@ -165,7 +148,7 @@ func (c *UserController) UpdateProfile(ctx fiber.Ctx) error {
 	}
 
 	var req UpdateProfileRequest
-	if err := req.BindAndValidate(ctx); err != nil {
+	if err := requests.Body(ctx, &req); err != nil {
 		return err
 	}
 
@@ -186,8 +169,6 @@ func (c *UserController) UpdateProfile(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Security		Bearer
 //	@Success		200	{object}	support.APISuccessResponse{data=user.SafeUser}	"获取成功"
-//	@Failure		401	{object}	support.APIResponse								"身份凭证已失效"
-//	@Failure		404	{object}	support.APIResponse								"当前用户不存在"
 //	@Router			/api/v1/users/me [get]
 func (c *UserController) GetCurrentUser(ctx fiber.Ctx) error {
 	userID, ok := ctx.Locals("user_id").(int64)
@@ -213,14 +194,13 @@ func (c *UserController) GetCurrentUser(ctx fiber.Ctx) error {
 //	@Security		Bearer
 //	@Param			request	query		SearchUsersRequest											true	"检索过滤参数"
 //	@Success		200		{object}	support.APISuccessResponse{data=support.PaginatedResponse{items=[]user.SafeUser}}	"搜索成功"
-//	@Failure		401		{object}	support.APIResponse																			"未授权的请求"
-//	@Failure		422		{object}	support.APIResponse																			"请求参数校验失败"
 //	@Router			/api/v1/users/search [get]
 func (c *UserController) SearchUsers(ctx fiber.Ctx) error {
 	var req SearchUsersRequest
-	if err := req.BindAndValidate(ctx); err != nil {
+	if err := requests.Query(ctx, &req); err != nil {
 		return helpers.HandleAppError(ctx, err)
 	}
+	req.Normalize()
 	page, err := c.userService.SearchUsers(ctx.Context(), req.ToQuery())
 	if err != nil {
 		return helpers.HandleInternalServerError(ctx, err.Error())
@@ -237,8 +217,6 @@ func (c *UserController) SearchUsers(ctx fiber.Ctx) error {
 //	@Produce		application/octet-stream
 //	@Security		Bearer
 //	@Success		200	{file}		binary	"导出成功"
-//	@Failure		401	{object}	support.APIResponse		"未授权的请求"
-//	@Failure		500	{object}	support.APIResponse		"电子表格生成或导出失败"
 //	@Router			/api/v1/users/export [get]
 func (c *UserController) ExportUsers(ctx fiber.Ctx) error {
 	ctx.Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -261,16 +239,14 @@ func (c *UserController) ExportUsers(ctx fiber.Ctx) error {
 //	@Security		Bearer
 //	@Param			file	formData	file															true	"用户数据 Excel 文件"
 //	@Success		200		{object}	support.APISuccessResponse{data=object{count=int}}	"导入成功"
-//	@Failure		400		{object}	support.APIResponse									"上传的文件为空或数据解析错误"
-//	@Failure		401		{object}	support.APIResponse									"未授权的请求"
 //	@Router			/api/v1/users/import [post]
 func (c *UserController) ImportUsers(ctx fiber.Ctx) error {
-	file, err := ctx.FormFile("file")
-	if err != nil {
-		return helpers.HandleBadRequest(ctx, "File is required")
+	var req ImportUsersRequest
+	if err := requests.Form(ctx, &req); err != nil {
+		return err
 	}
 
-	f, err := file.Open()
+	f, err := req.File.Open()
 	if err != nil {
 		return helpers.HandleInternalServerError(ctx, "Failed to open uploaded file")
 	}

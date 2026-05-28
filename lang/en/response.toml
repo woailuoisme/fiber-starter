@@ -1,0 +1,38 @@
+["response.success"]
+other = "Operation successful."
+
+["response.created"]
+other = "Created successfully."
+
+["response.updated"]
+other = "Updated successfully."
+
+["response.deleted"]
+other = "Deleted successfully."
+
+["response.saved"]
+other = "Saved successfully."
+
+["response.error"]
+other = "An error occurred."
+
+["response.not_found"]
+other = "Resource not found."
+
+["response.unauthorized"]
+other = "Unauthorized access."
+
+["response.forbidden"]
+other = "Access forbidden."
+
+["response.internal_error"]
+other = "Internal server error."
+
+["response.bad_request"]
+other = "Bad request."
+
+["response.validation_failed"]
+other = "The given data was invalid."
+
+["response.too_many_requests"]
+other = "Too many requests, please try again later."

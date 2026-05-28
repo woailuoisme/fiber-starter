@@ -1,0 +1,77 @@
+["common.yes"]
+other = "是"
+
+["common.no"]
+other = "否"
+
+["common.ok"]
+other = "确定"
+
+["common.cancel"]
+other = "取消"
+
+["common.save"]
+other = "保存"
+
+["common.delete"]
+other = "删除"
+
+["common.edit"]
+other = "编辑"
+
+["common.create"]
+other = "创建"
+
+["common.update"]
+other = "更新"
+
+["common.search"]
+other = "搜索"
+
+["common.filter"]
+other = "筛选"
+
+["common.sort"]
+other = "排序"
+
+["common.export"]
+other = "导出"
+
+["common.import"]
+other = "导入"
+
+["common.refresh"]
+other = "刷新"
+
+["common.back"]
+other = "返回"
+
+["common.next"]
+other = "下一步"
+
+["common.previous"]
+other = "上一步"
+
+["common.submit"]
+other = "提交"
+
+["common.reset"]
+other = "重置"
+
+["common.close"]
+other = "关闭"
+
+["common.loading"]
+other = "加载中..."
+
+["common.no_data"]
+other = "暂无数据。"
+
+["common.confirm"]
+other = "确认"
+
+["common.warning"]
+other = "警告"
+
+["common.info"]
+other = "提示"

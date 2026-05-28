@@ -42,6 +42,8 @@ func (m *Manager) Drive(name ...string) contracts.Queue {
 	switch driverName {
 	case "asynq":
 		driver = drivers.NewAsynqDriver(m.config)
+	case "noop", "null":
+		driver = drivers.NewNoopQueue()
 	default:
 		driver = drivers.NewAsynqDriver(m.config)
 	}

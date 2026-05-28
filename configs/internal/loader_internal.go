@@ -2,12 +2,12 @@ package internal
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/knadh/koanf/providers/confmap"
@@ -16,6 +16,17 @@ import (
 )
 
 var loadEnvOnce sync.Once
+
+// LogInfo and LogWarn are package level hooks to inject high-level loggers and avoid circular dependencies.
+// Default implementations mimic the Zap logger format using standard fmt/time without importing zap package.
+var (
+	LogInfo = func(msg string) {
+		fmt.Printf("%s     INFO    configs/internal/loader_internal.go    %s\n", time.Now().Format("2006-01-02 15:04:05"), msg)
+	}
+	LogWarn = func(msg string) {
+		fmt.Printf("%s     WARN    configs/internal/loader_internal.go    %s\n", time.Now().Format("2006-01-02 15:04:05"), msg)
+	}
+)
 
 func LoadEnvFile() {
 	loadEnvOnce.Do(func() {
@@ -30,21 +41,34 @@ func LoadEnvFile() {
 		}
 		files = append(files, fmt.Sprintf(".env.%s", appEnv), ".env")
 
-		loaded := false
+		var pathsToLoad []string
 		for _, file := range files {
 			for _, path := range EnvFileCandidates(file) {
-				if FileExists(path) {
-					if err := godotenv.Load(path); err == nil {
-						log.Printf("Successfully loaded environment file: %s", path) //nolint:gosec // environment file path is controlled by local project config
-						loaded = true
-						break
-					}
+				if info, err := os.Stat(path); err == nil && !info.IsDir() {
+					pathsToLoad = append(pathsToLoad, path)
+					break
 				}
 			}
 		}
 
-		if !loaded && strings.ToLower(strings.TrimSpace(os.Getenv("CONFIG_WARN_MISSING_ENV_FILE"))) != "false" {
-			log.Printf("Environment file not found, will use environment variables and default configuration")
+		loaded := false
+		if len(pathsToLoad) > 0 {
+			if err := godotenv.Load(pathsToLoad...); err == nil {
+				LogInfo(fmt.Sprintf("Successfully loaded environment files: %v", pathsToLoad))
+				loaded = true
+			} else {
+				LogWarn(fmt.Sprintf("Warning: failed to load environment files: %v", err))
+			}
+		}
+
+		if !loaded {
+			isProd := strings.ToLower(appEnv) == "production"
+			hasCoreEnv := os.Getenv("DB_HOST") != ""
+			warnMissing := strings.ToLower(strings.TrimSpace(os.Getenv("CONFIG_WARN_MISSING_ENV_FILE")))
+
+			if !isProd && !hasCoreEnv && warnMissing != "false" {
+				LogInfo("Environment file not found, will use environment variables and default configuration")
+			}
 		}
 	})
 }

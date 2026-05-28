@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -17,8 +18,13 @@ import (
 	"go.uber.org/zap"
 )
 
+const gracefulShutdownTimeout = 15 * time.Second
+
 // Serve starts the HTTP server and handles graceful shutdown
 func Serve(app *fiber.App, cfg *configs.Config) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	listenAddr := net.JoinHostPort(cfg.App.Host, cfg.App.Port)
 	baseURL := buildPublicURL(cfg.App.Host, cfg.App.Port)
 	docsURL := baseURL + "/docs"
@@ -40,9 +46,6 @@ func Serve(app *fiber.App, cfg *configs.Config) error {
 		})
 	}()
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-
 	select {
 	case err := <-listenErr:
 		if err != nil {
@@ -53,22 +56,21 @@ func Serve(app *fiber.App, cfg *configs.Config) error {
 			return fmt.Errorf("server_failed_to_start: listen_addr=%s: %w", listenAddr, err)
 		}
 		return nil
-	case <-sigCh:
+	case <-ctx.Done():
 		helpers.Info("shutdown_signal_received")
 	}
 
-	shutdownDone := make(chan error, 1)
-	go func() {
-		shutdownDone <- app.Shutdown()
-	}()
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), gracefulShutdownTimeout)
+	defer cancel()
 
-	select {
-	case err := <-shutdownDone:
-		if err != nil {
-			helpers.Warn("server_shutdown_failed", zap.Error(err))
+	if err := app.ShutdownWithContext(shutdownCtx); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			helpers.Warn("server_shutdown_timed_out", zap.Duration("timeout", gracefulShutdownTimeout))
+			return fmt.Errorf("server_shutdown_timed_out: timeout=%s: %w", gracefulShutdownTimeout, err)
 		}
-	case <-time.After(15 * time.Second):
-		helpers.Warn("server_shutdown_timed_out")
+
+		helpers.Warn("server_shutdown_failed", zap.Error(err))
+		return fmt.Errorf("server_shutdown_failed: %w", err)
 	}
 
 	return nil

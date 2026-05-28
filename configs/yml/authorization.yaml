@@ -1,0 +1,3 @@
+authorization:
+  model_file: ${AUTHORIZATION_MODEL_FILE:configs/casbin/model.conf}
+  policy_file: ${AUTHORIZATION_POLICY_FILE:configs/casbin/policy.csv}

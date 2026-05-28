@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -56,6 +57,10 @@ func EnvConfigMap() map[string]any {
 		"JWT_REFRESH_TIME":    "jwt.refresh_time",
 		"JWT_EXPIRE_HOURS":    "jwt.expire_hours",
 		"JWT_ISSUER":          "jwt.issuer",
+
+		// Authorization
+		"AUTHORIZATION_MODEL_FILE":  "authorization.model_file",
+		"AUTHORIZATION_POLICY_FILE": "authorization.policy_file",
 
 		// Logger
 		"LOGGER_LEVEL":       "logger.level",
@@ -185,15 +190,17 @@ func EnvConfigMap() map[string]any {
 		"I18N_COOKIE_MAX_AGE":   "i18n.cookie_max_age",
 
 		// Meilisearch & OTEL
-		"SEARCH_DRIVER":        "search.default",
-		"MEILISEARCH_HOST":     "search.host",
-		"MEILISEARCH_API_KEY":  "search.api_key",
-		"OTEL_ENABLED":         "otel.enabled",
-		"OTEL_SERVICE_NAME":    "otel.service_name",
-		"OTEL_EXPORTER_TYPE":   "otel.exporter_type",
-		"OTEL_ENDPOINT":        "otel.endpoint",
-		"OTEL_METRICS_ENABLED": "otel.metrics_enabled",
-		"OTEL_METRICS_PATH":    "otel.metrics_path",
+		"SEARCH_DRIVER":           "search.default",
+		"MEILISEARCH_HOST":        "search.host",
+		"MEILISEARCH_API_KEY":     "search.api_key",
+		"OTEL_TRACE_ENABLED":      "otel.trace_enabled",
+		"OTEL_SERVICE_NAME":       "otel.service_name",
+		"OTEL_EXPORTER_TYPE":      "otel.exporter_type",
+		"OTEL_ENDPOINT":           "otel.endpoint",
+		"OTEL_OTLP_INSECURE":      "otel.otlp_insecure",
+		"OTEL_TRACE_SAMPLE_RATIO": "otel.trace_sample_ratio",
+		"OTEL_METRICS_ENABLED":    "otel.metrics_enabled",
+		"OTEL_METRICS_PATH":       "otel.metrics_path",
 
 		// Database common
 		"DB_POOL_MAX_OPEN_CONNS":     "database.pool.max_open_conns",
@@ -214,6 +221,12 @@ func EnvConfigMap() map[string]any {
 
 	for env, key := range mappings {
 		set(env, key)
+	}
+
+	// Backward compatibility: LOG_CHANNEL was the previous name for logger output.
+	// LOGGER_OUTPUT is canonical and wins when both are present.
+	if _, ok := m["logger.output"]; !ok {
+		set("LOG_CHANNEL", "logger.output")
 	}
 
 	// Laravel-compatible aliases take precedence over older project-specific names.
@@ -258,6 +271,26 @@ func EnvConfigMap() map[string]any {
 	}
 
 	// 3. Complex parsing (Slices)
+	setBool := func(envKey, target string) {
+		if value := strings.TrimSpace(os.Getenv(envKey)); value != "" {
+			if parsed, err := strconv.ParseBool(value); err == nil {
+				m[target] = parsed
+			}
+		}
+	}
+	setFloat := func(envKey, target string) {
+		if value := strings.TrimSpace(os.Getenv(envKey)); value != "" {
+			if parsed, err := strconv.ParseFloat(value, 64); err == nil {
+				m[target] = parsed
+			}
+		}
+	}
+
+	setBool("OTEL_TRACE_ENABLED", "otel.trace_enabled")
+	setBool("OTEL_METRICS_ENABLED", "otel.metrics_enabled")
+	setBool("OTEL_OTLP_INSECURE", "otel.otlp_insecure")
+	setFloat("OTEL_TRACE_SAMPLE_RATIO", "otel.trace_sample_ratio")
+
 	if val := strings.TrimSpace(os.Getenv("I18N_SUPPORTED_LANGUAGES")); val != "" {
 		var supported []string
 		for _, part := range strings.Split(val, ",") {

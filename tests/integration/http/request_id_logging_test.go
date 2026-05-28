@@ -3,6 +3,8 @@ package tests
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	middleware "lfiber/internal/common/middleware"
@@ -93,6 +95,48 @@ func TestRequestID_PreservedAndLogged(t *testing.T) {
 	}
 
 	require.True(t, foundError)
+}
+
+func TestRequestID_CoversFaviconShortCircuit(t *testing.T) {
+	core, observed := observer.New(zapcore.DebugLevel)
+	prevLogger := logging.DefaultLogger
+	logging.DefaultLogger = zap.New(core)
+	t.Cleanup(func() {
+		logging.DefaultLogger = prevLogger
+	})
+
+	dir := t.TempDir()
+	prevDir, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(dir))
+	t.Cleanup(func() {
+		_ = os.Chdir(prevDir)
+	})
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "public"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "public", "favicon.ico"), []byte("ico"), 0o600))
+
+	app := fiber.New(fiber.Config{
+		ErrorHandler: helpers.HandleHTTPError,
+	})
+	middleware.SetupMiddleware(app, nil)
+
+	resp, err := app.Test(httptest.NewRequest("GET", "/favicon.ico", nil))
+	require.NoError(t, err)
+	require.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	requestID := resp.Header.Get("X-Request-ID")
+	require.NotEmpty(t, requestID)
+
+	var foundAccess bool
+	for _, entry := range observed.All() {
+		if entry.Message != "access" {
+			continue
+		}
+		foundAccess = true
+		assert.Equal(t, requestID, entry.ContextMap()["request_id"])
+	}
+
+	require.True(t, foundAccess)
 }
 
 func TestRequestLogging_RedactsSensitiveURLAndHeaders(t *testing.T) {

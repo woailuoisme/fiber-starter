@@ -6,6 +6,10 @@ import (
 
 	"lfiber/configs"
 	"lfiber/internal/providers/storage/contracts"
+	drivers "lfiber/internal/providers/storage/drivers"
+	support "lfiber/internal/support"
+
+	"go.uber.org/zap"
 )
 
 // Manager handles multiple storage disks (similar to Laravel's StorageManager)
@@ -46,10 +50,9 @@ func (m *Manager) Disk(name ...string) contracts.Disk {
 // createDisk is a factory method to create the appropriate disk driver
 func (m *Manager) createDisk(driver string) contracts.Disk {
 	disk, err := createDisk(driver, m.config)
-	if err != nil {
-		// In a production app, we might return a NullDriver or error out gracefully
-		// For now, we'll follow the pattern of failing fast if a critical disk is missing
-		panic(fmt.Errorf("failed to create storage disk [%s]: %w", driver, err))
+	if err != nil || disk == nil {
+		support.Warn("Failed to create storage disk, falling back to NoopDisk", zap.String("driver", driver), zap.Error(err))
+		return drivers.NewNoopDisk()
 	}
 	return disk
 }

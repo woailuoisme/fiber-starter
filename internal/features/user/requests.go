@@ -1,20 +1,17 @@
 package user
 
-import (
-	requests "lfiber/internal/common/requests"
+import "mime/multipart"
 
-	"github.com/gofiber/fiber/v3"
-)
+// UserURIRequest 用户路径参数请求。
+type UserURIRequest struct {
+	ID int64 `uri:"id" validate:"required,gt=0"`
+}
 
 // UpdateProfileRequest 更新资料请求
 type UpdateProfileRequest struct {
 	Name   string `json:"name" validate:"omitempty,min=2,max=100" example:"Alice"`
 	Phone  string `json:"phone" validate:"omitempty,e164" example:"+8613800138000"`
 	Avatar string `json:"avatar" validate:"omitempty,url" example:"https://example.com/avatar.jpg"` //nolint:lll
-}
-
-func (r *UpdateProfileRequest) BindAndValidate(c fiber.Ctx) error {
-	return requests.BindAndValidateBody(c, r)
 }
 
 func (r UpdateProfileRequest) ToInput() UpdateUserInput {
@@ -37,14 +34,6 @@ type UserListRequest struct {
 	Limit int `query:"limit" validate:"omitempty,gte=1,lte=100"`
 }
 
-func (r *UserListRequest) BindAndValidate(c fiber.Ctx) error {
-	if err := requests.BindAndValidateQuery(c, r); err != nil {
-		return err
-	}
-	r.Normalize()
-	return nil
-}
-
 func (r UserListRequest) ToQuery() UserListQuery {
 	r.Normalize()
 	return UserListQuery{
@@ -58,14 +47,6 @@ type SearchUsersRequest struct {
 	Q     string `query:"q" validate:"required,min=1,max=100"`
 	Page  int    `query:"page" validate:"omitempty,gte=1"`
 	Limit int    `query:"limit" validate:"omitempty,gte=1,lte=100"`
-}
-
-func (r *SearchUsersRequest) BindAndValidate(c fiber.Ctx) error {
-	if err := requests.BindAndValidateQuery(c, r); err != nil {
-		return err
-	}
-	r.Normalize()
-	return nil
 }
 
 func (r SearchUsersRequest) ToQuery() UserListQuery {
@@ -110,4 +91,9 @@ func (r UserListRequest) Pagination() (int, int) {
 func (r SearchUsersRequest) Pagination() (int, int) {
 	query := r.ToQuery()
 	return query.Page, query.Limit
+}
+
+// ImportUsersRequest 用户导入表单请求。
+type ImportUsersRequest struct {
+	File *multipart.FileHeader `form:"file" validate:"required,uploaded_file"`
 }

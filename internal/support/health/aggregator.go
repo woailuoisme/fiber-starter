@@ -27,6 +27,7 @@ const (
 type Status struct {
 	Name     string `json:"name"`
 	Status   string `json:"status"`
+	Driver   string `json:"driver,omitempty"`
 	Error    string `json:"error,omitempty"`
 	Enabled  bool   `json:"enabled"`
 	Critical bool   `json:"critical"`
@@ -60,17 +61,50 @@ func (a *Aggregator) Check() (map[string]Status, string) {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
+	cfg := a.app.AppConfig()
+
+	getDriver := func(name string) string {
+		if cfg == nil {
+			return ""
+		}
+		switch name {
+		case "database":
+			defaultConn := cfg.Database.Default
+			if conn, ok := cfg.Database.Connections[defaultConn]; ok {
+				return conn.Driver
+			}
+			return defaultConn
+		case "cache":
+			return cfg.Cache.Driver
+		case "mail":
+			return cfg.Mail.Default
+		case "queue":
+			if cfg.Queue.Enabled {
+				return "asynq"
+			}
+			return "noop"
+		case "search":
+			return cfg.Search.Default
+		case "storage":
+			return cfg.Storage.Driver
+		default:
+			return ""
+		}
+	}
+
 	// List of providers to check
 	checks := []struct {
 		name     string
 		enabled  bool
 		critical bool
+		driver   string
 		check    func() error
 	}{
 		{
 			name:     "database",
 			enabled:  true,
 			critical: a.isCritical("database", true),
+			driver:   getDriver("database"),
 			check: func() error {
 				if a.app.ConnectionValue() == nil {
 					return fmt.Errorf("database connection not initialized")
@@ -80,8 +114,9 @@ func (a *Aggregator) Check() (map[string]Status, string) {
 		},
 		{
 			name:     "cache",
-			enabled:  a.app.AppConfig() != nil && a.app.AppConfig().Cache.Enabled,
+			enabled:  cfg != nil && cfg.Cache.Enabled,
 			critical: a.isCritical("cache", false),
+			driver:   getDriver("cache"),
 			check: func() error {
 				if a.app.CacheStore() == nil {
 					return fmt.Errorf("cache store not initialized")
@@ -91,8 +126,9 @@ func (a *Aggregator) Check() (map[string]Status, string) {
 		},
 		{
 			name:     "mail",
-			enabled:  a.app.AppConfig() != nil && a.app.AppConfig().Mail.Enabled,
+			enabled:  cfg != nil && cfg.Mail.Enabled,
 			critical: a.isCritical("mail", false),
+			driver:   getDriver("mail"),
 			check: func() error {
 				if a.app.EmailServiceValue() == nil {
 					return fmt.Errorf("mail service not initialized")
@@ -102,8 +138,9 @@ func (a *Aggregator) Check() (map[string]Status, string) {
 		},
 		{
 			name:     "queue",
-			enabled:  a.app.AppConfig() != nil && a.app.AppConfig().Queue.Enabled,
+			enabled:  cfg != nil && cfg.Queue.Enabled,
 			critical: a.isCritical("queue", false),
+			driver:   getDriver("queue"),
 			check: func() error {
 				if a.app.QueueServiceValue() == nil {
 					return fmt.Errorf("queue service not initialized")
@@ -113,8 +150,9 @@ func (a *Aggregator) Check() (map[string]Status, string) {
 		},
 		{
 			name:     "search",
-			enabled:  a.app.AppConfig() != nil && a.app.AppConfig().Search.Enabled,
+			enabled:  cfg != nil && cfg.Search.Enabled,
 			critical: a.isCritical("search", false),
+			driver:   getDriver("search"),
 			check: func() error {
 				if a.app.SearchServiceValue() == nil {
 					return fmt.Errorf("search service not initialized")
@@ -124,8 +162,9 @@ func (a *Aggregator) Check() (map[string]Status, string) {
 		},
 		{
 			name:     "storage",
-			enabled:  a.app.AppConfig() != nil && a.app.AppConfig().Storage.Enabled,
+			enabled:  cfg != nil && cfg.Storage.Enabled,
 			critical: a.isCritical("storage", false),
+			driver:   getDriver("storage"),
 			check: func() error {
 				if a.app.StorageValue() == nil {
 					return fmt.Errorf("storage manager not initialized")
@@ -140,6 +179,7 @@ func (a *Aggregator) Check() (map[string]Status, string) {
 			results[c.name] = Status{
 				Name:     c.name,
 				Status:   StatusDisabled,
+				Driver:   c.driver,
 				Enabled:  false,
 				Critical: c.critical,
 			}
@@ -158,6 +198,7 @@ func (a *Aggregator) Check() (map[string]Status, string) {
 			results[c.name] = Status{
 				Name:     c.name,
 				Status:   status,
+				Driver:   c.driver,
 				Error:    helpers.RedactSensitive(reason),
 				Enabled:  true,
 				Critical: c.critical,
@@ -167,7 +208,7 @@ func (a *Aggregator) Check() (map[string]Status, string) {
 		}
 
 		wg.Add(1)
-		go func(name string, critical bool, check func() error) {
+		go func(name string, critical bool, driver string, check func() error) {
 			defer wg.Done()
 			err := safeCheckWithTimeout(check, defaultCheckTimeout)
 
@@ -190,11 +231,12 @@ func (a *Aggregator) Check() (map[string]Status, string) {
 			results[name] = Status{
 				Name:     name,
 				Status:   status,
+				Driver:   driver,
 				Error:    errMsg,
 				Enabled:  true,
 				Critical: critical,
 			}
-		}(c.name, c.critical, c.check)
+		}(c.name, c.critical, c.driver, c.check)
 	}
 
 	wg.Wait()

@@ -20,17 +20,16 @@ func NewTranslatorWrapper(service *Service) *TranslatorWrapper {
 
 // Trans translates the given message key.
 func (w *TranslatorWrapper) Trans(c fiber.Ctx, key string, params map[string]interface{}, locale ...string) string {
-	return w.service.MustLocalize(c, &goi18n.LocalizeConfig{
-		MessageID:    key,
-		TemplateData: params,
-		DefaultMessage: &goi18n.Message{
-			ID: key,
-		},
+	return w.withLocale(c, locale, func() string {
+		return w.service.MustLocalize(c, &goi18n.LocalizeConfig{
+			MessageID:    key,
+			TemplateData: params,
+			DefaultMessage: &goi18n.Message{
+				ID: key,
+			},
+		})
 	})
 }
-
-// Note: Locale override via LocalizeConfig might need specific handling if the middleware doesn't support it directly in params.
-// But usually, it uses the language from the context.
 
 // Choice translates the given message key with pluralization.
 func (w *TranslatorWrapper) Choice(c fiber.Ctx, key string, number int, params map[string]interface{}, locale ...string) string {
@@ -39,6 +38,23 @@ func (w *TranslatorWrapper) Choice(c fiber.Ctx, key string, number int, params m
 	}
 	params["Count"] = number
 	return w.Trans(c, key, params, locale...)
+}
+
+func (w *TranslatorWrapper) withLocale(c fiber.Ctx, locale []string, localize func() string) string {
+	if c == nil || w == nil || w.service == nil || w.service.cfg == nil || len(locale) == 0 {
+		return localize()
+	}
+
+	matched := matchSupportedLanguage(locale[0], w.service.cfg.SupportedLanguages)
+	if matched == "" {
+		return localize()
+	}
+
+	previous := c.Locals(localeOverrideKey)
+	c.Locals(localeOverrideKey, matched)
+	defer c.Locals(localeOverrideKey, previous)
+
+	return localize()
 }
 
 // GetLocale returns the current locale.

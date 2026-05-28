@@ -1,0 +1,71 @@
+["validation.required"]
+other = "The {{.Field}} field is required."
+
+["validation.email"]
+other = "The {{.Field}} must be a valid email address."
+
+["validation.min"]
+other = "The {{.Field}} must be at least {{.Param}} characters."
+
+["validation.max"]
+other = "The {{.Field}} must be at most {{.Param}} characters."
+
+["validation.len"]
+other = "The {{.Field}} must be {{.Param}} characters."
+
+["validation.gte"]
+other = "The {{.Field}} must be greater than or equal to {{.Param}}."
+
+["validation.lte"]
+other = "The {{.Field}} must be less than or equal to {{.Param}}."
+
+["validation.gt"]
+other = "The {{.Field}} must be greater than {{.Param}}."
+
+["validation.lt"]
+other = "The {{.Field}} must be less than {{.Param}}."
+
+["validation.eqfield"]
+other = "The {{.Field}} must be equal to {{.Param}}."
+
+["validation.nefield"]
+other = "The {{.Field}} must not be equal to {{.Param}}."
+
+["validation.oneof"]
+other = "The {{.Field}} must be one of: {{.Param}}."
+
+["validation.url"]
+other = "The {{.Field}} must be a valid URL."
+
+["validation.uri"]
+other = "The {{.Field}} must be a valid URI."
+
+["validation.alpha"]
+other = "The {{.Field}} must contain only alphabetic characters."
+
+["validation.alphanum"]
+other = "The {{.Field}} must contain only alphanumeric characters."
+
+["validation.numeric"]
+other = "The {{.Field}} must be numeric."
+
+["validation.number"]
+other = "The {{.Field}} must be a valid number."
+
+["validation.uuid"]
+other = "The {{.Field}} must be a valid UUID."
+
+["validation.json"]
+other = "The {{.Field}} must be valid JSON."
+
+["validation.ipv4"]
+other = "The {{.Field}} must be a valid IPv4 address."
+
+["validation.ipv6"]
+other = "The {{.Field}} must be a valid IPv6 address."
+
+["validation.ip"]
+other = "The {{.Field}} must be a valid IP address."
+
+["validation.datetime"]
+other = "The {{.Field}} must be a valid datetime."

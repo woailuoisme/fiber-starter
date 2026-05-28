@@ -4,6 +4,8 @@ go 1.26.3
 
 require (
 	ariga.io/atlas-provider-bun v0.0.3
+	github.com/BurntSushi/toml v1.6.0
+	github.com/casbin/casbin/v2 v2.135.0
 	github.com/charmbracelet/huh v1.0.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/dromara/carbon/v2 v2.6.16
@@ -12,6 +14,7 @@ require (
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/goccy/go-json v0.10.6
+	github.com/gofiber/contrib/v3/casbin v1.0.6
 	github.com/gofiber/contrib/v3/i18n v1.0.6
 	github.com/gofiber/contrib/v3/jwt v1.1.5
 	github.com/gofiber/contrib/v3/loadshed v1.1.4
@@ -51,6 +54,7 @@ require (
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.43.0
 	go.opentelemetry.io/otel/sdk v1.43.0
 	go.opentelemetry.io/otel/sdk/metric v1.43.0
+	go.opentelemetry.io/otel/trace v1.43.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/crypto v0.52.0
 	golang.org/x/text v0.37.0
@@ -84,6 +88,8 @@ require (
 	github.com/aws/smithy-go v1.25.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.10.0 // indirect
+	github.com/casbin/govaluate v1.10.0 // indirect
 	github.com/catppuccin/go v0.3.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -190,7 +196,6 @@ require (
 	go.opentelemetry.io/contrib v1.43.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.43.0 // indirect
 	go.opentelemetry.io/otel/metric v1.43.0 // indirect
-	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect

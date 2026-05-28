@@ -3,25 +3,16 @@ package tests
 import (
 	"testing"
 
-	"lfiber/configs"
+	"lfiber/internal/common/exceptions"
 	requests "lfiber/internal/common/requests"
 	"lfiber/internal/features/auth"
 	"lfiber/internal/features/user"
-	supporti18n "lfiber/internal/providers/i18n"
-	validation "lfiber/internal/providers/validation"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRequestValidationHelpers_UseValidatorRules(t *testing.T) {
-	v, err := validation.RegisterValidation(&configs.Config{})
-	require.NoError(t, err)
-	requests.InitValidator(v)
-	t.Cleanup(func() {
-		requests.InitValidator(nil)
-	})
-
 	assert.True(t, requests.ValidateEmail("user@example.com"))
 	assert.False(t, requests.ValidateEmail("invalid"))
 
@@ -54,47 +45,47 @@ func TestRequestValidationHelpers_UseValidatorRules(t *testing.T) {
 }
 
 func TestRequestStructTags_EnforceAuthAndUserRules(t *testing.T) {
-	factory, err := validation.RegisterValidation(&configs.Config{})
-	require.NoError(t, err)
-
-	registerErr := factory.Make(&auth.RegisterRequest{
+	registerErr := requests.ValidateStruct(&auth.RegisterRequest{
 		Name:     "A",
 		Email:    "not-an-email",
 		Password: "short",
-	}, nil, nil, nil).Validate()
+	})
 	require.Error(t, registerErr)
-	registerErrors := supporti18n.FormatValidationErrors(registerErr)
+	var valRegErr *exceptions.ValidationException
+	require.ErrorAs(t, registerErr, &valRegErr)
+	registerErrors := valRegErr.Errors
 	assert.Contains(t, registerErrors, "name")
 	assert.Contains(t, registerErrors, "email")
 	assert.Contains(t, registerErrors, "password")
 
-	profileErr := factory.Make(&user.UpdateProfileRequest{
+	profileErr := requests.ValidateStruct(&user.UpdateProfileRequest{
 		Name:   "A",
 		Phone:  "not-a-phone",
 		Avatar: "not-a-url",
-	}, nil, nil, nil).Validate()
+	})
 	require.Error(t, profileErr)
-	profileErrors := supporti18n.FormatValidationErrors(profileErr)
+	var valProfileErr *exceptions.ValidationException
+	require.ErrorAs(t, profileErr, &valProfileErr)
+	profileErrors := valProfileErr.Errors
 	assert.Contains(t, profileErrors, "name")
 	assert.Contains(t, profileErrors, "phone")
 	assert.Contains(t, profileErrors, "avatar")
 
-	searchErr := factory.Make(&user.SearchUsersRequest{
+	searchErr := requests.ValidateStruct(&user.SearchUsersRequest{
 		Q:     "",
 		Page:  -1,
 		Limit: 101,
-	}, nil, nil, nil).Validate()
+	})
 	require.Error(t, searchErr)
-	searchErrors := supporti18n.FormatValidationErrors(searchErr)
+	var valSearchErr *exceptions.ValidationException
+	require.ErrorAs(t, searchErr, &valSearchErr)
+	searchErrors := valSearchErr.Errors
 	assert.Contains(t, searchErrors, "q")
 	assert.Contains(t, searchErrors, "page")
 	assert.Contains(t, searchErrors, "limit")
 }
 
 func TestValidationFallbackMessages_CoverConditionalAndTypeRules(t *testing.T) {
-	factory, err := validation.RegisterValidation(&configs.Config{})
-	require.NoError(t, err)
-
 	type payload struct {
 		Kind      string `json:"kind" validate:"required"`
 		Value     string `json:"value" validate:"required_if=Kind special"`
@@ -102,15 +93,17 @@ func TestValidationFallbackMessages_CoverConditionalAndTypeRules(t *testing.T) {
 		StartedAt string `json:"started_at" validate:"date"`
 	}
 
-	err = factory.Make(&payload{
+	err := requests.ValidateStruct(&payload{
 		Kind:      "special",
 		Value:     "",
 		Enabled:   "maybe",
 		StartedAt: "not-a-date",
-	}, nil, nil, nil).Validate()
+	})
 	require.Error(t, err)
 
-	errorsMap := supporti18n.FormatValidationErrors(err)
+	var valErr *exceptions.ValidationException
+	require.ErrorAs(t, err, &valErr)
+	errorsMap := valErr.Errors
 	valueErrors, ok := errorsMap["value"]
 	require.True(t, ok)
 	assert.NotEmpty(t, valueErrors)
@@ -130,15 +123,17 @@ func TestValidationFallbackMessages_CoverConditionalAndTypeRules(t *testing.T) {
 		Profile map[string]any `json:"profile" validate:"array=name username"`
 	}
 
-	arrayErr := factory.Make(&arrayPayload{
+	arrayErr := requests.ValidateStruct(&arrayPayload{
 		Profile: map[string]any{
 			"name":     "alice",
 			"username": "alice",
 			"admin":    true,
 		},
-	}, nil, nil, nil).Validate()
+	})
 	require.Error(t, arrayErr)
-	arrayErrors := supporti18n.FormatValidationErrors(arrayErr)
+	var valArrayErr *exceptions.ValidationException
+	require.ErrorAs(t, arrayErr, &valArrayErr)
+	arrayErrors := valArrayErr.Errors
 	profileErrors, ok := arrayErrors["profile"]
 	require.True(t, ok)
 	assert.NotEmpty(t, profileErrors)
@@ -146,9 +141,6 @@ func TestValidationFallbackMessages_CoverConditionalAndTypeRules(t *testing.T) {
 }
 
 func TestValidationFallbackMessages_CoverLaravelAliases(t *testing.T) {
-	factory, err := validation.RegisterValidation(&configs.Config{})
-	require.NoError(t, err)
-
 	type payload struct {
 		Username  string         `json:"username" validate:"alpha_num"`
 		Slug      string         `json:"slug" validate:"alpha_dash"`
@@ -159,7 +151,7 @@ func TestValidationFallbackMessages_CoverLaravelAliases(t *testing.T) {
 		StartedAt string         `json:"started_at" validate:"date_format=2006-01-02"`
 	}
 
-	err = factory.Make(&payload{
+	err := requests.ValidateStruct(&payload{
 		Username:  "bad username!",
 		Slug:      "bad slug!",
 		Prefix:    "postfix",
@@ -167,10 +159,12 @@ func TestValidationFallbackMessages_CoverLaravelAliases(t *testing.T) {
 		Items:     map[string]any{"0": "first", "2": "third"},
 		Profile:   map[string]any{"name": "alice"},
 		StartedAt: "01-02-2006",
-	}, nil, nil, nil).Validate()
+	})
 	require.Error(t, err)
 
-	errorsMap := supporti18n.FormatValidationErrors(err)
+	var valErr *exceptions.ValidationException
+	require.ErrorAs(t, err, &valErr)
+	errorsMap := valErr.Errors
 	assert.Contains(t, errorsMap, "username")
 	assert.Contains(t, errorsMap, "slug")
 	assert.Contains(t, errorsMap, "prefix")

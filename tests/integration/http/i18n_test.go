@@ -10,7 +10,6 @@ import (
 	requests "lfiber/internal/common/requests"
 	"lfiber/internal/providers"
 	supporti18n "lfiber/internal/providers/i18n"
-	validation "lfiber/internal/providers/validation"
 	helpers "lfiber/internal/support"
 	"lfiber/tests/internal/testkit"
 
@@ -22,7 +21,7 @@ import (
 func TestI18n_LocalizeLanguagePriorityAndCookiePersistence(t *testing.T) {
 	initTestI18n(t)
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{StructValidator: requests.NewStructValidator()})
 	app.Use(supporti18n.Middleware())
 	app.Get("/welcome", func(c fiber.Ctx) error {
 		message := supporti18n.Trans(c, "app.welcome", nil)
@@ -56,14 +55,14 @@ func TestI18n_LocalizeLanguagePriorityAndCookiePersistence(t *testing.T) {
 func TestI18n_ValidationErrorsUseRequestLanguage(t *testing.T) {
 	initTestI18n(t)
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{StructValidator: requests.NewStructValidator()})
 	app.Use(supporti18n.Middleware())
 	app.Post("/validate", func(c fiber.Ctx) error {
 		var req struct {
 			Email string `json:"email" validate:"required,email"`
 		}
 
-		if err := requests.BindAndValidateBody(c, &req); err != nil {
+		if err := requests.Body(c, &req); err != nil {
 			return helpers.HandleAppError(c, err)
 		}
 
@@ -90,12 +89,9 @@ func initTestI18n(t *testing.T) {
 
 	langDir := filepath.Join(testkit.RepoRoot(t), "lang")
 
-	v, err := validation.RegisterValidation(&configs.Config{})
-	require.NoError(t, err)
-	requests.InitValidator(v)
 	_, translator, err := supporti18n.RegisterI18n(&configs.Config{
 		I18n: configs.I18nConfig{
-			DefaultLanguage:    "zh-CN",
+			DefaultLanguage:    "en",
 			SupportedLanguages: []string{"en", "zh-CN"},
 			LanguageDir:        langDir,
 			CookieName:         "lang",
@@ -106,7 +102,6 @@ func initTestI18n(t *testing.T) {
 
 	rt := &providers.Runtime{
 		Translator: translator,
-		Validation: v,
 	}
 	providers.SetInstance(rt)
 	t.Cleanup(func() {

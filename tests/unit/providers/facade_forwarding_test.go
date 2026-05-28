@@ -9,6 +9,7 @@ import (
 	models "lfiber/internal/features/user"
 	auth "lfiber/internal/providers/auth"
 	authContracts "lfiber/internal/providers/auth/contracts"
+	authorizationContracts "lfiber/internal/providers/authorization/contracts"
 	cache "lfiber/internal/providers/cache"
 	cacheContracts "lfiber/internal/providers/cache/contracts"
 	configContracts "lfiber/internal/providers/config/contracts"
@@ -27,7 +28,6 @@ import (
 	searchContracts "lfiber/internal/providers/search/contracts"
 	storage "lfiber/internal/providers/storage"
 	storageContracts "lfiber/internal/providers/storage/contracts"
-	validationContracts "lfiber/internal/providers/validation/contracts"
 	"lfiber/internal/support/appctx"
 	"lfiber/tests/internal/testkit"
 
@@ -360,7 +360,7 @@ func (m *fakeAuthManager) Guard(name ...string) authContracts.Guard {
 	return m.guard
 }
 
-func (m *fakeAuthManager) SetModelCreator(creator func() any) {}
+func (m *fakeAuthManager) SetModelCreator(provider string, creator func() any) {}
 
 type fakeMailManager struct {
 	mailer        mailContracts.Mailer
@@ -486,6 +486,7 @@ func (j *dummyJob) QueueName() string            { return "default" }
 
 type fakeApp struct {
 	auth           authContracts.Manager
+	authorization  authorizationContracts.Authorizer
 	cacheManager   cacheContracts.Manager
 	cacheStore     cacheContracts.Store
 	mailManager    mailContracts.Manager
@@ -495,13 +496,16 @@ type fakeApp struct {
 	storageManager storageContracts.StorageManager
 }
 
-func (a *fakeApp) AppConfig() *configs.Config                            { return nil }
-func (a *fakeApp) ConfigRepository() configContracts.Repository          { return nil }
-func (a *fakeApp) DatabaseManager() databaseContracts.Manager            { return nil }
-func (a *fakeApp) ConnectionValue() databaseContracts.Connection         { return nil }
-func (a *fakeApp) CacheManagerValue() cacheContracts.Manager             { return a.cacheManager }
-func (a *fakeApp) CacheStore() cacheContracts.Store                      { return a.cacheStore }
-func (a *fakeApp) AuthManager() authContracts.Manager                    { return a.auth }
+func (a *fakeApp) AppConfig() *configs.Config                    { return nil }
+func (a *fakeApp) ConfigRepository() configContracts.Repository  { return nil }
+func (a *fakeApp) DatabaseManager() databaseContracts.Manager    { return nil }
+func (a *fakeApp) ConnectionValue() databaseContracts.Connection { return nil }
+func (a *fakeApp) CacheManagerValue() cacheContracts.Manager     { return a.cacheManager }
+func (a *fakeApp) CacheStore() cacheContracts.Store              { return a.cacheStore }
+func (a *fakeApp) AuthManager() authContracts.Manager            { return a.auth }
+func (a *fakeApp) AuthorizationService() authorizationContracts.Authorizer {
+	return a.authorization
+}
 func (a *fakeApp) MailManagerValue() mailContracts.Manager               { return a.mailManager }
 func (a *fakeApp) EmailServiceValue() mailContracts.Mailer               { return a.emailService }
 func (a *fakeApp) QueueManagerValue() queueContracts.Manager             { return a.queueManager }
@@ -514,7 +518,6 @@ func (a *fakeApp) StorageValue() storageContracts.StorageManager         { retur
 func (a *fakeApp) HashService() hashContracts.Hasher                     { return nil }
 func (a *fakeApp) NotificationService() notificationContracts.Dispatcher { return nil }
 func (a *fakeApp) TranslatorService() i18nContracts.Translator           { return nil }
-func (a *fakeApp) ValidationService() validationContracts.Factory        { return nil }
 func (a *fakeApp) LogService() loggingContracts.Logger                   { return nil }
 func (a *fakeApp) RateLimiterService() ratelimiterContracts.Limiter      { return nil }
 

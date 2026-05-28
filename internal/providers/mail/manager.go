@@ -46,6 +46,8 @@ func (m *Manager) Drive(name ...string) contracts.Mailer {
 		mailer = drivers.NewLogDriver()
 	case "smtp":
 		mailer = drivers.NewSMTPDriver(m.config)
+	case "null", "noop":
+		mailer = drivers.NewNoopMailer()
 	default:
 		mailer = drivers.NewResendDriver(m.config)
 	}

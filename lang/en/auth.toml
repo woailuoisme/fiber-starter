@@ -1,0 +1,59 @@
+["auth.login"]
+other = "Login"
+
+["auth.logout"]
+other = "Logout"
+
+["auth.register"]
+other = "Register"
+
+["auth.email"]
+other = "Email"
+
+["auth.password"]
+other = "Password"
+
+["auth.confirm_password"]
+other = "Confirm Password"
+
+["auth.forgot_password"]
+other = "Forgot Password"
+
+["auth.reset_password"]
+other = "Reset Password"
+
+["auth.remember_me"]
+other = "Remember Me"
+
+["auth.login_success"]
+other = "Successfully logged in."
+
+["auth.logout_success"]
+other = "Successfully logged out."
+
+["auth.register_success"]
+other = "Account created successfully."
+
+["auth.failed"]
+other = "These credentials do not match our records."
+
+["auth.throttle"]
+other = "Too many login attempts. Please try again in {{.Seconds}} seconds."
+
+["auth.password_reset_link"]
+other = "We have emailed your password reset link!"
+
+["auth.password_reset_success"]
+other = "Your password has been reset!"
+
+["auth.account_disabled"]
+other = "Your account has been disabled."
+
+["auth.unauthorized"]
+other = "Unauthorized access, please login."
+
+["auth.token_expired"]
+other = "Session expired, please login again."
+
+["auth.token_invalid"]
+other = "Invalid authentication token."

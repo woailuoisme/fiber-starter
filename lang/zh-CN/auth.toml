@@ -1,0 +1,59 @@
+["auth.login"]
+other = "登录"
+
+["auth.logout"]
+other = "退出登录"
+
+["auth.register"]
+other = "注册"
+
+["auth.email"]
+other = "邮箱"
+
+["auth.password"]
+other = "密码"
+
+["auth.confirm_password"]
+other = "确认密码"
+
+["auth.forgot_password"]
+other = "忘记密码"
+
+["auth.reset_password"]
+other = "重置密码"
+
+["auth.remember_me"]
+other = "记住我"
+
+["auth.login_success"]
+other = "登录成功。"
+
+["auth.logout_success"]
+other = "已成功退出登录。"
+
+["auth.register_success"]
+other = "账号创建成功。"
+
+["auth.failed"]
+other = "用户名或密码错误。"
+
+["auth.throttle"]
+other = "登录尝试次数过多。请在 {{.Seconds}} 秒后再试。"
+
+["auth.password_reset_link"]
+other = "我们已向您的邮箱发送了密码重置链接！"
+
+["auth.password_reset_success"]
+other = "您的密码已成功重置！"
+
+["auth.account_disabled"]
+other = "您的账户已被禁用。"
+
+["auth.unauthorized"]
+other = "未授权访问，请先登录。"
+
+["auth.token_expired"]
+other = "登录已过期，请重新登录。"
+
+["auth.token_invalid"]
+other = "无效的登录凭证。"

@@ -69,7 +69,7 @@ type commandJob struct {
 
 func (j *commandJob) Handle(ctx context.Context) error {
 	// In a real implementation, this would execute the command via os/exec or a command runner
-	fmt.Printf("Executing scheduled command: %s %v\n", j.command, j.args)
+	helpers.Info("scheduled_command_started", zap.String("command", j.command), zap.Strings("args", j.args))
 	return nil
 }
 func (j *commandJob) TaskName() string  { return "schedule:command" }

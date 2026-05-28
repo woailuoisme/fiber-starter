@@ -1,4 +1,4 @@
-package validation
+package requests
 
 import (
 	"mime/multipart"
@@ -12,39 +12,37 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// registerCustomValidations 注册自定义验证规则
-func (s *Service) registerCustomValidations() {
-	_ = s.Extend("array", validateArray, "must be an array")
-	_ = s.Extend("list", validateList, "must be a list")
-	_ = s.Extend("required_array_keys", validateRequiredArrayKeys, "must contain the required keys")
-	_ = s.Extend("alpha_dash", validateAlphaDash, "must contain only letters, numbers, dashes, or underscores")
-	_ = s.Extend("accepted", validateAccepted, "must be accepted")
-	_ = s.Extend("declined", validateDeclined, "must be declined")
-	_ = s.Extend("date_format", validateDateFormat, "must match the expected date format")
-	_ = s.Extend("date_equals", validateDateEquals, "must be a date equal to the expected date")
-	_ = s.Extend("after", validateAfter, "must be a date after the expected date")
-	_ = s.Extend("after_or_equal", validateAfterOrEqual, "must be a date after or equal to the expected date")
-	_ = s.Extend("before", validateBefore, "must be a date before the expected date")
-	_ = s.Extend("before_or_equal", validateBeforeOrEqual, "must be a date before or equal to the expected date")
-	_ = s.Extend("uploaded_file", validateFile, "must be a valid uploaded file")
-	_ = s.Extend("max_bytes", validateMaxBytes, "must not exceed file size limit")
-	_ = s.Extend("mime_types", validateMimeTypes, "must be a valid file type")
-	_ = s.Extend("phone", validatePhone, "phone is invalid")
-	_ = s.Extend("positive_int", validatePositiveInt, "must be a positive integer")
-	_ = s.Extend("positive", validatePositive, "must be a positive number")
-	_ = s.Extend("price", validatePrice, "must be a positive price")
-	_ = s.Extend("mobile", validateMobile, "mobile number is invalid")
-	_ = s.Extend("date", validateDate, "must be a valid date")
-}
+// registerCustomValidations 注册自定义验证规则和 Laravel 别名
+func registerCustomValidations(v *validator.Validate) {
+	_ = v.RegisterValidation("array", validateArray)
+	_ = v.RegisterValidation("list", validateList)
+	_ = v.RegisterValidation("required_array_keys", validateRequiredArrayKeys)
+	_ = v.RegisterValidation("alpha_dash", validateAlphaDash)
+	_ = v.RegisterValidation("accepted", validateAccepted)
+	_ = v.RegisterValidation("declined", validateDeclined)
+	_ = v.RegisterValidation("date_format", validateDateFormat)
+	_ = v.RegisterValidation("date_equals", validateDateEquals)
+	_ = v.RegisterValidation("after", validateAfter)
+	_ = v.RegisterValidation("after_or_equal", validateAfterOrEqual)
+	_ = v.RegisterValidation("before", validateBefore)
+	_ = v.RegisterValidation("before_or_equal", validateBeforeOrEqual)
+	_ = v.RegisterValidation("uploaded_file", validateFile)
+	_ = v.RegisterValidation("max_bytes", validateMaxBytes)
+	_ = v.RegisterValidation("mime_types", validateMimeTypes)
+	_ = v.RegisterValidation("phone", validatePhone)
+	_ = v.RegisterValidation("positive_int", validatePositiveInt)
+	_ = v.RegisterValidation("positive", validatePositive)
+	_ = v.RegisterValidation("price", validatePrice)
+	_ = v.RegisterValidation("mobile", validateMobile)
+	_ = v.RegisterValidation("date", validateDate)
 
-// registerLaravelAliases registers Laravel-friendly aliases for validator tags.
-func (s *Service) registerLaravelAliases() {
-	s.validator.RegisterAlias("alpha_num", "alphanumunicode")
-	s.validator.RegisterAlias("starts_with", "startswith")
-	s.validator.RegisterAlias("ends_with", "endswith")
-	s.validator.RegisterAlias("doesnt_start_with", "startsnotwith")
-	s.validator.RegisterAlias("doesnt_end_with", "endsnotwith")
-	s.validator.RegisterAlias("mac_address", "mac")
+	// 注册 Laravel 风格的别名
+	v.RegisterAlias("alpha_num", "alphanumunicode")
+	v.RegisterAlias("starts_with", "startswith")
+	v.RegisterAlias("ends_with", "endswith")
+	v.RegisterAlias("doesnt_start_with", "startsnotwith")
+	v.RegisterAlias("doesnt_end_with", "endsnotwith")
+	v.RegisterAlias("mac_address", "mac")
 }
 
 // validatePhone 验证手机号
@@ -87,7 +85,7 @@ func validatePositive(fl validator.FieldLevel) bool {
 	}
 }
 
-// validatePrice 验证价格（正整数）
+// validatePrice 验证价格（正数）
 func validatePrice(fl validator.FieldLevel) bool {
 	switch fl.Field().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:

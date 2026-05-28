@@ -38,9 +38,12 @@ default:
 # 显示帮助信息
 help: default
 
-# 启动开发服务器 (自动检测 air)
 dev:
-    @command -v air >/dev/null 2>&1 && air || {{ APP_RUN }} serve
+    #!/usr/bin/env bash
+    PORT=$(grep -E "^APP_PORT=" .env 2>/dev/null | cut -d'=' -f2)
+    PORT=${PORT:-3000}
+    PID=$(lsof -t -i :$PORT -sTCP:LISTEN) && kill -9 $PID 2>/dev/null && echo "Killed process $PID using port $PORT" || true
+    command -v air >/dev/null 2>&1 && air || {{ APP_RUN }} serve
 
 # 直接运行应用
 run:

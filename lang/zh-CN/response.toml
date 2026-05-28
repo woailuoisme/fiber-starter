@@ -1,0 +1,38 @@
+["response.success"]
+other = "操作成功。"
+
+["response.created"]
+other = "创建成功。"
+
+["response.updated"]
+other = "更新成功。"
+
+["response.deleted"]
+other = "删除成功。"
+
+["response.saved"]
+other = "保存成功。"
+
+["response.error"]
+other = "发生错误。"
+
+["response.not_found"]
+other = "未找到相关资源。"
+
+["response.unauthorized"]
+other = "未授权访问。"
+
+["response.forbidden"]
+other = "禁止访问。"
+
+["response.internal_error"]
+other = "服务器内部错误。"
+
+["response.bad_request"]
+other = "无效请求。"
+
+["response.validation_failed"]
+other = "提交的数据验证未通过。"
+
+["response.too_many_requests"]
+other = "请求过于频繁，请稍后再试。"

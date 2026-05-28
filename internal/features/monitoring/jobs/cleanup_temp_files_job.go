@@ -2,7 +2,10 @@ package jobs
 
 import (
 	"context"
-	"fmt"
+
+	helpers "lfiber/internal/support"
+
+	"go.uber.org/zap"
 )
 
 type CleanupTempFilesJob struct {
@@ -25,6 +28,6 @@ func (j *CleanupTempFilesJob) QueueName() string {
 
 func (j *CleanupTempFilesJob) Handle(ctx context.Context) error {
 	// Logic to cleanup temp files
-	fmt.Printf("Cleaning up temporary files in %s\n", j.Directory)
+	helpers.Info("cleanup_temp_files_started", zap.String("directory", j.Directory))
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 
 	exceptions "lfiber/internal/common/exceptions"
 	middleware "lfiber/internal/common/middleware"
+	requests "lfiber/internal/common/requests"
 	userModel "lfiber/internal/features/user"
 	helpers "lfiber/internal/support"
 
@@ -46,15 +47,11 @@ func NewAuthController(authService AuthService) *AuthController {
 //	@Produce		json
 //	@Param			request	body		RegisterRequest															true	"注册参数"
 //	@Success		201		{object}	support.APISuccessResponse{data=object{user=user.SafeUser,verification_required=bool}}	"注册成功"
-//	@Failure		400		{object}	support.APIResponse																		"请求参数错误"
-//	@Failure		409		{object}	support.APIResponse																		"邮箱已被注册"
-//	@Failure		422		{object}	support.APIResponse																		"数据校验失败"
-//	@Failure		500		{object}	support.APIResponse																		"服务器内部错误"
 //	@Router			/api/v1/auth/sign-up [post]
 func (c *AuthController) SignUp(ctx fiber.Ctx) error {
 	var req RegisterRequest
 
-	if err := req.BindAndValidate(ctx); err != nil {
+	if err := requests.Body(ctx, &req); err != nil {
 		return err
 	}
 
@@ -66,11 +63,6 @@ func (c *AuthController) SignUp(ctx fiber.Ctx) error {
 	return helpers.HandleCreated(ctx, "Registered successfully", NewSignUpResource(result).ToResponse())
 }
 
-// Register is a compatibility wrapper for SignUp.
-func (c *AuthController) Register(ctx fiber.Ctx) error {
-	return c.SignUp(ctx)
-}
-
 // VerifySignUp verifies the signup OTP and returns a session.
 //
 //	@Summary		验证注册邮箱
@@ -80,15 +72,11 @@ func (c *AuthController) Register(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		VerifySignUpRequest																								true	"验证参数"
 //	@Success		200		{object}	support.APISuccessResponse{data=object{user=user.SafeUser,tokens=object{access_token=string,refresh_token=string}}}	"验证成功"
-//	@Failure		400		{object}	support.APIResponse																								"验证码无效或已过期"
-//	@Failure		403		{object}	support.APIResponse																								"账号已被禁用"
-//	@Failure		404		{object}	support.APIResponse																								"用户不存在"
-//	@Failure		422		{object}	support.APIResponse																								"数据校验失败"
 //	@Router			/api/v1/auth/sign-up/verify [post]
 func (c *AuthController) VerifySignUp(ctx fiber.Ctx) error {
 	var req VerifySignUpRequest
 
-	if err := req.BindAndValidate(ctx); err != nil {
+	if err := requests.Body(ctx, &req); err != nil {
 		return err
 	}
 
@@ -109,14 +97,11 @@ func (c *AuthController) VerifySignUp(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		LoginRequest																									true	"登录参数"
 //	@Success		200		{object}	support.APISuccessResponse{data=object{user=user.SafeUser,tokens=object{access_token=string,refresh_token=string}}}	"登录成功"
-//	@Failure		401		{object}	support.APIResponse																									"邮箱或密码错误"
-//	@Failure		403		{object}	support.APIResponse																									"邮箱未验证或账号被禁用"
-//	@Failure		422		{object}	support.APIResponse																									"数据校验失败"
 //	@Router			/api/v1/auth/sign-in [post]
 func (c *AuthController) SignIn(ctx fiber.Ctx) error {
 	var req LoginRequest
 
-	if err := req.BindAndValidate(ctx); err != nil {
+	if err := requests.Body(ctx, &req); err != nil {
 		return err
 	}
 
@@ -128,11 +113,6 @@ func (c *AuthController) SignIn(ctx fiber.Ctx) error {
 	return helpers.HandleSuccess(ctx, "Logged in successfully", NewAuthResultResource(result).ToResponse())
 }
 
-// Login is a compatibility wrapper for SignIn.
-func (c *AuthController) Login(ctx fiber.Ctx) error {
-	return c.SignIn(ctx)
-}
-
 // RefreshSession refreshes the access and refresh tokens.
 //
 //	@Summary		刷新令牌
@@ -142,14 +122,11 @@ func (c *AuthController) Login(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		RefreshTokenRequest														true	"刷新参数"
 //	@Success		200		{object}	support.APISuccessResponse{data=object{access_token=string,refresh_token=string}}	"刷新成功"
-//	@Failure		401		{object}	support.APIResponse														"刷新令牌无效或已过期"
-//	@Failure		403		{object}	support.APIResponse														"账号已被禁用"
-//	@Failure		422		{object}	support.APIResponse														"数据校验失败"
 //	@Router			/api/v1/auth/refresh [post]
 func (c *AuthController) RefreshSession(ctx fiber.Ctx) error {
 	var req RefreshTokenRequest
 
-	if err := req.BindAndValidate(ctx); err != nil {
+	if err := requests.Body(ctx, &req); err != nil {
 		return err
 	}
 
@@ -161,11 +138,6 @@ func (c *AuthController) RefreshSession(ctx fiber.Ctx) error {
 	return helpers.HandleSuccess(ctx, "Token refreshed successfully", NewAuthTokensResource(tokens).ToResponse())
 }
 
-// RefreshToken is a compatibility wrapper for RefreshSession.
-func (c *AuthController) RefreshToken(ctx fiber.Ctx) error {
-	return c.RefreshSession(ctx)
-}
-
 // SignOut logs the current user out.
 //
 //	@Summary		用户登出
@@ -175,8 +147,6 @@ func (c *AuthController) RefreshToken(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Security		Bearer
 //	@Success		200	{object}	support.APISuccessNoDataResponse	"注销成功"
-//	@Failure		400	{object}	support.APIResponse					"解析访问令牌失败"
-//	@Failure		401	{object}	support.APIResponse					"未授权的请求"
 //	@Router			/api/v1/auth/sign-out [post]
 func (c *AuthController) SignOut(ctx fiber.Ctx) error {
 	user := middleware.GetUserFromContext(ctx)
@@ -196,11 +166,6 @@ func (c *AuthController) SignOut(ctx fiber.Ctx) error {
 	return helpers.HandleSuccess(ctx, "Logged out successfully", nil)
 }
 
-// Logout is a compatibility wrapper for SignOut.
-func (c *AuthController) Logout(ctx fiber.Ctx) error {
-	return c.SignOut(ctx)
-}
-
 // UpdatePassword changes the current user's password.
 //
 //	@Summary		修改密码
@@ -211,9 +176,6 @@ func (c *AuthController) Logout(ctx fiber.Ctx) error {
 //	@Security		Bearer
 //	@Param			request	body		ChangePasswordRequest	true	"修改参数"
 //	@Success		200		{object}	support.APISuccessNoDataResponse		"修改成功"
-//	@Failure		400		{object}	support.APIResponse						"旧密码错误"
-//	@Failure		401		{object}	support.APIResponse						"未授权的请求"
-//	@Failure		422		{object}	support.APIResponse						"数据校验失败"
 //	@Router			/api/v1/auth/change-password [post]
 func (c *AuthController) UpdatePassword(ctx fiber.Ctx) error {
 	userID := middleware.GetCurrentUserID(ctx)
@@ -222,7 +184,7 @@ func (c *AuthController) UpdatePassword(ctx fiber.Ctx) error {
 	}
 
 	var req ChangePasswordRequest
-	if err := req.BindAndValidate(ctx); err != nil {
+	if err := requests.Body(ctx, &req); err != nil {
 		return err
 	}
 
@@ -231,11 +193,6 @@ func (c *AuthController) UpdatePassword(ctx fiber.Ctx) error {
 	}
 
 	return helpers.HandleSuccess(ctx, "Password changed successfully", nil)
-}
-
-// ChangePassword is a compatibility wrapper for UpdatePassword.
-func (c *AuthController) ChangePassword(ctx fiber.Ctx) error {
-	return c.UpdatePassword(ctx)
 }
 
 // SendPasswordReset sends a reset email to the user.
@@ -247,11 +204,10 @@ func (c *AuthController) ChangePassword(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		ResetPasswordRequest	true	"重置密码参数"
 //	@Success		200		{object}	support.APISuccessNoDataResponse		"成功"
-//	@Failure		422		{object}	support.APIResponse						"数据校验失败"
 //	@Router			/api/v1/auth/reset-password [post]
 func (c *AuthController) SendPasswordReset(ctx fiber.Ctx) error {
 	var req ResetPasswordRequest
-	if err := req.BindAndValidate(ctx); err != nil {
+	if err := requests.Body(ctx, &req); err != nil {
 		return err
 	}
 
@@ -260,11 +216,6 @@ func (c *AuthController) SendPasswordReset(ctx fiber.Ctx) error {
 	}
 
 	return helpers.HandleSuccess(ctx, "Password reset code sent", nil)
-}
-
-// ResetPassword is a compatibility wrapper for SendPasswordReset.
-func (c *AuthController) ResetPassword(ctx fiber.Ctx) error {
-	return c.SendPasswordReset(ctx)
 }
 
 // VerifyPasswordReset verifies the password reset OTP and returns a short-lived reset token.
@@ -276,13 +227,11 @@ func (c *AuthController) ResetPassword(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		VerifyResetPasswordRequest								true	"验证重置密码参数"
 //	@Success		200		{object}	support.APISuccessResponse{data=object{reset_token=string}}	"验证成功"
-//	@Failure		400		{object}	support.APIResponse											"验证码无效或已过期"
-//	@Failure		422		{object}	support.APIResponse											"数据校验失败"
 //	@Router			/api/v1/auth/reset-password/verify [post]
 func (c *AuthController) VerifyPasswordReset(ctx fiber.Ctx) error {
 	var req VerifyResetPasswordRequest
 
-	if err := req.BindAndValidate(ctx); err != nil {
+	if err := requests.Body(ctx, &req); err != nil {
 		return err
 	}
 
@@ -305,13 +254,10 @@ func (c *AuthController) VerifyPasswordReset(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		ConfirmResetPasswordRequest	true	"确认重置密码参数"
 //	@Success		200		{object}	support.APISuccessNoDataResponse			"成功"
-//	@Failure		400		{object}	support.APIResponse							"重置令牌无效或已过期"
-//	@Failure		404		{object}	support.APIResponse							"用户不存在"
-//	@Failure		422		{object}	support.APIResponse							"数据校验失败"
 //	@Router			/api/v1/auth/reset-password/confirm [post]
 func (c *AuthController) ConfirmPasswordReset(ctx fiber.Ctx) error {
 	var req ConfirmResetPasswordRequest
-	if err := req.BindAndValidate(ctx); err != nil {
+	if err := requests.Body(ctx, &req); err != nil {
 		return err
 	}
 
@@ -320,11 +266,6 @@ func (c *AuthController) ConfirmPasswordReset(ctx fiber.Ctx) error {
 	}
 
 	return helpers.HandleSuccess(ctx, "Password reset successfully", nil)
-}
-
-// ConfirmResetPassword is a compatibility wrapper for ConfirmPasswordReset.
-func (c *AuthController) ConfirmResetPassword(ctx fiber.Ctx) error {
-	return c.ConfirmPasswordReset(ctx)
 }
 
 // Session returns the current authenticated user's profile.
@@ -336,7 +277,6 @@ func (c *AuthController) ConfirmResetPassword(ctx fiber.Ctx) error {
 //	@Produce		json
 //	@Security		Bearer
 //	@Success		200	{object}	support.APISuccessResponse{data=object{user=user.SafeUser}}	"获取成功"
-//	@Failure		401	{object}	support.APIResponse											"身份凭证已失效"
 //	@Router			/api/v1/auth/session [get]
 func (c *AuthController) Session(ctx fiber.Ctx) error {
 	user := middleware.GetUserFromContext(ctx)
@@ -373,9 +313,4 @@ func (c *AuthController) Session(ctx fiber.Ctx) error {
 			Email: email,
 		},
 	})
-}
-
-// GetProfile is a compatibility wrapper for Session.
-func (c *AuthController) GetProfile(ctx fiber.Ctx) error {
-	return c.Session(ctx)
 }

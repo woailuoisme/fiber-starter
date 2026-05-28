@@ -1,14 +1,18 @@
 package i18n
 
 import (
-	"encoding/json"
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
 
 	"lfiber/configs"
 
+	"github.com/BurntSushi/toml"
 	contribi18n "github.com/gofiber/contrib/v3/i18n"
 	"github.com/gofiber/fiber/v3"
 	"golang.org/x/text/language"
@@ -61,19 +65,35 @@ func Init(cfg *configs.I18nConfig) (*Service, error) {
 	service := &Service{
 		cfg: cfg,
 	}
-	service.translator = contribi18n.New(&contribi18n.Config{
+	translator, err := newTranslator(rootPath, supported, defaultLang, cfg)
+	if err != nil {
+		return nil, err
+	}
+	service.translator = translator
+
+	return service, nil
+}
+
+func newTranslator(rootPath string, supported []language.Tag, defaultLang language.Tag, cfg *configs.I18nConfig) (translator *contribi18n.I18n, err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			err = fmt.Errorf("initialize i18n translator: %v", recovered)
+		}
+	}()
+
+	translator = contribi18n.New(&contribi18n.Config{
 		RootPath:         rootPath,
 		AcceptLanguages:  supported,
 		DefaultLanguage:  defaultLang,
-		FormatBundleFile: "json",
-		UnmarshalFunc:    legacyJSONUnmarshal,
-		Loader:           contribi18n.LoaderFunc(os.ReadFile),
+		FormatBundleFile: "toml",
+		UnmarshalFunc:    toml.Unmarshal,
+		Loader:           contribi18n.LoaderFunc(loadLanguageBundle),
 		LangHandler: func(c fiber.Ctx, defaultLang string) string {
 			return GetCurrentLanguage(c, *cfg)
 		},
 	})
 
-	return service, nil
+	return translator, nil
 }
 
 // Localize resolves a message.
@@ -114,52 +134,6 @@ func (s *Service) Middleware() fiber.Handler {
 	}
 }
 
-// legacyJSONUnmarshal maintains compatibility with the existing JSON structure.
-func legacyJSONUnmarshal(data []byte, v interface{}) error {
-	var raw interface{}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-
-	normalized := normalizeCatalog(raw)
-	switch dst := v.(type) {
-	case *interface{}:
-		*dst = normalized
-		return nil
-	default:
-		return json.Unmarshal(data, v)
-	}
-}
-
-func normalizeCatalog(value interface{}) interface{} {
-	flat := make(map[string]interface{})
-	flatten(value, "", flat)
-	return flat
-}
-
-func flatten(value interface{}, prefix string, result map[string]interface{}) {
-	switch data := value.(type) {
-	case map[string]interface{}:
-		for key, item := range data {
-			newPrefix := key
-			if prefix != "" {
-				newPrefix = prefix + "." + key
-			}
-			flatten(item, newPrefix, result)
-		}
-	case string:
-		if prefix != "" {
-			result[prefix] = map[string]interface{}{
-				"other": data,
-			}
-		}
-	default:
-		if prefix != "" {
-			result[prefix] = data
-		}
-	}
-}
-
 func resolveUpwardPath(path string, depth int) string {
 	candidate := path
 	for i := 0; i <= depth; i++ {
@@ -170,4 +144,67 @@ func resolveUpwardPath(path string, depth int) string {
 	}
 
 	return ""
+}
+
+var messageIDPattern = regexp.MustCompile(`^\s*\["([^"]+)"\]\s*$`)
+
+func loadLanguageBundle(path string) ([]byte, error) {
+	localeDir := languageDirectoryForBundle(path)
+	entries, err := os.ReadDir(localeDir)
+	if err != nil {
+		return nil, fmt.Errorf("read language directory %s: %w", localeDir, err)
+	}
+
+	files := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".toml") {
+			files = append(files, filepath.Join(localeDir, entry.Name()))
+		}
+	}
+	if len(files) == 0 {
+		return nil, fmt.Errorf("language directory %s contains no toml files", localeDir)
+	}
+	sort.Strings(files)
+
+	var bundle bytes.Buffer
+	seen := make(map[string]string)
+	for _, file := range files {
+		data, err := os.ReadFile(file) //nolint:gosec // file is discovered from the configured local language directory
+		if err != nil {
+			return nil, fmt.Errorf("read language file %s: %w", file, err)
+		}
+		if err := ensureUniqueMessageIDs(file, data, seen); err != nil {
+			return nil, err
+		}
+		bundle.Write(data)
+		if len(data) == 0 || data[len(data)-1] != '\n' {
+			bundle.WriteByte('\n')
+		}
+		bundle.WriteByte('\n')
+	}
+
+	return bundle.Bytes(), nil
+}
+
+func languageDirectoryForBundle(path string) string {
+	base := filepath.Base(path)
+	ext := filepath.Ext(base)
+	locale := strings.TrimSuffix(base, ext)
+	return filepath.Join(filepath.Dir(path), locale)
+}
+
+func ensureUniqueMessageIDs(file string, data []byte, seen map[string]string) error {
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		matches := messageIDPattern.FindStringSubmatch(line)
+		if len(matches) != 2 {
+			continue
+		}
+		messageID := matches[1]
+		if previous, ok := seen[messageID]; ok {
+			return fmt.Errorf("duplicate i18n message %q in %s and %s", messageID, previous, file)
+		}
+		seen[messageID] = file
+	}
+	return nil
 }

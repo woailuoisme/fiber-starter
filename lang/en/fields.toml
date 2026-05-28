@@ -1,0 +1,62 @@
+["fields.email"]
+other = "Email"
+
+["fields.password"]
+other = "Password"
+
+["fields.name"]
+other = "Name"
+
+["fields.username"]
+other = "Username"
+
+["fields.phone"]
+other = "Phone"
+
+["fields.address"]
+other = "Address"
+
+["fields.city"]
+other = "City"
+
+["fields.country"]
+other = "Country"
+
+["fields.zipcode"]
+other = "Zip Code"
+
+["fields.description"]
+other = "Description"
+
+["fields.title"]
+other = "Title"
+
+["fields.content"]
+other = "Content"
+
+["fields.status"]
+other = "Status"
+
+["fields.type"]
+other = "Type"
+
+["fields.amount"]
+other = "Amount"
+
+["fields.quantity"]
+other = "Quantity"
+
+["fields.price"]
+other = "Price"
+
+["fields.total"]
+other = "Total"
+
+["fields.avatar"]
+other = "Avatar"
+
+["fields.created_at"]
+other = "Created At"
+
+["fields.updated_at"]
+other = "Updated At"

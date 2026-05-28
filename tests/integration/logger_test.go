@@ -1,9 +1,11 @@
 package tests
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -133,4 +135,41 @@ func TestLoggerStackModeUsesStdoutAndDaily(t *testing.T) {
 	data, err := os.ReadFile(dailyFile)
 	require.NoError(t, err)
 	assert.Contains(t, string(data), "stack-channel-test")
+}
+
+func TestLoggerErrorStacktraceUsesArray(t *testing.T) {
+	dir := testkit.UseTempWorkDir(t)
+	testkit.SetLoggerConfig(t, configs.LoggerConfig{
+		Level:  "info",
+		Output: "single",
+	})
+
+	l, err := logging.Register(configs.GlobalConfig.Logger)
+	require.NoError(t, err)
+	l.Error("stacktrace-array-test")
+	require.NoError(t, l.Sync())
+
+	data, err := os.ReadFile(filepath.Join(dir, "storage", "logs", "app.log"))
+	require.NoError(t, err)
+	var payload map[string]any
+	logLine := firstJSONLine(string(data))
+	require.NotEmpty(t, logLine)
+	require.NoError(t, json.Unmarshal([]byte(logLine), &payload))
+	assert.Equal(t, "stacktrace-array-test", payload["message"])
+	stacktrace, ok := payload["stacktrace"].([]any)
+	require.True(t, ok, "payload=%v", payload)
+	require.NotEmpty(t, stacktrace)
+	for _, frame := range stacktrace {
+		assert.IsType(t, "", frame)
+	}
+}
+
+func firstJSONLine(output string) string {
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "{") {
+			return line
+		}
+	}
+	return ""
 }

@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http/httptest"
@@ -16,13 +17,16 @@ import (
 	middleware "lfiber/internal/common/middleware"
 	"lfiber/internal/common/requests"
 	ratelimiter "lfiber/internal/providers/ratelimiter"
-	"lfiber/internal/providers/validation"
 	helpers "lfiber/internal/support"
 	"lfiber/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func TestThrottle_EnforcesRequestLimit(t *testing.T) {
@@ -157,19 +161,15 @@ func TestRequestBehavior_BodyLimitUsesErrorEnvelope(t *testing.T) {
 }
 
 func TestRequestBehavior_ValidationFailureUsesErrorEnvelope(t *testing.T) {
-	v, err := validation.RegisterValidation(&configs.Config{})
-	require.NoError(t, err)
-	requests.InitValidator(v)
-	t.Cleanup(func() {
-		requests.InitValidator(nil)
+	app := fiber.New(fiber.Config{
+		ErrorHandler:    helpers.HandleHTTPError,
+		StructValidator: requests.NewStructValidator(),
 	})
-
-	app := fiber.New(fiber.Config{ErrorHandler: helpers.HandleHTTPError})
 	app.Post("/validate", func(c fiber.Ctx) error {
 		var payload struct {
 			Email string `json:"email" validate:"required,email"`
 		}
-		return requests.BindAndValidateBody(c, &payload)
+		return requests.Body(c, &payload)
 	})
 
 	resp := testkit.DoRequest(t, app, "POST", "/validate", `{}`)
@@ -192,4 +192,98 @@ func TestHTTPStartupAndMiddlewareBaseline(t *testing.T) {
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 	assert.NotEmpty(t, resp.Header.Get("X-Request-ID"))
 	assert.NotEmpty(t, resp.Header.Get("X-Content-Type-Options"))
+}
+
+func TestOTELMiddleware_RecordsBusinessRouteWithRequestID(t *testing.T) {
+	recorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	otel.SetTracerProvider(provider)
+	t.Cleanup(func() {
+		_ = provider.Shutdown(context.Background())
+		otel.SetTracerProvider(noop.NewTracerProvider())
+	})
+
+	cfg := testkit.NewSQLiteConfig(t)
+	cfg.OTEL.TraceEnabled = true
+	cfg.OTEL.MetricsEnabled = false
+	cfg.OTEL.MetricsPath = "/metrics"
+
+	app := fiber.New(fiber.Config{ErrorHandler: helpers.HandleHTTPError})
+	middleware.SetupMiddleware(app, cfg)
+	app.Get("/api/v1/ping", func(c fiber.Ctx) error {
+		return c.SendString("ok")
+	})
+
+	req := httptest.NewRequest("GET", "/api/v1/ping", nil)
+	req.Header.Set("X-Request-ID", "rid-otel")
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	require.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	spans := recorder.Ended()
+	require.NotEmpty(t, spans)
+
+	var found bool
+	for _, span := range spans {
+		if span.Name() != "GET /api/v1/ping" {
+			continue
+		}
+		found = true
+		var requestID string
+		for _, attr := range span.Attributes() {
+			if string(attr.Key) == "request_id" {
+				requestID = attr.Value.AsString()
+			}
+		}
+		assert.Equal(t, "rid-otel", requestID)
+	}
+	require.True(t, found)
+}
+
+func TestOTELMiddleware_SkipsHealthDocsAndMetrics(t *testing.T) {
+	recorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	otel.SetTracerProvider(provider)
+	t.Cleanup(func() {
+		_ = provider.Shutdown(context.Background())
+		otel.SetTracerProvider(noop.NewTracerProvider())
+	})
+
+	cfg := testkit.NewSQLiteConfig(t)
+	cfg.OTEL.TraceEnabled = true
+	cfg.OTEL.MetricsEnabled = true
+	cfg.OTEL.MetricsPath = "/metrics"
+
+	app := fiber.New(fiber.Config{ErrorHandler: helpers.HandleHTTPError})
+	middleware.SetupMiddleware(app, cfg)
+	for _, path := range []string{"/health", "/docs", "/metrics"} {
+		app.Get(path, func(c fiber.Ctx) error {
+			return c.SendString("ok")
+		})
+	}
+
+	for _, path := range []string{"/health", "/docs", "/metrics"} {
+		resp, err := app.Test(httptest.NewRequest("GET", path, nil))
+		require.NoError(t, err)
+		require.Equal(t, fiber.StatusOK, resp.StatusCode)
+	}
+
+	assert.Empty(t, recorder.Ended())
+}
+
+func TestOTELMiddleware_AllowsMetricsOnlyMode(t *testing.T) {
+	cfg := testkit.NewSQLiteConfig(t)
+	cfg.OTEL.TraceEnabled = false
+	cfg.OTEL.MetricsEnabled = true
+	cfg.OTEL.MetricsPath = "/metrics"
+
+	app := fiber.New(fiber.Config{ErrorHandler: helpers.HandleHTTPError})
+	middleware.SetupMiddleware(app, cfg)
+	app.Get("/api/v1/metrics-only", func(c fiber.Ctx) error {
+		return c.SendString("ok")
+	})
+
+	resp, err := app.Test(httptest.NewRequest("GET", "/api/v1/metrics-only", nil))
+	require.NoError(t, err)
+	require.Equal(t, fiber.StatusOK, resp.StatusCode)
 }

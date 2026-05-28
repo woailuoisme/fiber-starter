@@ -209,7 +209,11 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) (SignUp
 		return SignUpResult{}, err
 	}
 
-	saved, err := s.getUserByEmail(ctx, user.Email)
+	userRepo, err := s.userRepo()
+	if err != nil {
+		return SignUpResult{}, err
+	}
+	saved, err := userRepo.GetByEmail(ctx, user.Email)
 	if err != nil {
 		return SignUpResult{}, err
 	}
@@ -273,7 +277,11 @@ func (s *authService) VerifySignUp(ctx context.Context, input VerifyCodeInput) (
 		return AuthResult{}, err
 	}
 
-	user, err := s.getUserByEmail(ctx, input.Email)
+	userRepo, err := s.userRepo()
+	if err != nil {
+		return AuthResult{}, err
+	}
+	user, err := userRepo.GetByEmail(ctx, input.Email)
 	if err != nil {
 		return AuthResult{}, err
 	}
@@ -349,7 +357,11 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (To
 		return TokenPair{}, exceptions.NewAuthenticationException("refresh token has expired")
 	}
 
-	user, err := s.getUserByID(ctx, claims.UserID)
+	userRepo, err := s.userRepo()
+	if err != nil {
+		return TokenPair{}, err
+	}
+	user, err := userRepo.GetByID(ctx, claims.UserID)
 	if err != nil {
 		return TokenPair{}, err
 	}
@@ -678,24 +690,6 @@ func (s *authService) validateOTP(authRepo *AuthRepository, email string, purpos
 	}
 
 	return otp, nil
-}
-
-func (s *authService) getUserByEmail(ctx context.Context, email string) (*userPkg.User, error) {
-	ctx = serviceContext(ctx)
-	userRepo, err := s.userRepo()
-	if err != nil {
-		return nil, err
-	}
-	return userRepo.GetByEmail(ctx, email)
-}
-
-func (s *authService) getUserByID(ctx context.Context, id int64) (*userPkg.User, error) {
-	ctx = serviceContext(ctx)
-	userRepo, err := s.userRepo()
-	if err != nil {
-		return nil, err
-	}
-	return userRepo.GetByID(ctx, id)
 }
 
 func (s *authService) makePasswordResetToken(user *userPkg.User, expiresAt time.Time) (string, error) {

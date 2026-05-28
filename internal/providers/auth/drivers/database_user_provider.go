@@ -48,22 +48,20 @@ func (p *DatabaseUserProvider) RetrieveById(id int64) (any, error) {
 		return nil, exceptions.ServiceUnavailableWithCause("Service unavailable", fmt.Errorf("database connection not initialized"))
 	}
 
-	if p.table == "users" {
-		bunDB, err := p.db.BunDB()
+	bunDB, err := p.db.BunDB()
+	if err == nil && p.modelCreator != nil {
+		usr := p.modelCreator()
+		err = bunDB.NewSelect().Model(usr).Where("id = ?", id).Where("deleted_at IS NULL").Scan(context.Background())
 		if err != nil {
-			return nil, exceptions.ServiceUnavailableWithCause("Service unavailable", err)
-		}
-		if p.modelCreator != nil {
-			usr := p.modelCreator()
-			err = bunDB.NewSelect().Model(usr).Where("id = ?", id).Where("deleted_at IS NULL").Scan(context.Background())
-			if err != nil {
-				if err == sql.ErrNoRows {
-					return nil, nil
-				}
-				return nil, err
+			if err == sql.ErrNoRows {
+				return nil, nil
 			}
-			return usr, nil
+			return nil, err
 		}
+		return usr, nil
+	}
+
+	if p.table == "users" && err == nil {
 		var usr AuthUser
 		err = bunDB.NewSelect().Model(&usr).Where("id = ?", id).Where("deleted_at IS NULL").Scan(context.Background())
 		if err != nil {
@@ -107,22 +105,20 @@ func (p *DatabaseUserProvider) RetrieveByCredentials(credentials map[string]stri
 		return nil, nil
 	}
 
-	if p.table == "users" {
-		bunDB, err := p.db.BunDB()
+	bunDB, err := p.db.BunDB()
+	if err == nil && p.modelCreator != nil {
+		usr := p.modelCreator()
+		err = bunDB.NewSelect().Model(usr).Where("email = ?", email).Where("deleted_at IS NULL").Scan(context.Background())
 		if err != nil {
-			return nil, exceptions.ServiceUnavailableWithCause("Service unavailable", err)
-		}
-		if p.modelCreator != nil {
-			usr := p.modelCreator()
-			err = bunDB.NewSelect().Model(usr).Where("email = ?", email).Where("deleted_at IS NULL").Scan(context.Background())
-			if err != nil {
-				if err == sql.ErrNoRows {
-					return nil, nil
-				}
-				return nil, err
+			if err == sql.ErrNoRows {
+				return nil, nil
 			}
-			return usr, nil
+			return nil, err
 		}
+		return usr, nil
+	}
+
+	if p.table == "users" && err == nil {
 		var usr AuthUser
 		err = bunDB.NewSelect().Model(&usr).Where("email = ?", email).Where("deleted_at IS NULL").Scan(context.Background())
 		if err != nil {

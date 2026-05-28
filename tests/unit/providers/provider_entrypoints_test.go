@@ -25,10 +25,8 @@ import (
 	search "lfiber/internal/providers/search"
 	storage "lfiber/internal/providers/storage"
 	storageDrivers "lfiber/internal/providers/storage/drivers"
-	validation "lfiber/internal/providers/validation"
 	"lfiber/tests/internal/testkit"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/v2"
@@ -341,50 +339,6 @@ func TestProviderEntryPoints_RegisterWrappers(t *testing.T) {
 		exists, err := disk.Exists("entrypoint.txt")
 		require.NoError(t, err)
 		assert.True(t, exists)
-	})
-
-	t.Run("Validation", func(t *testing.T) {
-		factory, err := validation.RegisterValidation(&configs.Config{})
-		require.NoError(t, err)
-		require.NotNil(t, factory)
-		svc, ok := factory.(*validation.Service)
-		require.True(t, ok)
-
-		require.NoError(t, svc.ExtendImplicit("entrypoint_implicit", func(fl validator.FieldLevel) bool {
-			return fl.Field().String() == "ready"
-		}, "must be ready"))
-		svc.Replacer("entrypoint_rule", func(field string, param string, value any) string {
-			return field + " uses custom replacement"
-		})
-		require.NoError(t, svc.Extend("entrypoint_rule", func(fl validator.FieldLevel) bool {
-			return fl.Field().String() == "ready"
-		}, "must be ready"))
-
-		type payload struct {
-			Email string `json:"email" validate:"required,email,entrypoint_rule"`
-		}
-
-		type replacerPayload struct {
-			Code string `json:"code" validate:"entrypoint_rule"`
-		}
-
-		type implicitPayload struct {
-			Code string `json:"code" validate:"entrypoint_implicit"`
-		}
-
-		v := factory.Make(&payload{Email: "invalid"}, nil, nil, nil)
-		err = v.Validate()
-		require.Error(t, err)
-		var validationErrors validator.ValidationErrors
-		require.ErrorAs(t, err, &validationErrors)
-		assert.True(t, v.Fails())
-
-		replaced := factory.Make(&replacerPayload{Code: "invalid"}, nil, nil, nil)
-		err = replaced.Validate()
-		require.Error(t, err)
-		assert.Contains(t, replaced.Errors().First("code"), "custom replacement")
-
-		require.Error(t, svc.Validate(&implicitPayload{}))
 	})
 }
 

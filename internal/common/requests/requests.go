@@ -5,23 +5,51 @@ import (
 	"errors"
 	"fmt"
 	"mime/multipart"
+	"reflect"
 	"strconv"
 	"strings"
 
 	exceptions "lfiber/internal/common/exceptions"
 	supporti18n "lfiber/internal/providers/i18n"
-	"lfiber/internal/providers/validation/contracts"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 )
 
-// ValidatorFactory 全局验证工厂实例。
-var ValidatorFactory contracts.Factory
+// validate 是包内全局私有的验证器实例，避免重复创建以提升性能。
+var validate *validator.Validate
 
-// InitValidator 初始化验证器。
-func InitValidator(v contracts.Factory) {
-	ValidatorFactory = v
+func init() {
+	validate = validator.New()
+
+	// 注册标签命名解析函数，使验证错误消息中的字段名称自动使用 json 标签中定义的名称。
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		for _, tagName := range []string{"json", "query", "uri", "form", "header", "cookie"} {
+			tag := fld.Tag.Get(tagName)
+			if tag == "" || tag == "-" {
+				continue
+			}
+			name := strings.Split(tag, ",")[0]
+			if name != "" {
+				return name
+			}
+		}
+		return fld.Name
+	})
+
+	// 注册全部自定义规则与 Laravel 别名。
+	registerCustomValidations(validate)
+}
+
+type structValidator struct{}
+
+func (structValidator) Validate(out any) error {
+	return validate.Struct(out)
+}
+
+// NewStructValidator 返回 Fiber Bind 使用的全局结构体验证器。
+func NewStructValidator() fiber.StructValidator {
+	return structValidator{}
 }
 
 // ValidateStruct 验证结构体。
@@ -33,11 +61,7 @@ func ValidateStruct(s interface{}) error {
 // ValidateStructWithContext 验证结构体并使用请求语言格式化错误。
 // Requirements: 10.1, 10.6, 10.7
 func ValidateStructWithContext(c fiber.Ctx, s interface{}) error {
-	if ValidatorFactory == nil {
-		return errors.New("validator not initialized")
-	}
-
-	err := ValidatorFactory.Make(s, nil, nil, nil).Validate()
+	err := validate.Struct(s)
 	if err != nil {
 		if validationErrors, ok := errors.AsType[validator.ValidationErrors](err); ok {
 			errors := supporti18n.FormatValidationErrorsWithContext(c, validationErrors)
@@ -49,38 +73,19 @@ func ValidateStructWithContext(c fiber.Ctx, s interface{}) error {
 	return nil
 }
 
-// ValidateRequest 验证请求并解析到结构体
-// Requirements: 10.1, 10.6, 10.7
-func ValidateRequest(c fiber.Ctx, req interface{}) error {
-	if err := c.Bind().Body(req); err != nil {
-		return exceptions.NewBadRequestException("Invalid request body")
-	}
-
-	return ValidateStructWithContext(c, req)
-}
-
 func validateScalar(value any, rule string) bool {
 	if rule == "" {
 		return false
 	}
 
-	if ValidatorFactory != nil {
-		return ValidatorFactory.Make(map[string]any{"value": value}, map[string]string{"value": rule}, nil, nil).Validate() == nil
-	}
-
-	v := validator.New()
-	return v.Var(value, rule) == nil
+	return validate.Var(value, rule) == nil
 }
 
 func validateRuleSet(c fiber.Ctx, values map[string]any, rules map[string]string) error {
-	if ValidatorFactory == nil {
-		return errors.New("validator not initialized")
-	}
-
 	validationErrors := make(map[string][]string, len(rules))
 	for field, rule := range rules {
 		value := values[field]
-		err := ValidatorFactory.Make(map[string]any{field: value}, map[string]string{field: rule}, nil, nil).Validate()
+		err := validate.Var(value, rule)
 		if err == nil {
 			continue
 		}

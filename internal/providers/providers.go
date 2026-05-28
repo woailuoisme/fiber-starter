@@ -7,6 +7,8 @@ import (
 	"lfiber/configs"
 	auth "lfiber/internal/providers/auth"
 	authContracts "lfiber/internal/providers/auth/contracts"
+	authorization "lfiber/internal/providers/authorization"
+	authorizationContracts "lfiber/internal/providers/authorization/contracts"
 	cache "lfiber/internal/providers/cache"
 	cacheContracts "lfiber/internal/providers/cache/contracts"
 	config "lfiber/internal/providers/config"
@@ -35,8 +37,6 @@ import (
 	searchContracts "lfiber/internal/providers/search/contracts"
 	storage "lfiber/internal/providers/storage"
 	storageContracts "lfiber/internal/providers/storage/contracts"
-	validation "lfiber/internal/providers/validation"
-	validationContracts "lfiber/internal/providers/validation/contracts"
 	helpers "lfiber/internal/support"
 	"lfiber/internal/support/appctx"
 )
@@ -50,6 +50,7 @@ type Runtime struct {
 	CacheManager    cacheContracts.Manager
 	Cache           cacheContracts.Store
 	Auth            authContracts.Manager
+	Authorization   authorizationContracts.Authorizer
 	MailManager     mailContracts.Manager
 	EmailService    mailContracts.Mailer
 	Realtime        realtimeContracts.Manager
@@ -63,7 +64,6 @@ type Runtime struct {
 	Hash            hashContracts.Hasher
 	Notification    notificationContracts.Dispatcher
 	Translator      i18nContracts.Translator
-	Validation      validationContracts.Factory
 	Log             loggingContracts.Logger
 	RateLimiter     ratelimiterContracts.Limiter
 	Degraded        map[string]string
@@ -97,135 +97,143 @@ func Build() (*Runtime, error) {
 	rt := &Runtime{Config: cfg, Degraded: map[string]string{}}
 
 	// Phase 1: Register (Object creation, dependency wiring)
-	configRepo, err := config.RegisterConfig(k)
-	if err != nil {
-		return nil, fmt.Errorf("register config provider: %w", err)
+	steps := []struct {
+		name     string
+		critical bool
+		register func() error
+	}{
+		{"config", true, func() error {
+			configRepo, err := config.RegisterConfig(k)
+			if err == nil {
+				rt.ConfigRepo = configRepo
+			}
+			return err
+		}},
+		{"translator", true, func() error {
+			_, translator, err := i18n.RegisterI18n(cfg)
+			if err == nil {
+				rt.Translator = translator
+			}
+			return err
+		}},
+		{"database", true, func() error {
+			databaseManager, connection, err := database.RegisterDatabase(cfg)
+			if err == nil {
+				rt.Database = databaseManager
+				rt.Connection = connection
+			}
+			return err
+		}},
+		{"cache", false, func() error {
+			cacheManager, cacheStore, err := cache.RegisterCache(cfg)
+			if err == nil {
+				rt.CacheManager = cacheManager
+				rt.Cache = cacheStore
+			}
+			return err
+		}},
+		{"hash", true, func() error {
+			hashManager, err := hash.RegisterHash(cfg)
+			if err == nil {
+				rt.Hash = hashManager
+			}
+			return err
+		}},
+		{"auth", true, func() error {
+			authManager, err := auth.Register(cfg, rt.Connection, rt.Hash)
+			if err == nil {
+				rt.Auth = authManager
+			}
+			return err
+		}},
+		{"authorization", true, func() error {
+			authorizationService, err := authorization.Register(cfg.Authorization)
+			if err == nil {
+				rt.Authorization = authorizationService
+			}
+			return err
+		}},
+		{"mail", false, func() error {
+			mailManager, emailService, err := mail.Register(cfg)
+			if err == nil {
+				rt.MailManager = mailManager
+				rt.EmailService = emailService
+			}
+			return err
+		}},
+		{"realtime", false, func() error {
+			realtimeManager, err := realtime.RegisterRealtime(cfg)
+			if err == nil {
+				rt.Realtime = realtimeManager
+			}
+			return err
+		}},
+		{"queue", false, func() error {
+			queueManager, queueService, err := queue.RegisterQueue(cfg)
+			if err == nil {
+				rt.QueueManager = queueManager
+				rt.QueueService = queueService
+			}
+			return err
+		}},
+		{"schedule", true, func() error {
+			scheduleManager, scheduleService, err := schedule.RegisterSchedule(cfg)
+			if err == nil {
+				rt.ScheduleManager = scheduleManager
+				rt.ScheduleService = scheduleService
+			}
+			return err
+		}},
+		{"search", false, func() error {
+			searchManager, searchService, err := search.Register(cfg)
+			if err == nil {
+				rt.SearchManager = searchManager
+				rt.SearchService = searchService
+			}
+			return err
+		}},
+		{"storage", false, func() error {
+			storageManager, err := storage.Register(cfg)
+			if err == nil {
+				rt.Storage = storageManager
+			}
+			return err
+		}},
+		{"notification", true, func() error {
+			notificationManager, notificationService, err := notification.RegisterNotification(rt.EmailService)
+			if err == nil {
+				rt.Notification = notificationService
+				if err := notification.RegisterConfiguredChannels(cfg, notificationManager); err != nil {
+					return err
+				}
+			}
+			return err
+		}},
+		{"logging", true, func() error {
+			loggingService, err := logging.Register(cfg.Logger)
+			if err == nil {
+				rt.Log = loggingService
+			}
+			return err
+		}},
+		{"ratelimiter", true, func() error {
+			rateLimiterService, err := ratelimiter.Register(cfg.Limiter)
+			if err == nil {
+				rt.RateLimiter = rateLimiterService
+			}
+			return err
+		}},
 	}
-	rt.ConfigRepo = configRepo
 
-	_, translator, err := i18n.RegisterI18n(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("register i18n provider: %w", err)
-	}
-	rt.Translator = translator
-
-	databaseManager, connection, err := database.RegisterDatabase(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("register database provider: %w", err)
-	}
-	rt.Database = databaseManager
-	rt.Connection = connection
-
-	cacheManager, cacheStore, err := cache.RegisterCache(cfg)
-	if err != nil {
-		if isDependencyCritical(cfg, "cache", false) {
-			return nil, fmt.Errorf("register cache provider: %w", err)
+	for _, step := range steps {
+		err := step.register()
+		if err != nil {
+			if step.critical || isDependencyCritical(cfg, step.name, false) {
+				return nil, fmt.Errorf("register %s provider: %w", step.name, err)
+			}
+			rt.markDegraded(step.name, err)
 		}
-		rt.markDegraded("cache", err)
-	} else {
-		rt.CacheManager = cacheManager
-		rt.Cache = cacheStore
 	}
-
-	hashManager, err := hash.RegisterHash(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("register hash provider: %w", err)
-	}
-	rt.Hash = hashManager
-
-	authManager, err := auth.Register(cfg, connection, hashManager)
-	if err != nil {
-		return nil, fmt.Errorf("register auth provider: %w", err)
-	}
-	rt.Auth = authManager
-
-	mailManager, emailService, err := mail.Register(cfg)
-	if err != nil {
-		if isDependencyCritical(cfg, "mail", false) {
-			return nil, fmt.Errorf("register mail provider: %w", err)
-		}
-		rt.markDegraded("mail", err)
-	} else {
-		rt.MailManager = mailManager
-		rt.EmailService = emailService
-	}
-
-	realtimeManager, err := realtime.RegisterRealtime(cfg)
-	if err != nil {
-		if isDependencyCritical(cfg, "realtime", false) {
-			return nil, fmt.Errorf("register realtime provider: %w", err)
-		}
-		rt.markDegraded("realtime", err)
-	} else {
-		rt.Realtime = realtimeManager
-	}
-
-	queueManager, queueService, err := queue.RegisterQueue(cfg)
-	if err != nil {
-		if isDependencyCritical(cfg, "queue", false) {
-			return nil, fmt.Errorf("register queue provider: %w", err)
-		}
-		rt.markDegraded("queue", err)
-	} else {
-		rt.QueueManager = queueManager
-		rt.QueueService = queueService
-	}
-
-	scheduleManager, scheduleService, err := schedule.RegisterSchedule(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("register schedule provider: %w", err)
-	}
-	rt.ScheduleManager = scheduleManager
-	rt.ScheduleService = scheduleService
-
-	searchManager, searchService, err := search.Register(cfg)
-	if err != nil {
-		if isDependencyCritical(cfg, "search", false) {
-			return nil, fmt.Errorf("register search provider: %w", err)
-		}
-		rt.markDegraded("search", err)
-	} else {
-		rt.SearchManager = searchManager
-		rt.SearchService = searchService
-	}
-
-	storageManager, err := storage.Register(cfg)
-	if err != nil {
-		if isDependencyCritical(cfg, "storage", false) {
-			return nil, fmt.Errorf("register storage provider: %w", err)
-		}
-		rt.markDegraded("storage", err)
-	} else {
-		rt.Storage = storageManager
-	}
-
-	notificationManager, notificationService, err := notification.RegisterNotification(emailService)
-	if err != nil {
-		return nil, fmt.Errorf("register notification provider: %w", err)
-	}
-	rt.Notification = notificationService
-
-	if err := notification.RegisterConfiguredChannels(cfg, notificationManager); err != nil {
-		return nil, fmt.Errorf("register notification channels: %w", err)
-	}
-
-	validationService, err := validation.RegisterValidation(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("register validation provider: %w", err)
-	}
-	rt.Validation = validationService
-
-	loggingService, err := logging.Register(cfg.Logger)
-	if err != nil {
-		return nil, fmt.Errorf("register logging provider: %w", err)
-	}
-	rt.Log = loggingService
-
-	rateLimiterService, err := ratelimiter.Register(cfg.Limiter)
-	if err != nil {
-		return nil, fmt.Errorf("register rate limiter provider: %w", err)
-	}
-	rt.RateLimiter = rateLimiterService
 
 	return SetInstance(rt), nil
 }
@@ -332,6 +340,8 @@ func (rt *Runtime) CacheStore() cacheContracts.Store { return rt.Cache }
 
 func (rt *Runtime) AuthManager() authContracts.Manager { return rt.Auth }
 
+func (rt *Runtime) AuthorizationService() authorizationContracts.Authorizer { return rt.Authorization }
+
 func (rt *Runtime) MailManagerValue() mailContracts.Manager { return rt.MailManager }
 
 func (rt *Runtime) EmailServiceValue() mailContracts.Mailer { return rt.EmailService }
@@ -355,8 +365,6 @@ func (rt *Runtime) HashService() hashContracts.Hasher { return rt.Hash }
 func (rt *Runtime) NotificationService() notificationContracts.Dispatcher { return rt.Notification }
 
 func (rt *Runtime) TranslatorService() i18nContracts.Translator { return rt.Translator }
-
-func (rt *Runtime) ValidationService() validationContracts.Factory { return rt.Validation }
 
 func (rt *Runtime) LogService() loggingContracts.Logger { return rt.Log }
 
