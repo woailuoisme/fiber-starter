@@ -107,6 +107,13 @@ coverage.xml
 /tests/coverage/
 /test-results/
 /.test-results/
+/test_exports/
+/test_imports/
+*.prof
+*.pprof
+*.cpu
+*.mem
+/tests/unit/providers/storage/
 
 # ------------------------------------------
 # Infrastructure & Deployment

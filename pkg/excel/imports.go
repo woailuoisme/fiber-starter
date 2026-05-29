@@ -295,7 +295,8 @@ func setFieldValue(field reflect.Value, val string) error {
 		field.SetFloat(floatVal)
 	case reflect.Bool:
 		boolVal := false
-		if strings.ToLower(val) == "true" || val == "1" || val == "是" {
+		lowerVal := strings.ToLower(val)
+		if lowerVal == "true" || lowerVal == "yes" || val == "1" || val == "是" {
 			boolVal = true
 		}
 		field.SetBool(boolVal)

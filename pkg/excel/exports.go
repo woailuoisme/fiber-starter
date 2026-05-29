@@ -411,9 +411,9 @@ func formatValue(val interface{}) interface{} {
 		return v.Format("2006-01-02 15:04:05")
 	case bool:
 		if v {
-			return "是"
+			return "Yes"
 		}
-		return "否"
+		return "No"
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		// 转为数值类型保留，excelize 会以数值单元格写入
 		return v

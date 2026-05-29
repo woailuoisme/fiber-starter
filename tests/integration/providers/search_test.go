@@ -20,6 +20,13 @@ import (
 func TestSearchProvider_NullDriver(t *testing.T) {
 	cfg := &configs.Config{}
 	manager := search.NewManager(cfg)
+	search.SetDefaultManager(manager)
+	search.SetDefaultEngine(manager.Drive("null"))
+	t.Cleanup(func() {
+		search.SetDefaultManager(nil)
+		search.SetDefaultEngine(nil)
+	})
+
 	runtime := &providers.Runtime{
 		SearchManager: manager,
 		SearchService: manager.Drive("null"),
@@ -55,6 +62,13 @@ func TestSearchProvider_MeilisearchConfigError(t *testing.T) {
 func TestSearchProvider_Operations(t *testing.T) {
 	cfg := &configs.Config{}
 	manager := search.NewManager(cfg)
+	search.SetDefaultManager(manager)
+	search.SetDefaultEngine(manager.Drive("null"))
+	t.Cleanup(func() {
+		search.SetDefaultManager(nil)
+		search.SetDefaultEngine(nil)
+	})
+
 	runtime := &providers.Runtime{
 		SearchManager: manager,
 		SearchService: manager.Drive("null"),

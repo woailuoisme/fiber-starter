@@ -59,7 +59,7 @@ func MakeExportCommand() *cobra.Command {
 						options = append(options, huh.NewOption(f, f))
 					}
 					prompt := huh.NewSelect[string]().
-						Title("选择关联的 Feature 模块:").
+						Title("Select the associated feature:").
 						Options(options...).
 						Value(&selectedFeature)
 					if err = prompt.Run(); err != nil {
@@ -70,15 +70,15 @@ func MakeExportCommand() *cobra.Command {
 				// 2. 选择 Concerns
 				if len(selectedConcerns) == 0 {
 					prompt := huh.NewMultiSelect[string]().
-						Title("选择需要实现的 Concern 接口:").
+						Title("Select Excel concerns to implement:").
 						Options(
-							huh.NewOption("FromSlice (全量切片导出)", "FromSlice"),
-							huh.NewOption("FromQuery (流式大表导出)", "FromQuery"),
-							huh.NewOption("WithHeadings (定义自定义表头)", "WithHeadings"),
-							huh.NewOption("WithMapping (自定义行列数据转换)", "WithMapping"),
-							huh.NewOption("ShouldAutoSize (列宽自动计算)", "ShouldAutoSize"),
-							huh.NewOption("WithColumnWidths (自定义指定列宽)", "WithColumnWidths"),
-							huh.NewOption("WithQueueNotification (启用异步队列处理通知)", "WithQueueNotification"),
+							huh.NewOption("FromSlice (Export from slice)", "FromSlice"),
+							huh.NewOption("FromQuery (Export from query)", "FromQuery"),
+							huh.NewOption("WithHeadings (Custom headings)", "WithHeadings"),
+							huh.NewOption("WithMapping (Custom mapping)", "WithMapping"),
+							huh.NewOption("ShouldAutoSize (Auto fit columns)", "ShouldAutoSize"),
+							huh.NewOption("WithColumnWidths (Custom column widths)", "WithColumnWidths"),
+							huh.NewOption("WithQueueNotification (Queue and notify)", "WithQueueNotification"),
 						).
 						Value(&selectedConcerns)
 					if err = prompt.Run(); err != nil {

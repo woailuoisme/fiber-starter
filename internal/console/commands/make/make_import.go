@@ -55,7 +55,7 @@ func MakeImportCommand() *cobra.Command {
 						options = append(options, huh.NewOption(f, f))
 					}
 					prompt := huh.NewSelect[string]().
-						Title("选择关联的 Feature 模块:").
+						Title("Select the associated feature:").
 						Options(options...).
 						Value(&selectedFeature)
 					if err = prompt.Run(); err != nil {
@@ -66,15 +66,15 @@ func MakeImportCommand() *cobra.Command {
 				// 2. 选择 Concerns
 				if len(selectedConcerns) == 0 {
 					prompt := huh.NewMultiSelect[string]().
-						Title("选择需要实现的 Concern 接口:").
+						Title("Select Excel concerns to implement:").
 						Options(
-							huh.NewOption("ToSlice (读取至切片中)", "ToSlice"),
-							huh.NewOption("ToModel (逐行映射为数据库 Model)", "ToModel"),
-							huh.NewOption("OnRow (通用的逐行读取回调)", "OnRow"),
-							huh.NewOption("WithHeadingRow (定义标题行)", "WithHeadingRow"),
-							huh.NewOption("WithValidation (添加数据校验)", "WithValidation"),
-							huh.NewOption("WithBatchInserts (批量入库)", "WithBatchInserts"),
-							huh.NewOption("WithQueueNotification (启用异步队列处理通知)", "WithQueueNotification"),
+							huh.NewOption("ToSlice (Read into slice)", "ToSlice"),
+							huh.NewOption("ToModel (Map rows to database models)", "ToModel"),
+							huh.NewOption("OnRow (Iterate with row callbacks)", "OnRow"),
+							huh.NewOption("WithHeadingRow (Define header row index)", "WithHeadingRow"),
+							huh.NewOption("WithValidation (Apply validation rules)", "WithValidation"),
+							huh.NewOption("WithBatchInserts (Batch inserts)", "WithBatchInserts"),
+							huh.NewOption("WithQueueNotification (Queue and notify)", "WithQueueNotification"),
 						).
 						Value(&selectedConcerns)
 					if err = prompt.Run(); err != nil {
