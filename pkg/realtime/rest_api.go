@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"lfiber/pkg/realtime/internal/pusher"
+
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -149,7 +151,7 @@ func (m *ManagerImpl) handleTriggerEvent(c fiber.Ctx) error {
 		if channel == "" {
 			continue
 		}
-		m.publishEnvelope(Envelope{
+		m.publishEnvelope(pusher.Envelope{
 			NodeID:         m.nodeID,
 			Event:          req.Name,
 			Channel:        channel,
@@ -245,9 +247,9 @@ func (m *ManagerImpl) channelState(filter string, info map[string]bool) map[stri
 	return out
 }
 
-func (m *ManagerImpl) presenceMembers(channel string) ([]PresenceMember, error) {
+func (m *ManagerImpl) presenceMembers(channel string) ([]pusher.PresenceMember, error) {
 	if m.presence == nil {
-		return []PresenceMember{}, nil
+		return []pusher.PresenceMember{}, nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -256,7 +258,7 @@ func (m *ManagerImpl) presenceMembers(channel string) ([]PresenceMember, error) 
 		return nil, err
 	}
 	if members == nil {
-		return []PresenceMember{}, nil
+		return []pusher.PresenceMember{}, nil
 	}
 	return members, nil
 }
@@ -272,8 +274,8 @@ func parseInfo(value string) map[string]bool {
 	return out
 }
 
-func uniquePresenceMembers(members []PresenceMember) []PresenceMember {
-	seen := map[string]PresenceMember{}
+func uniquePresenceMembers(members []pusher.PresenceMember) []pusher.PresenceMember {
+	seen := map[string]pusher.PresenceMember{}
 	for _, member := range members {
 		if member.UserID == "" {
 			continue
@@ -288,7 +290,7 @@ func uniquePresenceMembers(members []PresenceMember) []PresenceMember {
 	}
 	sort.Strings(ids)
 
-	out := make([]PresenceMember, 0, len(ids))
+	out := make([]pusher.PresenceMember, 0, len(ids))
 	for _, id := range ids {
 		out = append(out, seen[id])
 	}

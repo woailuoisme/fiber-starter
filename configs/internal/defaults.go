@@ -175,6 +175,7 @@ func DefaultConfigMap() map[string]any {
 		"websocket.enabled":                                 true,
 		"websocket.port":                                    "3001",
 		"websocket.path":                                    "/app/:appKey",
+		"websocket.sse_path":                                "/sse/app/:appKey",
 		"websocket.auth_path":                               "/broadcasting/auth",
 		"websocket.app_id":                                  "lfiber",
 		"websocket.app_key":                                 "lfiber",

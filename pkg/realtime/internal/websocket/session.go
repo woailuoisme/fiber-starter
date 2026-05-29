@@ -1,4 +1,4 @@
-package realtime
+package websocket
 
 import (
 	"encoding/json"
@@ -6,21 +6,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofiber/contrib/v3/websocket"
+	"lfiber/pkg/realtime/internal/pusher"
+
+	fiberws "github.com/gofiber/contrib/v3/websocket"
 	"github.com/google/uuid"
 )
 
 // Session 代表一个连接到当前节点的活跃 WebSocket 连接会话。
 type Session struct {
-	manager *ManagerImpl
-	conn    *websocket.Conn
-	id      string
+	controller Controller
+	conn       *fiberws.Conn
+	id         string
 
 	mu        sync.RWMutex
 	writeMu   sync.Mutex
-	user      User
+	user      pusher.User
 	channels  map[string]struct{}
-	presence  map[string]PresenceMember
+	presence  map[string]pusher.PresenceMember
 	send      chan []byte
 	done      chan struct{}
 	closeOnce sync.Once
@@ -29,33 +31,31 @@ type Session struct {
 	lastPong          time.Time
 }
 
-func newSession(manager *ManagerImpl, conn *websocket.Conn) *Session {
-	heartbeat := time.Duration(manager.heartbeatIntervalSeconds()) * time.Second
+func NewSession(controller Controller, conn *fiberws.Conn) *Session {
+	heartbeat := time.Duration(controller.HeartbeatIntervalSeconds()) * time.Second
 	if heartbeat <= 0 {
 		heartbeat = 30 * time.Second
 	}
 
-	queueSize := manager.writeQueueSize()
+	queueSize := controller.WriteQueueSize()
 	if queueSize <= 0 {
 		queueSize = 128
 	}
 
 	session := &Session{
-		manager:           manager,
+		controller:        controller,
 		conn:              conn,
 		id:                uuid.NewString(),
 		channels:          make(map[string]struct{}),
-		presence:          make(map[string]PresenceMember),
+		presence:          make(map[string]pusher.PresenceMember),
 		send:              make(chan []byte, queueSize),
 		done:              make(chan struct{}),
 		heartbeatInterval: heartbeat,
 		lastPong:          time.Now(),
 	}
 
-	if manager.userResolver != nil {
-		if u, err := manager.userResolver(conn); err == nil {
-			session.user = u
-		}
+	if u, err := controller.ResolveUser(conn); err == nil {
+		session.user = u
 	}
 
 	return session
@@ -65,13 +65,13 @@ func (s *Session) ID() string {
 	return s.id
 }
 
-func (s *Session) User() User {
+func (s *Session) User() pusher.User {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.user
 }
 
-func (s *Session) SetUser(user User) {
+func (s *Session) SetUser(user pusher.User) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.user = user
@@ -88,33 +88,33 @@ func (s *Session) ChannelNames() []string {
 	return channels
 }
 
-func (s *Session) addChannel(channel string) {
+func (s *Session) AddChannel(channel string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.channels[channel] = struct{}{}
 }
 
-func (s *Session) removeChannel(channel string) {
+func (s *Session) RemoveChannel(channel string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.channels, channel)
 	delete(s.presence, channel)
 }
 
-func (s *Session) hasChannel(channel string) bool {
+func (s *Session) HasChannel(channel string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	_, ok := s.channels[channel]
 	return ok
 }
 
-func (s *Session) setPresenceMember(channel string, member PresenceMember) {
+func (s *Session) SetPresenceMember(channel string, member pusher.PresenceMember) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.presence[channel] = member
 }
 
-func (s *Session) presenceMember(channel string) (PresenceMember, bool) {
+func (s *Session) PresenceMember(channel string) (pusher.PresenceMember, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	member, ok := s.presence[channel]
@@ -137,8 +137,8 @@ func (s *Session) EnqueueFrame(frame []byte) bool {
 	case s.send <- frame:
 		return true
 	default:
-		s.manager.logger.Warn("realtime_send_queue_full", "socket_id", s.id)
-		s.manager.removeSession(s.id)
+		s.controller.Warn("realtime_send_queue_full", "socket_id", s.id)
+		s.controller.RemoveWebSocketSession(s.id)
 		return false
 	}
 }
@@ -149,7 +149,7 @@ func (s *Session) TouchPong() {
 	s.lastPong = time.Now()
 }
 
-func (s *Session) shutdown() {
+func (s *Session) Shutdown() {
 	s.closeOnce.Do(func() {
 		close(s.done)
 		if s.conn != nil {
@@ -159,13 +159,13 @@ func (s *Session) shutdown() {
 }
 
 func (s *Session) readLoop() {
-	defer s.manager.removeSession(s.id)
+	defer s.controller.RemoveWebSocketSession(s.id)
 	for {
 		messageType, data, err := s.conn.ReadMessage()
 		if err != nil {
 			return
 		}
-		if messageType != websocket.TextMessage {
+		if messageType != fiberws.TextMessage {
 			continue
 		}
 		s.handleInbound(data)
@@ -180,10 +180,10 @@ func (s *Session) writePump() {
 				return
 			}
 			s.writeMu.Lock()
-			err := s.conn.WriteMessage(websocket.TextMessage, frame)
+			err := s.conn.WriteMessage(fiberws.TextMessage, frame)
 			s.writeMu.Unlock()
 			if err != nil {
-				s.manager.removeSession(s.id)
+				s.controller.RemoveWebSocketSession(s.id)
 				return
 			}
 		case <-s.done:
@@ -204,11 +204,11 @@ func (s *Session) heartbeatLoop() {
 			s.mu.RUnlock()
 
 			if time.Since(lastPong) > 2*s.heartbeatInterval {
-				s.manager.logger.Warn("realtime_heartbeat_timeout", "socket_id", s.id)
-				s.manager.removeSession(s.id)
+				s.controller.Warn("realtime_heartbeat_timeout", "socket_id", s.id)
+				s.controller.RemoveWebSocketSession(s.id)
 				return
 			}
-			_ = s.SendMessage(Message{Event: EventPing})
+			_ = s.SendMessage(pusher.Message{Event: pusher.EventPing})
 		case <-s.done:
 			return
 		}
@@ -216,41 +216,41 @@ func (s *Session) heartbeatLoop() {
 }
 
 func (s *Session) handleInbound(data []byte) {
-	var msg Message
+	var msg pusher.Message
 	if err := json.Unmarshal(data, &msg); err != nil {
 		s.sendError("invalid realtime payload")
 		return
 	}
 
 	switch msg.Event {
-	case EventSubscribe:
+	case pusher.EventSubscribe:
 		s.handleSubscribe(msg)
-	case EventUnsubscribe:
+	case pusher.EventUnsubscribe:
 		s.handleUnsubscribe(msg)
-	case EventPong:
+	case pusher.EventPong:
 		s.TouchPong()
-	case EventPing:
-		_ = s.SendMessage(Message{Event: EventPong})
+	case pusher.EventPing:
+		_ = s.SendMessage(pusher.Message{Event: pusher.EventPong})
 	default:
 		s.handleBroadcast(msg)
 	}
 }
 
-func (s *Session) handleSubscribe(msg Message) {
-	payload, err := decodeSubscribePayload(msg.Data)
+func (s *Session) handleSubscribe(msg pusher.Message) {
+	payload, err := pusher.DecodeSubscribePayload(msg.Data)
 	if err != nil {
 		s.sendError(err.Error())
 		return
 	}
 
-	if err := s.manager.subscribeSession(s, payload); err != nil {
+	if err := s.controller.SubscribeWebSocketSession(s, payload); err != nil {
 		s.sendError(err.Error())
 		return
 	}
 }
 
-func (s *Session) handleUnsubscribe(msg Message) {
-	payload, err := decodeSubscribePayload(msg.Data)
+func (s *Session) handleUnsubscribe(msg pusher.Message) {
+	payload, err := pusher.DecodeSubscribePayload(msg.Data)
 	if err != nil {
 		payload.Channel = msg.Channel
 	}
@@ -258,23 +258,22 @@ func (s *Session) handleUnsubscribe(msg Message) {
 		s.sendError("missing channel")
 		return
 	}
-	s.manager.unsubscribeSession(s, payload.Channel)
+	s.controller.UnsubscribeWebSocketSession(s, payload.Channel)
 }
 
-func (s *Session) handleBroadcast(msg Message) {
-	if !s.manager.clientEventsEnabled() {
+func (s *Session) handleBroadcast(msg pusher.Message) {
+	if !s.controller.ClientEventsEnabled() {
 		s.sendError("client events are disabled")
 		return
 	}
 	if msg.Channel == "" || msg.Event == "" || len(msg.Data) == 0 {
 		return
 	}
-	if !strings.HasPrefix(msg.Event, "client-") || !s.hasChannel(msg.Channel) {
+	if !strings.HasPrefix(msg.Event, "client-") || !s.HasChannel(msg.Channel) {
 		s.sendError("client event is not allowed")
 		return
 	}
-	s.manager.publishEnvelope(Envelope{
-		NodeID:         s.manager.nodeID,
+	s.controller.PublishClientEvent(pusher.Envelope{
 		Event:          msg.Event,
 		Channel:        msg.Channel,
 		Data:           msg.Data,
@@ -283,13 +282,13 @@ func (s *Session) handleBroadcast(msg Message) {
 }
 
 func (s *Session) sendError(message string) {
-	_ = s.SendMessage(Message{
-		Event: EventError,
-		Data:  encodePusherData(ErrorPayload{Message: message}),
+	_ = s.SendMessage(pusher.Message{
+		Event: pusher.EventError,
+		Data:  pusher.EncodeData(pusher.ErrorPayload{Message: message}),
 	})
 }
 
-func (s *Session) SendMessage(msg Message) error {
+func (s *Session) SendMessage(msg pusher.Message) error {
 	frame, err := json.Marshal(msg)
 	if err != nil {
 		return err

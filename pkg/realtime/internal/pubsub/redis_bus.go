@@ -1,4 +1,4 @@
-package realtime
+package pubsub
 
 import (
 	"context"
@@ -37,12 +37,22 @@ type redisBus struct {
 	logger Logger
 }
 
-func newRedisBus(client *redis.Client, prefix string, logger Logger) EventBus {
+type Logger interface {
+	Info(msg string, fields ...any)
+	Warn(msg string, fields ...any)
+}
+
+func NewRedisBus(client *redis.Client, prefix string, logger Logger) EventBus {
 	if logger == nil {
-		logger = NewNoopLogger()
+		logger = noopLogger{}
 	}
 	return &redisBus{client: client, prefix: prefix, logger: logger}
 }
+
+type noopLogger struct{}
+
+func (noopLogger) Info(string, ...any) {}
+func (noopLogger) Warn(string, ...any) {}
 
 func (b *redisBus) key(channel string) string {
 	if b.prefix == "" {

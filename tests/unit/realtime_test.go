@@ -5,6 +5,7 @@ import (
 	"crypto/md5" //nolint:gosec // Pusher REST compatibility signs body_md5.
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -144,6 +145,58 @@ func TestRealtime_APIHandler_ValidatesPusherSignature(t *testing.T) {
 	invalidResp, err := app.Test(invalidReq)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusUnauthorized, invalidResp.StatusCode)
+}
+
+func TestRealtime_WebSocketHandler_AliasesLegacyHandler(t *testing.T) {
+	mgr := realtime.NewManager(&realtime.Config{AppKey: "app-key"}, realtime.NewNoopLogger())
+	t.Cleanup(func() {
+		require.NoError(t, mgr.Close())
+	})
+
+	assert.NotNil(t, mgr.WebSocketHandler())
+	assert.NotNil(t, mgr.Handler())
+}
+
+func TestRealtime_SSEFrame_UsesBusinessEventAndEnvelopeData(t *testing.T) {
+	frame, err := realtime.NewSSEFrame(realtime.Envelope{
+		Event:          "orders.updated",
+		Channel:        "private-orders.1",
+		Data:           json.RawMessage(`{"id":1}`),
+		OriginSocketID: "socket-1",
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, "orders.updated", frame.Name)
+	assert.NotEmpty(t, frame.ID)
+
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal(frame.Data, &payload))
+	assert.Equal(t, "private-orders.1", payload["channel"])
+	assert.Equal(t, "orders.updated", payload["event"])
+	assert.Equal(t, "socket-1", payload["socket_id"])
+	assert.Equal(t, map[string]any{"id": float64(1)}, payload["data"])
+}
+
+func TestRealtime_SSEHandler_RejectsPrivateChannelWithoutSignature(t *testing.T) {
+	cfg := &realtime.Config{
+		AppKey:    "app-key",
+		AppSecret: "secret",
+		BusMode:   "memory",
+	}
+	mgr := realtime.NewManager(cfg, realtime.NewNoopLogger())
+	t.Cleanup(func() {
+		require.NoError(t, mgr.Close())
+	})
+
+	app := fiber.New()
+	app.Get("/sse/app/:appKey", mgr.SSEHandler())
+
+	req := httptest.NewRequest(http.MethodGet, "/sse/app/app-key?channels=private-orders.1", nil)
+	req.Header.Set(fiber.HeaderAccept, "text/event-stream")
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 }
 
 func signedURL(t *testing.T, method, path, key, secret string, body []byte) string {

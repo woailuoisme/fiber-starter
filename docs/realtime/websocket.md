@@ -44,6 +44,8 @@ WebSocket 端点默认位于 `/app/{app_key}`，保持 Pusher / Laravel Reverb �
 
 REST API 使用 Pusher 风格的 `auth_key`、`auth_timestamp`、`auth_version`、`body_md5` 和 `auth_signature` 参数签名。
 
+只读浏览器推送也可使用 SSE 传输，默认端点为 `GET /sse/app/{app_key}`，详见 `docs/realtime/sse.md`。
+
 ## 2. 消息格式
 
 所有消息均采用 JSON 格式传输：

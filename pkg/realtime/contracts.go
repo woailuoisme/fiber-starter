@@ -3,14 +3,13 @@ package realtime
 import (
 	"context"
 
+	"lfiber/pkg/realtime/internal/pusher"
+
 	"github.com/gofiber/fiber/v3"
 )
 
 // User 抽象业务层用户实体，仅包含实时通信需要的最小集
-type User struct {
-	ID   string         `json:"id"`
-	Info map[string]any `json:"info,omitempty"`
-}
+type User = pusher.User
 
 // Logger 接口解耦了具体的日志库，允许从外部注入任意结构化日志引擎
 type Logger interface {
@@ -24,8 +23,14 @@ type ChannelAuthorization func(ctx context.Context, user User, channel string, p
 
 // Manager 定义了实时通信主控的通用接口
 type Manager interface {
+	// WebSocketHandler 返回对接客户端 WebSocket 连接的 Fiber Handler
+	WebSocketHandler() fiber.Handler
+
 	// Handler 返回对接客户端 WebSocket 连接的 Fiber Handler
 	Handler() fiber.Handler
+
+	// SSEHandler 返回对接客户端 Server-Sent Events 连接的 Fiber Handler
+	SSEHandler() fiber.Handler
 
 	// AuthHandler 返回处理广播验证授权的 Fiber Handler
 	AuthHandler() fiber.Handler

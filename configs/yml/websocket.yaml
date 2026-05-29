@@ -1,6 +1,7 @@
 websocket:
   port: ${WEBSOCKET_PORT:6001}
   path: ${WEBSOCKET_PATH:/app/:appKey}
+  sse_path: ${WEBSOCKET_SSE_PATH:/sse/app/:appKey}
   auth_path: /broadcasting/auth
   app_id: ${REVERB_APP_ID:lfiber}
   app_key: ${REVERB_APP_KEY:lfiber}

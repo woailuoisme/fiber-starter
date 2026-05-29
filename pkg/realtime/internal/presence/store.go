@@ -1,4 +1,4 @@
-package realtime
+package presence
 
 import (
 	"context"
@@ -11,13 +11,19 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"lfiber/pkg/realtime/internal/pusher"
 )
+
+type Logger interface {
+	Info(msg string, fields ...any)
+	Error(msg string, fields ...any)
+}
 
 // PresenceStore 维护和查询在线状态成员的底层驱动接口
 type PresenceStore interface {
-	Join(ctx context.Context, channel string, socketID string, member PresenceMember, ttl time.Duration) error
+	Join(ctx context.Context, channel string, socketID string, member pusher.PresenceMember, ttl time.Duration) error
 	Leave(ctx context.Context, channel string, socketID string) error
-	Members(ctx context.Context, channel string) ([]PresenceMember, error)
+	Members(ctx context.Context, channel string) ([]pusher.PresenceMember, error)
 	Count(ctx context.Context, channel string) (int, error)
 	Close() error
 }
@@ -28,17 +34,17 @@ type memoryPresenceStore struct {
 }
 
 type memoryPresenceMember struct {
-	member    PresenceMember
+	member    pusher.PresenceMember
 	expiresAt time.Time
 }
 
-func newMemoryPresenceStore() PresenceStore {
+func NewMemoryStore() PresenceStore {
 	return &memoryPresenceStore{
 		channels: make(map[string]map[string]memoryPresenceMember),
 	}
 }
 
-func (s *memoryPresenceStore) Join(_ context.Context, channel string, socketID string, member PresenceMember, ttl time.Duration) error {
+func (s *memoryPresenceStore) Join(_ context.Context, channel string, socketID string, member pusher.PresenceMember, ttl time.Duration) error {
 	if channel == "" || socketID == "" {
 		return errors.New("invalid presence identity")
 	}
@@ -74,7 +80,7 @@ func (s *memoryPresenceStore) Leave(_ context.Context, channel string, socketID 
 	return nil
 }
 
-func (s *memoryPresenceStore) Members(_ context.Context, channel string) ([]PresenceMember, error) {
+func (s *memoryPresenceStore) Members(_ context.Context, channel string) ([]pusher.PresenceMember, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -84,7 +90,7 @@ func (s *memoryPresenceStore) Members(_ context.Context, channel string) ([]Pres
 	}
 
 	now := time.Now()
-	members := make([]PresenceMember, 0, len(ch))
+	members := make([]pusher.PresenceMember, 0, len(ch))
 	for socketID, item := range ch {
 		if !item.expiresAt.IsZero() && now.After(item.expiresAt) {
 			delete(ch, socketID)
@@ -112,9 +118,9 @@ func (s *memoryPresenceStore) Count(ctx context.Context, channel string) (int, e
 func (s *memoryPresenceStore) Close() error { return nil }
 
 // redisPresenceEnvelope 带有 NodeID 标识的 Redis 在线成员包装，用于在宕机时踢出残留数据
-type redisPresenceEnvelope struct {
-	Member PresenceMember `json:"member"`
-	NodeID string         `json:"node_id"`
+type RedisEnvelope struct {
+	Member pusher.PresenceMember `json:"member"`
+	NodeID string                `json:"node_id"`
 }
 
 type redisPresenceStore struct {
@@ -123,7 +129,7 @@ type redisPresenceStore struct {
 	nodeID string
 }
 
-func newRedisPresenceStore(client *redis.Client, prefix string, nodeID string) PresenceStore {
+func NewRedisStore(client *redis.Client, prefix string, nodeID string) PresenceStore {
 	return &redisPresenceStore{client: client, prefix: prefix, nodeID: nodeID}
 }
 
@@ -134,8 +140,8 @@ func (s *redisPresenceStore) key(channel string) string {
 	return fmt.Sprintf("%s:presence:%s", s.prefix, channel)
 }
 
-func (s *redisPresenceStore) Join(ctx context.Context, channel string, socketID string, member PresenceMember, ttl time.Duration) error {
-	envelope := redisPresenceEnvelope{
+func (s *redisPresenceStore) Join(ctx context.Context, channel string, socketID string, member pusher.PresenceMember, ttl time.Duration) error {
+	envelope := RedisEnvelope{
 		Member: member,
 		NodeID: s.nodeID,
 	}
@@ -169,15 +175,15 @@ func (s *redisPresenceStore) Leave(ctx context.Context, channel string, socketID
 	return nil
 }
 
-func (s *redisPresenceStore) Members(ctx context.Context, channel string) ([]PresenceMember, error) {
+func (s *redisPresenceStore) Members(ctx context.Context, channel string) ([]pusher.PresenceMember, error) {
 	key := s.key(channel)
 	values, err := s.client.HGetAll(ctx, key).Result()
 	if err != nil {
 		return nil, err
 	}
-	members := make([]PresenceMember, 0, len(values))
+	members := make([]pusher.PresenceMember, 0, len(values))
 	for _, raw := range values {
-		var env redisPresenceEnvelope
+		var env RedisEnvelope
 		if err := json.Unmarshal([]byte(raw), &env); err != nil {
 			continue
 		}
@@ -207,10 +213,10 @@ type fallbackPresenceStore struct {
 	done       chan struct{}
 }
 
-func newFallbackPresenceStore(redisStore PresenceStore, logger Logger, client *redis.Client) PresenceStore {
+func NewFallbackStore(redisStore PresenceStore, logger Logger, client *redis.Client) PresenceStore {
 	fps := &fallbackPresenceStore{
 		redisStore: redisStore,
-		memStore:   newMemoryPresenceStore(),
+		memStore:   NewMemoryStore(),
 		logger:     logger,
 		client:     client,
 		done:       make(chan struct{}),
@@ -220,7 +226,7 @@ func newFallbackPresenceStore(redisStore PresenceStore, logger Logger, client *r
 	return fps
 }
 
-func (s *fallbackPresenceStore) Join(ctx context.Context, channel string, socketID string, member PresenceMember, ttl time.Duration) error {
+func (s *fallbackPresenceStore) Join(ctx context.Context, channel string, socketID string, member pusher.PresenceMember, ttl time.Duration) error {
 	if s.redisAlive.Load() {
 		err := s.redisStore.Join(ctx, channel, socketID, member, ttl)
 		if err == nil {
@@ -244,7 +250,7 @@ func (s *fallbackPresenceStore) Leave(ctx context.Context, channel string, socke
 	return s.memStore.Leave(ctx, channel, socketID)
 }
 
-func (s *fallbackPresenceStore) Members(ctx context.Context, channel string) ([]PresenceMember, error) {
+func (s *fallbackPresenceStore) Members(ctx context.Context, channel string) ([]pusher.PresenceMember, error) {
 	if s.redisAlive.Load() {
 		members, err := s.redisStore.Members(ctx, channel)
 		if err == nil {

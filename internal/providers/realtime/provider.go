@@ -62,6 +62,7 @@ func RegisterRealtime(cfg *configs.Config) (realtimeContracts.Manager, error) {
 		AppKey:            cfg.WebSocket.AppKey,
 		AppSecret:         cfg.WebSocket.AppSecret,
 		Path:              cfg.WebSocket.Path,
+		SSEPath:           cfg.WebSocket.SSEPath,
 		BusMode:           cfg.WebSocket.BusMode,
 		RedisPrefix:       cfg.WebSocket.RedisPrefix,
 		WriteQueueSize:    cfg.WebSocket.WriteQueueSize,

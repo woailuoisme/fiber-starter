@@ -8,8 +8,14 @@ import (
 
 // Manager defines the interface for the realtime manager.
 type Manager interface {
+	// WebSocketHandler returns the websocket handler.
+	WebSocketHandler() fiber.Handler
+
 	// Handler returns the websocket handler.
 	Handler() fiber.Handler
+
+	// SSEHandler returns the Server-Sent Events handler.
+	SSEHandler() fiber.Handler
 
 	// AuthHandler returns the authentication handler.
 	AuthHandler() fiber.Handler

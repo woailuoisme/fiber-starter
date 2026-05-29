@@ -9,6 +9,7 @@ type Config struct {
 	AppKey            string        `json:"app_key"`
 	AppSecret         string        `json:"app_secret"`
 	Path              string        `json:"path"`
+	SSEPath           string        `json:"sse_path"`
 	BusMode           string        `json:"bus_mode"` // "redis" 或 "memory"
 	RedisPrefix       string        `json:"redis_prefix"`
 	WriteQueueSize    int           `json:"write_queue_size"`

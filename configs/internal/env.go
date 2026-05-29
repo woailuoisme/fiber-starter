@@ -147,6 +147,7 @@ func EnvConfigMap() map[string]any {
 		// WebSocket
 		"WEBSOCKET_PORT":               "websocket.port",
 		"WEBSOCKET_PATH":               "websocket.path",
+		"WEBSOCKET_SSE_PATH":           "websocket.sse_path",
 		"WEBSOCKET_AUTH_PATH":          "websocket.auth_path",
 		"WEBSOCKET_APP_ID":             "websocket.app_id",
 		"WEBSOCKET_APP_KEY":            "websocket.app_key",
@@ -161,6 +162,7 @@ func EnvConfigMap() map[string]any {
 		"REVERB_APP_KEY":               "websocket.app_key",
 		"REVERB_APP_SECRET":            "websocket.app_secret",
 		"REVERB_PATH":                  "websocket.path",
+		"REVERB_SSE_PATH":              "websocket.sse_path",
 
 		// Payment
 		"WECHAT_APP_ID":      "payment.wechat.app_id",

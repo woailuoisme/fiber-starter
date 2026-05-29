@@ -11,14 +11,20 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gofiber/contrib/v3/websocket"
+	"lfiber/pkg/realtime/internal/presence"
+	"lfiber/pkg/realtime/internal/pubsub"
+	"lfiber/pkg/realtime/internal/pusher"
+	"lfiber/pkg/realtime/internal/sse"
+	rtws "lfiber/pkg/realtime/internal/websocket"
+
+	fiberws "github.com/gofiber/contrib/v3/websocket"
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
 type channelSubscriptionState struct {
-	sub  Subscription
+	sub  pubsub.Subscription
 	refs int
 }
 
@@ -26,14 +32,16 @@ type channelSubscriptionState struct {
 type ManagerImpl struct {
 	cfg *Config
 
-	hub      *Hub
-	bus      EventBus
-	presence PresenceStore
-	rdb      *redis.Client
-	server   *Server
-	nodeID   string
-	logger   Logger
-	registry *channelRegistry
+	hub       *rtws.Hub
+	sseHub    *sse.Hub
+	bus       pubsub.EventBus
+	presence  presence.PresenceStore
+	rdb       *redis.Client
+	server    *rtws.Server
+	sseServer *sse.Server
+	nodeID    string
+	logger    Logger
+	registry  *channelRegistry
 
 	mu            sync.Mutex
 	subscriptions map[string]*channelSubscriptionState
@@ -41,7 +49,7 @@ type ManagerImpl struct {
 	done          chan struct{}
 
 	// 解耦业务的回调挂载
-	userResolver     func(*websocket.Conn) (User, error)
+	userResolver     func(*fiberws.Conn) (User, error)
 	onSubscribe      func(sessionID string, channel string, user User) error
 	authUserResolver func(c fiber.Ctx) (User, error)
 }
@@ -55,7 +63,8 @@ func NewManager(cfg *Config, logger Logger) *ManagerImpl {
 	m := &ManagerImpl{
 		cfg:           cfg,
 		logger:        logger,
-		hub:           NewHub(),
+		hub:           rtws.NewHub(),
+		sseHub:        sse.NewHub(),
 		nodeID:        nodeID,
 		registry:      newChannelRegistry(),
 		subscriptions: make(map[string]*channelSubscriptionState),
@@ -63,7 +72,8 @@ func NewManager(cfg *Config, logger Logger) *ManagerImpl {
 	}
 
 	m.initTransport()
-	m.server = NewServer(m)
+	m.server = rtws.NewServer(m)
+	m.sseServer = sse.NewServer(m)
 
 	// 开启集群节点心跳
 	if m.rdb != nil {
@@ -81,7 +91,29 @@ func (m *ManagerImpl) Config() *Config {
 	return m.cfg
 }
 
-func (m *ManagerImpl) SetUserResolver(resolver func(*websocket.Conn) (User, error)) {
+func (m *ManagerImpl) AppKey() string {
+	if m.cfg == nil {
+		return ""
+	}
+	return m.cfg.AppKey
+}
+
+func (m *ManagerImpl) MaxMessageSize() int {
+	if m.cfg == nil {
+		return 0
+	}
+	return m.cfg.MaxMessageSize
+}
+
+func (m *ManagerImpl) Info(msg string, fields ...any) {
+	m.logger.Info(msg, fields...)
+}
+
+func (m *ManagerImpl) Warn(msg string, fields ...any) {
+	m.logger.Warn(msg, fields...)
+}
+
+func (m *ManagerImpl) SetUserResolver(resolver func(*fiberws.Conn) (User, error)) {
 	m.userResolver = resolver
 }
 
@@ -100,9 +132,70 @@ func (m *ManagerImpl) SetAuthUserResolver(resolver func(fiber.Ctx) (User, error)
 	m.authUserResolver = resolver
 }
 
+func (m *ManagerImpl) RegisterSSESession(session *sse.Session) {
+	if session == nil {
+		return
+	}
+	if m.sseHub == nil {
+		m.sseHub = sse.NewHub()
+	}
+	m.sseHub.Register(session)
+}
+
+func (m *ManagerImpl) RemoveSSESession(sessionID string) {
+	if sessionID == "" || m.sseHub == nil {
+		return
+	}
+
+	channels := m.sseHub.Unregister(sessionID)
+	for _, channel := range channels {
+		m.releaseSubscription(channel)
+	}
+}
+
+func (m *ManagerImpl) SubscribeSSESession(_ fiber.Ctx, session *sse.Session, req sse.SubscribeRequest) error {
+	for _, channelName := range req.Channels {
+		channel, err := pusher.ParseChannel(channelName)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+
+		m.sseHub.Join(session, channel.Name)
+		m.ensureSubscription(channel.Name)
+	}
+	return nil
+}
+
+func (m *ManagerImpl) ValidateSSESubscribeRequest(req sse.SubscribeRequest) error {
+	for _, channelName := range req.Channels {
+		channel, err := pusher.ParseChannel(channelName)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+		if !channel.IsPrivate() {
+			continue
+		}
+		if m.cfg == nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "realtime config unavailable")
+		}
+		if req.SocketID == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "missing socket_id for private channel")
+		}
+		auth := req.AuthFor(channel.Name)
+		channelData := req.ChannelDataFor(channel.Name)
+		if auth == "" {
+			return fiber.NewError(fiber.StatusUnauthorized, "missing channel auth")
+		}
+		if err := pusher.ValidateChannelAuth(m.cfg.AppKey, m.cfg.AppSecret, req.SocketID, channel.Name, auth, channelData); err != nil {
+			return fiber.NewError(fiber.StatusUnauthorized, err.Error())
+		}
+	}
+	return nil
+}
+
 func (m *ManagerImpl) initTransport() {
 	if m.cfg == nil {
-		m.presence = newMemoryPresenceStore()
+		m.presence = presence.NewMemoryStore()
 		return
 	}
 
@@ -115,13 +208,13 @@ func (m *ManagerImpl) initTransport() {
 
 	if client != nil {
 		m.rdb = client
-		m.bus = newRedisBus(client, m.busPrefix(), m.logger)
-		redisStore := newRedisPresenceStore(client, m.busPrefix(), m.nodeID)
-		m.presence = newFallbackPresenceStore(redisStore, m.logger, client)
+		m.bus = pubsub.NewRedisBus(client, m.busPrefix(), m.logger)
+		redisStore := presence.NewRedisStore(client, m.busPrefix(), m.nodeID)
+		m.presence = presence.NewFallbackStore(redisStore, m.logger, client)
 		return
 	}
 
-	m.presence = newMemoryPresenceStore()
+	m.presence = presence.NewMemoryStore()
 }
 
 func (m *ManagerImpl) busPrefix() string {
@@ -132,10 +225,21 @@ func (m *ManagerImpl) busPrefix() string {
 }
 
 func (m *ManagerImpl) Handler() fiber.Handler {
+	return m.WebSocketHandler()
+}
+
+func (m *ManagerImpl) WebSocketHandler() fiber.Handler {
 	if m.server == nil {
-		m.server = NewServer(m)
+		m.server = rtws.NewServer(m)
 	}
 	return m.server.Handler()
+}
+
+func (m *ManagerImpl) SSEHandler() fiber.Handler {
+	if m.sseServer == nil {
+		m.sseServer = sse.NewServer(m)
+	}
+	return m.sseServer.Handler()
 }
 
 func (m *ManagerImpl) AuthHandler() fiber.Handler {
@@ -179,15 +283,13 @@ func (m *ManagerImpl) Close() error {
 	close(m.done)
 
 	// 1. 优雅平滑退出：通知客户端本节点即将关闭，下发 reconnect 事件引导其使用随机抖动时间重连
-	var activeSessions []*Session
+	var activeSessions []*rtws.Session
 	if m.hub != nil {
-		m.hub.mu.RLock()
-		for _, sess := range m.hub.sessions {
-			if sess != nil {
-				activeSessions = append(activeSessions, sess)
-			}
-		}
-		m.hub.mu.RUnlock()
+		activeSessions = m.hub.Sessions()
+	}
+	var activeSSESessions []*sse.Session
+	if m.sseHub != nil {
+		activeSSESessions = m.sseHub.Sessions()
 	}
 
 	if len(activeSessions) > 0 {
@@ -195,14 +297,14 @@ func (m *ManagerImpl) Close() error {
 		var wg sync.WaitGroup
 		for _, sess := range activeSessions {
 			wg.Add(1)
-			go func(s *Session) {
+			go func(s *rtws.Session) {
 				defer wg.Done()
 				// 产生 100 到 3000 毫秒的随机抖动延迟，以防止 thundering herd (雪崩重连) 拖垮后端
 				//nolint:gosec // weak random is fine for reconnection jitter
 				jitterMs := 100 + rand.Intn(2900)
-				_ = s.SendMessage(Message{
+				_ = s.SendMessage(pusher.Message{
 					Event: "realtime:reconnect",
-					Data:  encodePusherData(map[string]any{"reconnect_after_ms": jitterMs}),
+					Data:  pusher.EncodeData(map[string]any{"reconnect_after_ms": jitterMs}),
 				})
 			}(sess)
 		}
@@ -220,6 +322,9 @@ func (m *ManagerImpl) Close() error {
 
 		// 给客户端 1s 时间（Connection Drain）使其能平滑建立新物理连接，随后断开
 		time.Sleep(1 * time.Second)
+	}
+	for _, sess := range activeSSESessions {
+		sess.Shutdown()
 	}
 
 	// 2. 清理当前节点在 Redis 中的心跳
@@ -257,11 +362,34 @@ func (m *ManagerImpl) Close() error {
 	return errors.Join(errs...)
 }
 
-func (m *ManagerImpl) registerSession(session *Session) {
+func (m *ManagerImpl) registerSession(session *rtws.Session) {
 	if session == nil {
 		return
 	}
 	m.hub.Register(session)
+}
+
+func (m *ManagerImpl) RegisterWebSocketSession(session *rtws.Session) {
+	m.registerSession(session)
+}
+
+func (m *ManagerImpl) RemoveWebSocketSession(sessionID string) {
+	m.removeSession(sessionID)
+}
+
+func (m *ManagerImpl) SubscribeWebSocketSession(session *rtws.Session, payload pusher.SubscribePayload) error {
+	return m.subscribeSession(session, payload)
+}
+
+func (m *ManagerImpl) UnsubscribeWebSocketSession(session *rtws.Session, channel string) {
+	m.unsubscribeSession(session, channel)
+}
+
+func (m *ManagerImpl) ResolveUser(conn *fiberws.Conn) (pusher.User, error) {
+	if m.userResolver == nil {
+		return pusher.User{}, nil
+	}
+	return m.userResolver(conn)
 }
 
 func (m *ManagerImpl) authorizeChannel(ctx context.Context, channel string, user User) error {
@@ -291,10 +419,10 @@ func (m *ManagerImpl) removeSession(sessionID string) {
 		m.unsubscribeSession(session, channelName)
 	}
 	m.hub.Unregister(sessionID)
-	session.shutdown()
+	session.Shutdown()
 }
 
-func (m *ManagerImpl) subscribeSession(session *Session, payload SubscribePayload) error {
+func (m *ManagerImpl) subscribeSession(session *rtws.Session, payload pusher.SubscribePayload) error {
 	channel, err := ParseChannel(payload.Channel)
 	if err != nil {
 		return err
@@ -331,19 +459,19 @@ func (m *ManagerImpl) subscribeSession(session *Session, payload SubscribePayloa
 			m.releaseSubscription(channel.Name)
 			return err
 		}
-		session.setPresenceMember(channel.Name, member)
+		session.SetPresenceMember(channel.Name, member)
 		if err := m.presence.Join(context.Background(), channel.Name, session.ID(), member, m.presenceTTL()); err != nil {
 			m.hub.Leave(session, channel.Name)
 			m.releaseSubscription(channel.Name)
 			return err
 		}
 		snapshot, _ := m.presenceSnapshot(channel.Name)
-		_ = session.SendMessage(Message{
+		_ = session.SendMessage(pusher.Message{
 			Event:   EventSubscriptionSucceeded,
 			Channel: channel.Name,
 			Data:    encodePusherData(snapshot.PusherData()),
 		})
-		m.publishEnvelope(Envelope{
+		m.publishEnvelope(pusher.Envelope{
 			NodeID:         m.nodeID,
 			Event:          EventMemberAdded,
 			Channel:        channel.Name,
@@ -351,7 +479,7 @@ func (m *ManagerImpl) subscribeSession(session *Session, payload SubscribePayloa
 			OriginSocketID: session.ID(),
 		})
 	default:
-		_ = session.SendMessage(Message{
+		_ = session.SendMessage(pusher.Message{
 			Event:   EventSubscriptionSucceeded,
 			Channel: channel.Name,
 			Data:    encodePusherData(map[string]any{}),
@@ -361,7 +489,7 @@ func (m *ManagerImpl) subscribeSession(session *Session, payload SubscribePayloa
 	return nil
 }
 
-func (m *ManagerImpl) unsubscribeSession(session *Session, channelName string) {
+func (m *ManagerImpl) unsubscribeSession(session *rtws.Session, channelName string) {
 	if session == nil || channelName == "" {
 		return
 	}
@@ -371,14 +499,14 @@ func (m *ManagerImpl) unsubscribeSession(session *Session, channelName string) {
 		return
 	}
 
-	if !session.hasChannel(channelName) {
+	if !session.HasChannel(channelName) {
 		return
 	}
 
 	if channel.Kind == ChannelPresence {
-		if member, ok := session.presenceMember(channelName); ok {
+		if member, ok := session.PresenceMember(channelName); ok {
 			_ = m.presence.Leave(context.Background(), channelName, session.ID())
-			m.publishEnvelope(Envelope{
+			m.publishEnvelope(pusher.Envelope{
 				NodeID:         m.nodeID,
 				Event:          EventMemberRemoved,
 				Channel:        channelName,
@@ -396,7 +524,7 @@ func (m *ManagerImpl) Dispatch(channelName, event string, data any) error {
 	if channelName == "" || event == "" {
 		return errors.New("missing channel or event")
 	}
-	m.publishEnvelope(Envelope{
+	m.publishEnvelope(pusher.Envelope{
 		NodeID:  m.nodeID,
 		Event:   event,
 		Channel: channelName,
@@ -405,17 +533,18 @@ func (m *ManagerImpl) Dispatch(channelName, event string, data any) error {
 	return nil
 }
 
-func (m *ManagerImpl) publishEnvelope(env Envelope) {
+func (m *ManagerImpl) publishEnvelope(env pusher.Envelope) {
 	if env.Channel == "" || env.Event == "" {
 		return
 	}
 
-	m.broadcastToChannel(env.Channel, Message{
+	m.broadcastToChannel(env.Channel, pusher.Message{
 		Event:    env.Event,
 		Channel:  env.Channel,
 		Data:     encodePusherRawData(env.Data),
 		SocketID: env.OriginSocketID,
 	}, env.OriginSocketID)
+	m.broadcastSSEToChannel(env)
 
 	if m.bus == nil {
 		return
@@ -435,7 +564,7 @@ func (m *ManagerImpl) handleBusMessage(channel string, payload []byte) {
 		return
 	}
 
-	var env Envelope
+	var env pusher.Envelope
 	if err := json.Unmarshal(payload, &env); err != nil {
 		return
 	}
@@ -450,15 +579,16 @@ func (m *ManagerImpl) handleBusMessage(channel string, payload []byte) {
 		return
 	}
 
-	m.broadcastToChannel(env.Channel, Message{
+	m.broadcastToChannel(env.Channel, pusher.Message{
 		Event:    env.Event,
 		Channel:  env.Channel,
 		Data:     encodePusherRawData(env.Data),
 		SocketID: env.OriginSocketID,
 	}, env.OriginSocketID)
+	m.broadcastSSEToChannel(env)
 }
 
-func (m *ManagerImpl) broadcastToChannel(channelName string, msg Message, excludeSocketID string) {
+func (m *ManagerImpl) broadcastToChannel(channelName string, msg pusher.Message, excludeSocketID string) {
 	members := m.hub.Members(channelName)
 	if len(members) == 0 {
 		return
@@ -472,6 +602,27 @@ func (m *ManagerImpl) broadcastToChannel(channelName string, msg Message, exclud
 			continue
 		}
 		_ = session.SendMessage(msg)
+	}
+}
+
+func (m *ManagerImpl) broadcastSSEToChannel(env pusher.Envelope) {
+	if m.sseHub == nil || env.Channel == "" || env.Event == "" {
+		return
+	}
+
+	members := m.sseHub.Members(env.Channel)
+	if len(members) == 0 {
+		return
+	}
+
+	for _, session := range members {
+		if session == nil {
+			continue
+		}
+		if env.OriginSocketID != "" && session.ID() == env.OriginSocketID {
+			continue
+		}
+		_ = session.SendEnvelope(env)
 	}
 }
 
@@ -500,7 +651,7 @@ func (m *ManagerImpl) ensureSubscription(channel string) {
 	go m.consumeSubscription(channel, sub)
 }
 
-func (m *ManagerImpl) consumeSubscription(channel string, sub Subscription) {
+func (m *ManagerImpl) consumeSubscription(channel string, sub pubsub.Subscription) {
 	for payload := range sub.Messages() {
 		m.handleBusMessage(channel, payload)
 	}
@@ -535,14 +686,14 @@ func (m *ManagerImpl) presenceTTL() time.Duration {
 	return time.Duration(m.cfg.PresenceTTL) * time.Second
 }
 
-func (m *ManagerImpl) presenceMember(session *Session, payload SubscribePayload) (PresenceMember, error) {
+func (m *ManagerImpl) presenceMember(session *rtws.Session, payload pusher.SubscribePayload) (pusher.PresenceMember, error) {
 	if payload.ChannelData != "" {
-		var member PresenceMember
+		var member pusher.PresenceMember
 		if err := json.Unmarshal([]byte(payload.ChannelData), &member); err != nil {
-			return PresenceMember{}, err
+			return pusher.PresenceMember{}, err
 		}
 		if member.UserID == "" {
-			return PresenceMember{}, errors.New("presence channel data missing user_id")
+			return pusher.PresenceMember{}, errors.New("presence channel data missing user_id")
 		}
 		if member.UserInfo == nil {
 			member.UserInfo = map[string]any{}
@@ -552,22 +703,22 @@ func (m *ManagerImpl) presenceMember(session *Session, payload SubscribePayload)
 
 	user := session.User()
 	if user.ID == "" {
-		return PresenceMember{}, errors.New("presence member unavailable")
+		return pusher.PresenceMember{}, errors.New("presence member unavailable")
 	}
 
-	return PresenceMember{
+	return pusher.PresenceMember{
 		UserID:   user.ID,
 		UserInfo: user.Info,
 	}, nil
 }
 
-func (m *ManagerImpl) presenceSnapshot(channel string) (PresenceSnapshot, error) {
+func (m *ManagerImpl) presenceSnapshot(channel string) (pusher.PresenceSnapshot, error) {
 	if m.presence == nil {
-		return PresenceSnapshot{}, nil
+		return pusher.PresenceSnapshot{}, nil
 	}
 	members, err := m.presence.Members(context.Background(), channel)
 	if err != nil {
-		return PresenceSnapshot{}, err
+		return pusher.PresenceSnapshot{}, err
 	}
 	channelInfo, _ := ParseChannel(channel)
 	return channelInfo.Snapshot(members), nil
@@ -580,6 +731,10 @@ func (m *ManagerImpl) heartbeatIntervalSeconds() int {
 	return m.cfg.HeartbeatInterval
 }
 
+func (m *ManagerImpl) HeartbeatIntervalSeconds() int {
+	return m.heartbeatIntervalSeconds()
+}
+
 func (m *ManagerImpl) writeQueueSize() int {
 	if m.cfg == nil || m.cfg.WriteQueueSize <= 0 {
 		return 128
@@ -587,40 +742,21 @@ func (m *ManagerImpl) writeQueueSize() int {
 	return m.cfg.WriteQueueSize
 }
 
+func (m *ManagerImpl) WriteQueueSize() int {
+	return m.writeQueueSize()
+}
+
 func (m *ManagerImpl) clientEventsEnabled() bool {
 	return false
 }
 
-func (m *ManagerImpl) handleConnect(conn *websocket.Conn) {
-	if conn == nil {
-		return
-	}
+func (m *ManagerImpl) ClientEventsEnabled() bool {
+	return m.clientEventsEnabled()
+}
 
-	if m.cfg != nil && m.cfg.AppKey != "" {
-		if appKey := conn.Params("appKey"); appKey != "" && appKey != m.cfg.AppKey {
-			_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "invalid app key"))
-			_ = conn.Close()
-			return
-		}
-	}
-
-	if m.cfg != nil && m.cfg.MaxMessageSize > 0 {
-		conn.SetReadLimit(int64(m.cfg.MaxMessageSize))
-	}
-
-	session := newSession(m, conn)
-	m.registerSession(session)
-
-	_ = session.SendMessage(Message{
-		Event: EventConnectEstablished,
-		Data: encodePusherData(ConnectionEstablishedData{
-			SocketID:        session.ID(),
-			ActivityTimeout: m.heartbeatIntervalSeconds(),
-		}),
-	})
-	m.logger.Info("realtime_connected", "socket_id", session.ID())
-
-	session.Start()
+func (m *ManagerImpl) PublishClientEvent(env pusher.Envelope) {
+	env.NodeID = m.nodeID
+	m.publishEnvelope(env)
 }
 
 // ---------------- 集群高可用节点监控与清理逻辑 ----------------
@@ -690,7 +826,7 @@ func (m *ManagerImpl) CleanupPresence(ctx context.Context) error {
 		}
 
 		for socketID, raw := range records {
-			var env redisPresenceEnvelope
+			var env presence.RedisEnvelope
 			if err := json.Unmarshal([]byte(raw), &env); err != nil {
 				continue
 			}
@@ -703,7 +839,7 @@ func (m *ManagerImpl) CleanupPresence(ctx context.Context) error {
 					continue
 				}
 
-				m.publishEnvelope(Envelope{
+				m.publishEnvelope(pusher.Envelope{
 					NodeID:         m.nodeID,
 					Event:          EventMemberRemoved,
 					Channel:        channelName,

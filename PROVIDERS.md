@@ -291,6 +291,7 @@ msg := i18n.Trans(c, "messages.welcome", nil)
 ### Realtime 方法列表
 
 - `Handler() fiber.Handler`: 获取 WebSocket 主处理函数。
+- `SSEHandler() fiber.Handler`: 获取 Server-Sent Events 只读传输处理函数。
 - `AuthHandler() fiber.Handler`: 获取用于 WebSocket 握手校验的中间件。
 - `APIHandler() fiber.Handler`: 获取 Pusher-compatible REST API 处理函数。
 - `AuthorizeChannel(pattern string, auth realtime.ChannelAuthorization)`: 注册类似 Laravel `Broadcast::channel` 的频道授权回调。
