@@ -1,6 +1,8 @@
 package drivers
 
 import (
+	"fmt"
+
 	"lfiber/internal/providers/mail/contracts"
 )
 
@@ -54,6 +56,27 @@ func (m *BaseMessage) Attach(filePath string) contracts.Message {
 
 func (m *BaseMessage) Data(data map[string]interface{}) contracts.Message {
 	m.DataMap = data
+	return m
+}
+
+func (m *BaseMessage) View(templateName string, data map[string]interface{}) contracts.Message {
+	m.DataMap = data
+	htmlContent, err := RenderTemplate(templateName, data)
+	if err != nil {
+		m.BodyStr = fmt.Sprintf("<!-- Error rendering template: %v -->", err)
+	} else {
+		m.BodyStr = htmlContent
+	}
+	m.IsHtmlFlag = true
+	return m
+}
+
+// Mailable 根据传入的 Mailable 接口实例配置并构建邮件。
+// 这样业务逻辑层就可以直接传入具有强类型的结构体以提升可读性和类型安全性。
+func (m *BaseMessage) Mailable(ml contracts.Mailable) contracts.Message {
+	name, data := ml.Template()
+	m.View(name, data)
+	m.Subject(ml.Subject())
 	return m
 }
 

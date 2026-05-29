@@ -1,7 +1,10 @@
 package mail
 
 import (
+	"fmt"
+
 	"lfiber/internal/providers/mail/contracts"
+	"lfiber/internal/providers/mail/drivers"
 )
 
 type Message struct {
@@ -58,6 +61,27 @@ func (m *Message) Attach(filePath string) contracts.Message {
 
 func (m *Message) Data(data map[string]interface{}) contracts.Message {
 	m.data = data
+	return m
+}
+
+func (m *Message) View(templateName string, data map[string]interface{}) contracts.Message {
+	m.data = data
+	htmlContent, err := drivers.RenderTemplate(templateName, data)
+	if err != nil {
+		m.body = fmt.Sprintf("<!-- Error rendering template: %v -->", err)
+	} else {
+		m.body = htmlContent
+	}
+	m.isHtml = true
+	return m
+}
+
+// Mailable 根据传入的 Mailable 接口实例配置并构建邮件。
+// 提供强类型的方法调用，方便业务特性的模块化扩展。
+func (m *Message) Mailable(ml contracts.Mailable) contracts.Message {
+	name, data := ml.Template()
+	m.View(name, data)
+	m.Subject(ml.Subject())
 	return m
 }
 

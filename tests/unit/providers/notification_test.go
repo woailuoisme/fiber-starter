@@ -28,6 +28,16 @@ func (m *MockMessage) Data(data map[string]interface{}) mailContracts.Message {
 	m.Called(data)
 	return m
 }
+
+func (m *MockMessage) View(templateName string, data map[string]interface{}) mailContracts.Message {
+	m.Called(templateName, data)
+	return m
+}
+
+func (m *MockMessage) Mailable(ml mailContracts.Mailable) mailContracts.Message {
+	m.Called(ml)
+	return m
+}
 func (m *MockMessage) GetTo() []string                 { return nil }
 func (m *MockMessage) GetCc() []string                 { return nil }
 func (m *MockMessage) GetBcc() []string                { return nil }

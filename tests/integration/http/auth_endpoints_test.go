@@ -19,6 +19,7 @@ import (
 	hashProvider "lfiber/internal/providers/hash"
 	i18nProvider "lfiber/internal/providers/i18n"
 	mailContracts "lfiber/internal/providers/mail/contracts"
+	"lfiber/internal/providers/mail/drivers"
 	"lfiber/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
@@ -544,11 +545,30 @@ func (m *mockMessage) Html(body string) mailContracts.Message { m.body = body; r
 func (m *mockMessage) Plain(body string) mailContracts.Message                { m.body = body; return m }
 func (m *mockMessage) Attach(filePath string) mailContracts.Message           { return m }
 func (m *mockMessage) Data(data map[string]interface{}) mailContracts.Message { return m }
-func (m *mockMessage) GetTo() []string                                        { return m.to }
-func (m *mockMessage) GetCc() []string                                        { return nil }
-func (m *mockMessage) GetBcc() []string                                       { return nil }
-func (m *mockMessage) GetSubject() string                                     { return m.subject }
-func (m *mockMessage) GetBody() string                                        { return m.body }
-func (m *mockMessage) IsHtml() bool                                           { return false }
-func (m *mockMessage) GetAttachments() []string                               { return nil }
-func (m *mockMessage) GetData() map[string]interface{}                        { return nil }
+func (m *mockMessage) View(templateName string, data map[string]interface{}) mailContracts.Message {
+	return m
+}
+
+func (m *mockMessage) Mailable(ml mailContracts.Mailable) mailContracts.Message {
+	m.subject = ml.Subject()
+	name, data := ml.Template()
+	htmlContent, err := drivers.RenderTemplate(name, data)
+	if err != nil {
+		if codeVal, ok := data["Code"]; ok {
+			if codeStr, ok := codeVal.(string); ok {
+				m.body = codeStr
+			}
+		}
+	} else {
+		m.body = htmlContent
+	}
+	return m
+}
+func (m *mockMessage) GetTo() []string                 { return m.to }
+func (m *mockMessage) GetCc() []string                 { return nil }
+func (m *mockMessage) GetBcc() []string                { return nil }
+func (m *mockMessage) GetSubject() string              { return m.subject }
+func (m *mockMessage) GetBody() string                 { return m.body }
+func (m *mockMessage) IsHtml() bool                    { return false }
+func (m *mockMessage) GetAttachments() []string        { return nil }
+func (m *mockMessage) GetData() map[string]interface{} { return nil }

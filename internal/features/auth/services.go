@@ -223,7 +223,16 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) (SignUp
 		return SignUpResult{}, err
 	}
 	if shouldSend {
-		if err := s.sendOTPEmail(saved.Email, "Verify your email", "Your verification code is", code, authOTPExpiry); err != nil {
+		if s.mailer == nil {
+			_ = s.deleteOTP(record.ID)
+			return SignUpResult{}, errors.New("mailer is not configured")
+		}
+		msg := s.mailer.To(saved.Email).Mailable(SignupVerificationMail{
+			Name:      saved.Name,
+			Code:      code,
+			ExpiresIn: authOTPExpiry,
+		})
+		if err := s.mailer.Send(msg); err != nil {
 			_ = s.deleteOTP(record.ID)
 			return SignUpResult{}, err
 		}
@@ -455,7 +464,15 @@ func (s *authService) RequestPasswordReset(ctx context.Context, input PasswordRe
 		return err
 	}
 	if shouldSend {
-		if err := s.sendOTPEmail(input.Email, "Reset your password", "Your password reset code is", code, authOTPExpiry); err != nil {
+		if s.mailer == nil {
+			_ = s.deleteOTP(record.ID)
+			return errors.New("mailer is not configured")
+		}
+		msg := s.mailer.To(input.Email).Mailable(PasswordResetOTPMail{
+			Code:      code,
+			ExpiresIn: authOTPExpiry,
+		})
+		if err := s.mailer.Send(msg); err != nil {
 			_ = s.deleteOTP(record.ID)
 			return err
 		}
@@ -753,25 +770,6 @@ func (s *authService) otpSecret() string {
 		return s.config.App.Name
 	}
 	return "lfiber-otp-secret"
-}
-
-func (s *authService) sendOTPEmail(to, subject, leadText, code string, expires time.Duration) error {
-	if s.mailer == nil {
-		return errors.New("mailer is not configured")
-	}
-
-	body := fmt.Sprintf(
-		`<div style="font-family:Arial,sans-serif;line-height:1.6">
-<p>%s</p>
-<p><strong style="font-size:24px;letter-spacing:4px">%s</strong></p>
-<p>This code expires in %d minutes.</p>
-</div>`,
-		leadText,
-		code,
-		int(expires.Minutes()),
-	)
-
-	return s.mailer.Raw(to, subject, body)
 }
 
 func generateOTPCode() (string, error) {

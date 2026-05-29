@@ -17,17 +17,26 @@ type Argon2HashConfig struct {
 }
 
 type MailConfig struct {
-	Enabled     bool   `mapstructure:"enabled"`
-	Default     string `mapstructure:"default"`
-	FromName    string `mapstructure:"from_name"`
-	FromAddress string `mapstructure:"from_address"`
-	ReplyTo     string `mapstructure:"reply_to"`
-	APIKey      string `mapstructure:"api_key"`
-	Host        string `mapstructure:"host"`
-	Port        int    `mapstructure:"port"`
-	Username    string `mapstructure:"username"`
-	Password    string `mapstructure:"password"`
-	Encryption  string `mapstructure:"encryption"`
+	Enabled     bool            `mapstructure:"enabled"`
+	Default     string          `mapstructure:"default"`
+	FromName    string          `mapstructure:"from_name"`
+	FromAddress string          `mapstructure:"from_address"`
+	ReplyTo     string          `mapstructure:"reply_to"`
+	APIKey      string          `mapstructure:"api_key"`
+	Host        string          `mapstructure:"host"`
+	Port        int             `mapstructure:"port"`
+	Username    string          `mapstructure:"username"`
+	Password    string          `mapstructure:"password"`
+	Encryption  string          `mapstructure:"encryption"`
+	Theme       MailThemeConfig `mapstructure:"theme"`
+}
+
+type MailThemeConfig struct {
+	PrimaryColor string `mapstructure:"primary_color"`
+	SuccessColor string `mapstructure:"success_color"`
+	DangerColor  string `mapstructure:"danger_color"`
+	WarningColor string `mapstructure:"warning_color"`
+	BgColor      string `mapstructure:"bg_color"`
 }
 
 type NotificationConfig struct {

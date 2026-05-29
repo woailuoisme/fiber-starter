@@ -296,7 +296,7 @@ func setFieldValue(field reflect.Value, val string) error {
 	case reflect.Bool:
 		boolVal := false
 		lowerVal := strings.ToLower(val)
-		if lowerVal == "true" || lowerVal == "yes" || val == "1" || val == "是" {
+		if lowerVal == "true" || lowerVal == "yes" || val == "1" || val == "\u662f" {
 			boolVal = true
 		}
 		field.SetBool(boolVal)

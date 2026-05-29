@@ -1,19 +1,13 @@
 {
   "git.ignoreLimitWarning": true,
-  "files.associations": {
-    "*.tmpl": "gotmpl"
-  },
-  // Go 语言环境配置
-  "go.useLanguageServer": true,
+  // Go 工具链配置
   "go.lintTool": "golangci-lint",
   "go.lintOnSave": "package",
   "go.lintFlags": [
     "--fast"
   ],
   "go.formatTool": "gofumpt",
-  "go.toolsManagement.autoUpdate": true,
-  
-  // 保存时自动执行的操作：自动整理 import、自动格式化
+  // 保存时自动整理 import 并格式化
   "[go]": {
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
@@ -23,21 +17,13 @@
     "editor.tabSize": 4,
     "editor.insertSpaces": false
   },
-  
-  // 模板文件的缩进设置
-  "[gohtml]": {
-    "editor.tabSize": 4,
-    "editor.insertSpaces": false
-  },
+  // 模板文件缩进与 Go 保持一致（Tab）
   "[gotmpl]": {
     "editor.tabSize": 4,
     "editor.insertSpaces": false
   },
-
-  // 搜索和文件排除：隐藏临时构建物和繁重的缓存，避免 VS Code 搜索卡顿
+  // 隐藏缓存目录，避免搜索卡顿
   "files.exclude": {
-    "**/.git": true,
-    "**/.DS_Store": true,
     "**/.cache": true
   },
   "search.useIgnoreFiles": true

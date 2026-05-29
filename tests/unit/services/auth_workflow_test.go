@@ -214,8 +214,24 @@ type fakeRawCall struct {
 	Body    string
 }
 
-func (m *fakeMailer) To(to ...string) mailContracts.Message    { return fakeMessage{} }
-func (m *fakeMailer) Send(message mailContracts.Message) error { return nil }
+func (m *fakeMailer) To(to ...string) mailContracts.Message {
+	return &fakeMessage{to: to}
+}
+
+func (m *fakeMailer) Send(message mailContracts.Message) error {
+	msg := message.(*fakeMessage)
+	toStr := ""
+	if len(msg.to) > 0 {
+		toStr = msg.to[0]
+	}
+	m.rawCalls = append(m.rawCalls, fakeRawCall{
+		To:      toStr,
+		Subject: msg.subject,
+		Body:    msg.body,
+	})
+	return nil
+}
+
 func (m *fakeMailer) Raw(to, subject, body string) error {
 	m.rawCalls = append(m.rawCalls, fakeRawCall{To: to, Subject: subject, Body: body})
 	return nil
@@ -223,24 +239,44 @@ func (m *fakeMailer) Raw(to, subject, body string) error {
 func (m *fakeMailer) Close() error       { return nil }
 func (m *fakeMailer) HealthCheck() error { return nil }
 
-type fakeMessage struct{}
+type fakeMessage struct {
+	to      []string
+	subject string
+	body    string
+}
 
-func (fakeMessage) To(to ...string) mailContracts.Message                  { return fakeMessage{} }
-func (fakeMessage) Cc(cc ...string) mailContracts.Message                  { return fakeMessage{} }
-func (fakeMessage) Bcc(bcc ...string) mailContracts.Message                { return fakeMessage{} }
-func (fakeMessage) Subject(subject string) mailContracts.Message           { return fakeMessage{} }
-func (fakeMessage) Html(body string) mailContracts.Message                 { return fakeMessage{} }
-func (fakeMessage) Plain(body string) mailContracts.Message                { return fakeMessage{} }
-func (fakeMessage) Attach(filePath string) mailContracts.Message           { return fakeMessage{} }
-func (fakeMessage) Data(data map[string]interface{}) mailContracts.Message { return fakeMessage{} }
-func (fakeMessage) GetTo() []string                                        { return nil }
-func (fakeMessage) GetCc() []string                                        { return nil }
-func (fakeMessage) GetBcc() []string                                       { return nil }
-func (fakeMessage) GetSubject() string                                     { return "" }
-func (fakeMessage) GetBody() string                                        { return "" }
-func (fakeMessage) IsHtml() bool                                           { return false }
-func (fakeMessage) GetAttachments() []string                               { return nil }
-func (fakeMessage) GetData() map[string]interface{}                        { return nil }
+func (m *fakeMessage) To(to ...string) mailContracts.Message        { m.to = to; return m }
+func (m *fakeMessage) Cc(cc ...string) mailContracts.Message        { return m }
+func (m *fakeMessage) Bcc(bcc ...string) mailContracts.Message      { return m }
+func (m *fakeMessage) Subject(subject string) mailContracts.Message { m.subject = subject; return m }
+
+func (m *fakeMessage) Html(body string) mailContracts.Message { m.body = body; return m }
+
+func (m *fakeMessage) Plain(body string) mailContracts.Message                { m.body = body; return m }
+func (m *fakeMessage) Attach(filePath string) mailContracts.Message           { return m }
+func (m *fakeMessage) Data(data map[string]interface{}) mailContracts.Message { return m }
+func (m *fakeMessage) View(templateName string, data map[string]interface{}) mailContracts.Message {
+	return m
+}
+
+func (m *fakeMessage) Mailable(ml mailContracts.Mailable) mailContracts.Message {
+	m.subject = ml.Subject()
+	_, data := ml.Template()
+	if codeVal, ok := data["Code"]; ok {
+		if codeStr, ok := codeVal.(string); ok {
+			m.body = codeStr
+		}
+	}
+	return m
+}
+func (m *fakeMessage) GetTo() []string                 { return m.to }
+func (m *fakeMessage) GetCc() []string                 { return nil }
+func (m *fakeMessage) GetBcc() []string                { return nil }
+func (m *fakeMessage) GetSubject() string              { return m.subject }
+func (m *fakeMessage) GetBody() string                 { return m.body }
+func (m *fakeMessage) IsHtml() bool                    { return false }
+func (m *fakeMessage) GetAttachments() []string        { return nil }
+func (m *fakeMessage) GetData() map[string]interface{} { return nil }
 
 type fakeCache struct {
 	values map[string]string

@@ -25,10 +25,10 @@ import (
 
 type mockSliceRow struct {
 	ID        int       `excel:"ID"`
-	Name      string    `excel:"用户名"`
-	Age       int       `excel:"年龄"`
-	Active    bool      `excel:"激活状态"`
-	CreatedAt time.Time `excel:"创建时间"`
+	Name      string    `excel:"Username"`
+	Age       int       `excel:"Age"`
+	Active    bool      `excel:"Active"`
+	CreatedAt time.Time `excel:"CreatedAt"`
 }
 
 type testSliceExport struct {
@@ -40,7 +40,7 @@ func (e *testSliceExport) FromSlice() interface{} {
 }
 
 func (e *testSliceExport) Headings() []string {
-	return []string{"ID", "用户名", "年龄", "激活状态", "创建时间"}
+	return []string{"ID", "Username", "Age", "Active", "CreatedAt"}
 }
 
 type testSliceImport struct {
@@ -63,8 +63,8 @@ type TestExcelUser struct {
 	bun.BaseModel `bun:"table:test_excel_users,alias:u"`
 
 	ID    int    `bun:"id,pk,autoincrement" excel:"ID"`
-	Name  string `bun:"name,notnull" excel:"用户名"`
-	Email string `bun:"email" excel:"邮箱"`
+	Name  string `bun:"name,notnull" excel:"Username"`
+	Email string `bun:"email" excel:"Email"`
 }
 
 type testQueryExport struct{}
@@ -79,7 +79,7 @@ func (e *testQueryExport) FromQuery(ctx context.Context) (*bun.SelectQuery, erro
 }
 
 func (e *testQueryExport) Headings() []string {
-	return []string{"ID", "用户名", "邮箱"}
+	return []string{"ID", "Username", "Email"}
 }
 
 type testModelImport struct{}
@@ -114,8 +114,8 @@ func TestExcel_MemorySliceExportAndImport(t *testing.T) {
 	// 1. 初始化待导出数据
 	exportObj := &testSliceExport{
 		rows: []mockSliceRow{
-			{ID: 1, Name: "张三", Age: 18, Active: true, CreatedAt: now},
-			{ID: 2, Name: "李四", Age: 22, Active: false, CreatedAt: now.Add(time.Hour)},
+			{ID: 1, Name: "ZhangSan", Age: 18, Active: true, CreatedAt: now},
+			{ID: 2, Name: "LiSi", Age: 22, Active: false, CreatedAt: now.Add(time.Hour)},
 		},
 	}
 
@@ -131,13 +131,13 @@ func TestExcel_MemorySliceExportAndImport(t *testing.T) {
 
 	require.Len(t, importObj.dest, 2)
 	assert.Equal(t, 1, importObj.dest[0].ID)
-	assert.Equal(t, "张三", importObj.dest[0].Name)
+	assert.Equal(t, "ZhangSan", importObj.dest[0].Name)
 	assert.Equal(t, 18, importObj.dest[0].Age)
 	assert.True(t, importObj.dest[0].Active)
 	assert.True(t, importObj.dest[0].CreatedAt.Equal(now))
 
 	assert.Equal(t, 2, importObj.dest[1].ID)
-	assert.Equal(t, "李四", importObj.dest[1].Name)
+	assert.Equal(t, "LiSi", importObj.dest[1].Name)
 	assert.Equal(t, 22, importObj.dest[1].Age)
 	assert.False(t, importObj.dest[1].Active)
 	assert.True(t, importObj.dest[1].CreatedAt.Equal(now.Add(time.Hour)))
@@ -233,8 +233,8 @@ func TestExcel_ImportWithValidation(t *testing.T) {
 	// 1. 初始化两行数据：一行 age >= 18（合法），一行 age < 18（非法）
 	exportObj := &testSliceExport{
 		rows: []mockSliceRow{
-			{ID: 1, Name: "张三", Age: 18, Active: true, CreatedAt: now},
-			{ID: 2, Name: "小明", Age: 15, Active: false, CreatedAt: now},
+			{ID: 1, Name: "ZhangSan", Age: 18, Active: true, CreatedAt: now},
+			{ID: 2, Name: "XiaoMing", Age: 15, Active: false, CreatedAt: now},
 		},
 	}
 
@@ -266,7 +266,7 @@ func (e *mockQueueExport) FromSlice() interface{} {
 }
 
 func (e *mockQueueExport) Headings() []string {
-	return []string{"ID", "用户名"}
+	return []string{"ID", "Username"}
 }
 
 func (e *mockQueueExport) OnQueueSuccess(ctx context.Context, fileUrl string) error {
@@ -334,7 +334,7 @@ func TestExcel_QueueExportAndImportJobs(t *testing.T) {
 	exportJob := &mockQueueExport{
 		JobMeta: queueContracts.NewJobMeta("export:test", "default"),
 		rows: []mockSliceRow{
-			{ID: 1, Name: "张三", Age: 18, Active: true, CreatedAt: now},
+			{ID: 1, Name: "ZhangSan", Age: 18, Active: true, CreatedAt: now},
 		},
 		successChan: successChan,
 		errChan:     errChan,
@@ -385,5 +385,5 @@ func TestExcel_QueueExportAndImportJobs(t *testing.T) {
 	// 5. 验证导入结果数据是否正确
 	require.Len(t, importJob.dest, 1)
 	assert.Equal(t, 1, importJob.dest[0].ID)
-	assert.Equal(t, "张三", importJob.dest[0].Name)
+	assert.Equal(t, "ZhangSan", importJob.dest[0].Name)
 }
