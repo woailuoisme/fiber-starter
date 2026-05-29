@@ -1,0 +1,2 @@
+# Excel 默认配置
+temp_path: "${EXCEL_TEMP_PATH:.cache/excel}"

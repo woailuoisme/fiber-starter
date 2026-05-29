@@ -155,6 +155,7 @@ type Config struct {
 	OTEL          OTELConfig          `mapstructure:"otel"`
 	Limiter       LimiterConfig       `mapstructure:"limiter"`
 	Services      ServicesConfig      `mapstructure:"services"`
+	Excel         ExcelConfig         `mapstructure:"excel"`
 }
 
 type AuthorizationConfig struct {
@@ -435,4 +436,8 @@ type I18nConfig struct {
 	LanguageDir        string   `mapstructure:"language_dir"`
 	CookieName         string   `mapstructure:"cookie_name"`
 	CookieMaxAge       int      `mapstructure:"cookie_max_age"`
+}
+
+type ExcelConfig struct {
+	TempPath string `mapstructure:"temp_path"`
 }

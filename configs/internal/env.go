@@ -235,6 +235,7 @@ func EnvConfigMap() map[string]any {
 		"DB_MIGRATIONS_TABLE":        "database.migrations.table",
 		"DB_MIGRATIONS_PATH":         "database.migrations.path",
 		"DB_SEEDERS_PATH":            "database.seeders.path",
+		"EXCEL_TEMP_PATH":            "excel.temp_path",
 	}
 
 	for env, key := range mappings {

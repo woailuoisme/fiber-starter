@@ -23,9 +23,9 @@ import (
 	queueContracts "lfiber/internal/providers/queue/contracts"
 	ratelimiter "lfiber/internal/providers/ratelimiter"
 	schedule "lfiber/internal/providers/schedule"
-	search "lfiber/internal/providers/search"
 	storage "lfiber/internal/providers/storage"
 	storageDrivers "lfiber/internal/providers/storage/drivers"
+	search "lfiber/pkg/search"
 	"lfiber/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"

@@ -13,10 +13,12 @@ import (
 	dbcmd "lfiber/internal/console/commands/db"
 	hashcmd "lfiber/internal/console/commands/hash"
 	jwtcmd "lfiber/internal/console/commands/jwt"
+	makecmd "lfiber/internal/console/commands/make"
 	mediacmd "lfiber/internal/console/commands/media"
 	queuecmd "lfiber/internal/console/commands/queue"
 	routecmd "lfiber/internal/console/commands/route"
 	schedulecmd "lfiber/internal/console/commands/schedule"
+	scoutcmd "lfiber/internal/console/commands/scout"
 	servecmd "lfiber/internal/console/commands/serve"
 	"lfiber/internal/console/ui"
 	artisan "lfiber/internal/providers/artisan"
@@ -67,6 +69,8 @@ func NewRootCommand() *cobra.Command {
 	root.AddCommand(mediacmd.Commands()...)
 	root.AddCommand(queuecmd.Commands()...)
 	root.AddCommand(schedulecmd.Commands()...)
+	root.AddCommand(makecmd.Commands()...)
+	root.AddCommand(scoutcmd.Commands()...)
 
 	// Configure lipgloss colorized help function
 	root.SetHelpFunc(func(cmd *cobra.Command, args []string) {

@@ -36,14 +36,13 @@ import (
 	realtimeContracts "lfiber/internal/providers/realtime/contracts"
 	schedule "lfiber/internal/providers/schedule"
 	scheduleContracts "lfiber/internal/providers/schedule/contracts"
-	search "lfiber/internal/providers/search"
-	searchContracts "lfiber/internal/providers/search/contracts"
 	storage "lfiber/internal/providers/storage"
 	storageContracts "lfiber/internal/providers/storage/contracts"
 	helpers "lfiber/internal/support"
 	"lfiber/internal/support/appctx"
 	backup "lfiber/pkg/backup"
 	medialibrary "lfiber/pkg/medialibrary"
+	search "lfiber/pkg/search"
 )
 
 // Runtime holds the application infrastructure dependencies (Providers).
@@ -64,8 +63,8 @@ type Runtime struct {
 	QueueService    queueContracts.Queue
 	ScheduleManager scheduleContracts.Manager
 	ScheduleService scheduleContracts.Scheduler
-	SearchManager   searchContracts.Manager
-	SearchService   searchContracts.Engine
+	SearchManager   search.Manager
+	SearchService   search.Engine
 	Storage         storageContracts.StorageManager
 	Hash            hashContracts.Hasher
 	Notification    notificationContracts.Dispatcher
@@ -204,6 +203,8 @@ func Build() (*Runtime, error) {
 			if err == nil {
 				rt.SearchManager = searchManager
 				rt.SearchService = searchService
+				search.SetDefaultManager(searchManager)
+				search.SetDefaultEngine(searchService)
 			}
 			return err
 		}},
@@ -303,6 +304,8 @@ func (rt *Runtime) Close() error {
 		if err := rt.SearchManager.Close(); err != nil {
 			errs = append(errs, err)
 		}
+		search.SetDefaultManager(nil)
+		search.SetDefaultEngine(nil)
 	}
 	if rt.MailManager != nil {
 		if err := rt.MailManager.Close(); err != nil {
@@ -398,9 +401,9 @@ func (rt *Runtime) ScheduleManagerValue() scheduleContracts.Manager { return rt.
 
 func (rt *Runtime) ScheduleServiceValue() scheduleContracts.Scheduler { return rt.ScheduleService }
 
-func (rt *Runtime) SearchManagerValue() searchContracts.Manager { return rt.SearchManager }
+func (rt *Runtime) SearchManagerValue() search.Manager { return rt.SearchManager }
 
-func (rt *Runtime) SearchServiceValue() searchContracts.Engine { return rt.SearchService }
+func (rt *Runtime) SearchServiceValue() search.Engine { return rt.SearchService }
 
 func (rt *Runtime) StorageValue() storageContracts.StorageManager { return rt.Storage }
 

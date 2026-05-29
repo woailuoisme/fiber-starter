@@ -11,7 +11,9 @@ import (
 )
 
 func Commands() []*cobra.Command {
-	return []*cobra.Command{aboutCommand()}
+	return []*cobra.Command{
+		aboutCommand(),
+	}
 }
 
 func aboutCommand() *cobra.Command {

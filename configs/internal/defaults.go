@@ -61,6 +61,7 @@ func DefaultConfigMap() map[string]any {
 		"database.migrations.table":                         "migrations",
 		"database.migrations.path":                          "./database/migrations",
 		"database.seeders.path":                             "./database/seeders",
+		"excel.temp_path":                                   ".cache/excel",
 		"database.redis.client":                             "default",
 		"queue.enabled":                                     true,
 		"queue.concurrency":                                 10,

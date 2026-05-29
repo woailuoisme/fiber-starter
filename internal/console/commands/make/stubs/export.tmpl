@@ -1,0 +1,126 @@
+package exports
+
+import (
+	{{- if or .HasQuery .HasQueueNotification}}
+	"context"
+	{{- end}}
+	"lfiber/pkg/excel"
+	{{- if .HasQuery}}
+
+	"github.com/uptrace/bun"
+	{{- end}}
+	{{- if .HasQueueNotification}}
+	"lfiber/internal/common/jobs"
+	queueContracts "lfiber/internal/providers/queue/contracts"
+	{{- end}}
+)
+
+// {{.StructName}} 代表导出的主要结构体骨架。
+// 为什么这样做：支持面向 Concerns 接口，保证导出的高扩展性。
+type {{.StructName}} struct {
+	{{- if .HasQueueNotification}}
+	queueContracts.JobMeta
+	{{- end}}
+	// TODO: 可以在此处增加导出所需的过滤参数或外部依赖项
+}
+
+{{- if .HasSlice}}
+
+// FromSlice 返回待导出的切片数据。
+// 为什么：为数据导出提供原始数据集合（支持 struct/map 切片）。
+func (e *{{.StructName}}) FromSlice() interface{} {
+	// TODO: 返回你实际需要导出的数据 Slice，例如：
+	// return []models.User{}
+	return []map[string]interface{}{}
+}
+{{- end}}
+
+{{- if .HasQuery}}
+
+// FromQuery 返回用于流式导出的 Bun 查询。
+// 为什么使用 FromQuery：适合超大文件导出，防止大 Slice 一次性读入内存导致 OOM。
+func (e *{{.StructName}}) FromQuery(ctx context.Context) (*bun.SelectQuery, error) {
+	// TODO: 替换为实际的 Bun Select Query，且必须绑定了 Model，例如：
+	// return providers.App().Connection.NewSelect().Model((*models.User)(nil)), nil
+	return nil, nil
+}
+{{- end}}
+
+{{- if .HasHeadings}}
+
+// Headings 返回导出的第一行表头。
+// 为什么：为 Excel 文件设定直观的列标题。
+func (e *{{.StructName}}) Headings() []string {
+	return []string{
+		"ID",
+		"名称",
+		// "TODO: 添加更多列名",
+	}
+}
+{{- end}}
+
+{{- if .HasMapping}}
+
+// Mapping 接收单行数据，返回写入 Excel 的列数据切片。
+// 为什么：保证导出的每一列精确匹配我们所需的格式，防止直接暴露不需要的字段。
+func (e *{{.StructName}}) Mapping(row interface{}) []interface{} {
+	// TODO: 将其断言为你具体的 Model 类型并进行字段值映射，例如：
+	// item := row.(*models.User)
+	// return []interface{}{ item.ID, item.Name }
+	return []interface{}{}
+}
+{{- end}}
+
+{{- if .HasAutoSize}}
+
+// ShouldAutoSize 返回是否需要根据内容自动计算列宽。
+// 为什么：使得导出的 Excel 在排版上更加美化。
+func (e *{{.StructName}}) ShouldAutoSize() bool {
+	return true
+}
+{{- end}}
+
+{{- if .HasColumnWidths}}
+
+// ColumnWidths 返回列名到宽度（字符数）的映射。
+// 为什么：为特定长字段（如 URL、邮箱）设定固定的最佳显示宽度。
+func (e *{{.StructName}}) ColumnWidths() map[string]float64 {
+	return map[string]float64{
+		"A": 15,
+		"B": 30,
+	}
+}
+{{- end}}
+
+{{- if .HasQueueNotification}}
+
+// New{{.StructName}} 实例化一个支持队列异步处理的导出器
+// 为什么：用于声明 JobMeta 包含唯一任务识别名和所在的队列通道
+func New{{.StructName}}() *{{.StructName}} {
+	return &{{.StructName}}{
+		JobMeta: queueContracts.NewJobMeta("export:{{.StructSnakeName}}", "default"),
+	}
+}
+
+// Handle 队列消费者执行的入口函数
+// 为什么：支持后台异步导出数据并存储到指定路径中
+func (e *{{.StructName}}) Handle(ctx context.Context) error {
+	// TODO: 根据实际业务需求定义保存路径和磁盘驱动（如 s3/local）
+	filePath := "exports/{{.StructSnakeName}}.xlsx"
+	return jobs.HandleQueueExport(ctx, e, "local", filePath)
+}
+
+// OnQueueSuccess 在异步任务成功上传存储后自动被回调
+// 为什么：用于文件导出完成后的后续通知推送（如 WebSocket/Email）
+func (e *{{.StructName}}) OnQueueSuccess(ctx context.Context, fileUrl string) error {
+	// TODO: 编写通知推送逻辑
+	return nil
+}
+
+// OnQueueFailure 在异步任务执行失败时自动被回调
+func (e *{{.StructName}}) OnQueueFailure(ctx context.Context, err error) error {
+	// TODO: 异常报警或后置清理
+	return nil
+}
+{{- end}}
+

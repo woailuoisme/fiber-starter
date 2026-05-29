@@ -1,0 +1,118 @@
+package imports
+
+import (
+	{{- if .HasQueueNotification}}
+	"context"
+	{{- end}}
+	"lfiber/pkg/excel"
+	{{- if .HasQueueNotification}}
+	"lfiber/internal/common/jobs"
+	queueContracts "lfiber/internal/providers/queue/contracts"
+	{{- end}}
+)
+
+// {{.StructName}} 代表导入的主要结构体骨架。
+// 为什么这样做：通过实现特定的 Concern 接口让 Excel 导入符合声明式规范。
+type {{.StructName}} struct {
+	{{- if .HasQueueNotification}}
+	queueContracts.JobMeta
+	// 队列异步导入时保存的待导入文件路径（来自 HTTP 上传的暂存路径）
+	StoragePath string `json:"storage_path"`
+	{{- end}}
+	// TODO: 可以增加所需的外部依赖项（如存储服务、业务通道等）
+}
+
+{{- if .HasSlice}}
+
+// ToSlice 返回接收解析结果的切片指针，如 &[]User{}。
+// 为什么：支持将 Excel 数据直接反序列化为我们内存中的结构体切片。
+func (i *{{.StructName}}) ToSlice() interface{} {
+	// TODO: 返回接收解析结果的切片指针，例如：
+	// return &[]models.User{}
+	return &[]map[string]interface{}{}
+}
+{{- end}}
+
+{{- if .HasModel}}
+
+// ToModel 将单行字符数据转化为具体的 Model 实例，例如 *User{}。
+// 为什么：使导入可以直接面向数据库实体对象，解耦每一行读取和转换流程。
+func (i *{{.StructName}}) ToModel(row []string) (interface{}, error) {
+	// TODO: 解析传入的一维 row 切片并返回具体的数据库 Model，例如：
+	// return &models.User{
+	// 	Name:  row[0],
+	// 	Email: row[1],
+	// }, nil
+	return nil, nil
+}
+{{- end}}
+
+{{- if .HasOnRow}}
+
+// OnRow 接收单行字符数据，用户可在其中执行自定义逻辑。
+// 为什么：一种更灵活的轻量级回调，用于不需要直接转为单个 Bun Model 的业务处理。
+func (i *{{.StructName}}) OnRow(row []string) error {
+	// TODO: 处理每行数据的业务逻辑
+	return nil
+}
+{{- end}}
+
+{{- if .HasHeadingRow}}
+
+// HeadingRow 返回标题行行号（从 1 开始计）。
+// 为什么：定义标题行位置，数据从此行以下开始读取，标题名会自动与 Struct Tag 挂钩。
+func (i *{{.StructName}}) HeadingRow() int {
+	return 1
+}
+{{- end}}
+
+{{- if .HasValidation}}
+
+// Validate 对单行解析或转换后的 Model 数据进行自定义规则校验。
+// 为什么：防止非法数据污染数据库，支持使用全局校验器或手写业务校验逻辑。
+func (i *{{.StructName}}) Validate(model any) error {
+	// TODO: 自定义校验逻辑，若校验失败可返回特定 error，例如：
+	// return providers.App().Validation.Struct(model)
+	return nil
+}
+{{- end}}
+
+{{- if .HasBatchInserts}}
+
+// BatchSize 返回每批批量写入的数量上限。
+// 为什么：将单次 INSERT 替换为批量 INSERT，大幅降低数据库 IO 瓶颈与事务消耗。
+func (i *{{.StructName}}) BatchSize() int {
+	return 1000
+}
+{{- end}}
+
+{{- if .HasQueueNotification}}
+
+// New{{.StructName}} 实例化一个支持队列异步处理的导入器
+// 为什么：需要保存导入所需的临时暂存文件路径，并绑定唯一的任务识别名
+func New{{.StructName}}(storagePath string) *{{.StructName}} {
+	return &{{.StructName}}{
+		JobMeta:     queueContracts.NewJobMeta("import:{{.StructSnakeName}}", "default"),
+		StoragePath: storagePath,
+	}
+}
+
+// Handle 队列消费者执行的导入入口函数
+// 为什么：支持在后台异步获取暂存的文件并执行流式低内存导入
+func (i *{{.StructName}}) Handle(ctx context.Context) error {
+	return jobs.HandleQueueImport(ctx, i, "local", i.StoragePath)
+}
+
+// OnQueueSuccess 在异步导入任务成功完成后被自动回调
+func (i *{{.StructName}}) OnQueueSuccess(ctx context.Context, fileUrl string) error {
+	// TODO: 自定义成功后续处理（如通知用户导入成功）
+	return nil
+}
+
+// OnQueueFailure 在导入失败时自动被回调
+func (i *{{.StructName}}) OnQueueFailure(ctx context.Context, err error) error {
+	// TODO: 异常通知或数据补偿
+	return nil
+}
+{{- end}}
+

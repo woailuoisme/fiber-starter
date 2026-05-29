@@ -67,6 +67,7 @@ type (
 	OTELConfig                 = internal.OTELConfig
 	ServicesConfig             = internal.ServicesConfig
 	ServiceDependencyConfig    = internal.ServiceDependencyConfig
+	ExcelConfig                = internal.ExcelConfig
 )
 
 // GlobalConfig stores the globally accessible configuration instance.

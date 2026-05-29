@@ -26,10 +26,10 @@ import (
 	queueContracts "lfiber/internal/providers/queue/contracts"
 	ratelimiterContracts "lfiber/internal/providers/ratelimiter/contracts"
 	scheduleContracts "lfiber/internal/providers/schedule/contracts"
-	searchContracts "lfiber/internal/providers/search/contracts"
 	storage "lfiber/internal/providers/storage"
 	storageContracts "lfiber/internal/providers/storage/contracts"
 	"lfiber/internal/support/appctx"
+	search "lfiber/pkg/search"
 	"lfiber/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
@@ -515,8 +515,8 @@ func (a *fakeApp) QueueManagerValue() queueContracts.Manager             { retur
 func (a *fakeApp) QueueServiceValue() queueContracts.Queue               { return a.queueService }
 func (a *fakeApp) ScheduleManagerValue() scheduleContracts.Manager       { return nil }
 func (a *fakeApp) ScheduleServiceValue() scheduleContracts.Scheduler     { return nil }
-func (a *fakeApp) SearchManagerValue() searchContracts.Manager           { return nil }
-func (a *fakeApp) SearchServiceValue() searchContracts.Engine            { return nil }
+func (a *fakeApp) SearchManagerValue() search.Manager                    { return nil }
+func (a *fakeApp) SearchServiceValue() search.Engine                     { return nil }
 func (a *fakeApp) StorageValue() storageContracts.StorageManager         { return a.storageManager }
 func (a *fakeApp) HashService() hashContracts.Hasher                     { return nil }
 func (a *fakeApp) NotificationService() notificationContracts.Dispatcher { return nil }

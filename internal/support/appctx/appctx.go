@@ -18,8 +18,8 @@ import (
 	queueContracts "lfiber/internal/providers/queue/contracts"
 	ratelimiterContracts "lfiber/internal/providers/ratelimiter/contracts"
 	scheduleContracts "lfiber/internal/providers/schedule/contracts"
-	searchContracts "lfiber/internal/providers/search/contracts"
 	storageContracts "lfiber/internal/providers/storage/contracts"
+	search "lfiber/pkg/search"
 )
 
 // HealthChecker is an interface for components that can be checked for health.
@@ -70,8 +70,8 @@ type ScheduleProvider interface {
 }
 
 type SearchProvider interface {
-	SearchManagerValue() searchContracts.Manager
-	SearchServiceValue() searchContracts.Engine
+	SearchManagerValue() search.Manager
+	SearchServiceValue() search.Engine
 }
 
 type StorageProvider interface {

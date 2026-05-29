@@ -1,7 +1,7 @@
-package drivers
+package drive
 
 import (
-	"lfiber/internal/providers/search/contracts"
+	"lfiber/pkg/search/contracts"
 )
 
 type NullDriver struct{}
@@ -14,19 +14,15 @@ func (d *NullDriver) CreateIndex(uid string, primaryKey string) (*contracts.Task
 	return &contracts.TaskInfo{Status: "enqueued"}, nil
 }
 
-func (d *NullDriver) GetIndex(uid string) (interface{}, error) {
-	return nil, nil
-}
-
 func (d *NullDriver) DeleteIndex(uid string) (*contracts.TaskInfo, error) {
 	return &contracts.TaskInfo{Status: "enqueued"}, nil
 }
 
-func (d *NullDriver) AddDocuments(indexUID string, documents interface{}) (*contracts.TaskInfo, error) {
+func (d *NullDriver) AddDocuments(indexUID string, documents any) (*contracts.TaskInfo, error) {
 	return &contracts.TaskInfo{Status: "enqueued"}, nil
 }
 
-func (d *NullDriver) UpdateDocuments(indexUID string, documents interface{}) (*contracts.TaskInfo, error) {
+func (d *NullDriver) UpdateDocuments(indexUID string, documents any) (*contracts.TaskInfo, error) {
 	return &contracts.TaskInfo{Status: "enqueued"}, nil
 }
 

@@ -1,4 +1,4 @@
-package drivers
+package drive
 
 import (
 	"fmt"
@@ -6,8 +6,7 @@ import (
 	"time"
 
 	"lfiber/configs"
-	"lfiber/internal/providers/search/contracts"
-	helpers "lfiber/internal/support"
+	"lfiber/pkg/search/contracts"
 
 	"github.com/meilisearch/meilisearch-go"
 )
@@ -18,7 +17,6 @@ type MeilisearchDriver struct {
 
 func NewMeilisearchDriver(cfg *configs.Config) *MeilisearchDriver {
 	if cfg.Search.Host == "" {
-		helpers.Warn("Meilisearch host is not configured, search operations will fail")
 		return &MeilisearchDriver{}
 	}
 
@@ -53,7 +51,7 @@ func (d *MeilisearchDriver) DeleteIndex(uid string) (*contracts.TaskInfo, error)
 	return &contracts.TaskInfo{UID: int64(resp.TaskUID), Status: string(resp.Status)}, nil
 }
 
-func (d *MeilisearchDriver) AddDocuments(indexUID string, documents interface{}) (*contracts.TaskInfo, error) {
+func (d *MeilisearchDriver) AddDocuments(indexUID string, documents any) (*contracts.TaskInfo, error) {
 	if d.client == nil {
 		return nil, fmt.Errorf("meilisearch client not initialized")
 	}
@@ -64,7 +62,7 @@ func (d *MeilisearchDriver) AddDocuments(indexUID string, documents interface{})
 	return &contracts.TaskInfo{UID: int64(resp.TaskUID), Status: string(resp.Status)}, nil
 }
 
-func (d *MeilisearchDriver) UpdateDocuments(indexUID string, documents interface{}) (*contracts.TaskInfo, error) {
+func (d *MeilisearchDriver) UpdateDocuments(indexUID string, documents any) (*contracts.TaskInfo, error) {
 	if d.client == nil {
 		return nil, fmt.Errorf("meilisearch client not initialized")
 	}
@@ -123,7 +121,7 @@ func (d *MeilisearchDriver) Search(indexUID string, query string, request *contr
 		return nil, err
 	}
 
-	hits := make([]interface{}, len(resp.Hits))
+	hits := make([]any, len(resp.Hits))
 	for i, hit := range resp.Hits {
 		hits[i] = hit
 	}
