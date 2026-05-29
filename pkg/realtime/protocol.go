@@ -17,7 +17,7 @@ const (
 	EventMemberRemoved         = "pusher_internal:member_removed"
 )
 
-// Message is the Pusher-like wire format used by realtime events.
+// Message 对应 Pusher 兼容的前端 WebSocket 帧报文格式
 type Message struct {
 	Event    string          `json:"event"`
 	Channel  string          `json:"channel,omitempty"`
@@ -25,26 +25,26 @@ type Message struct {
 	SocketID string          `json:"socket_id,omitempty"`
 }
 
-// SubscribePayload is the payload sent by the client for subscriptions.
+// SubscribePayload 客户端发起通道订阅时的载荷体
 type SubscribePayload struct {
 	Channel     string `json:"channel"`
 	Auth        string `json:"auth,omitempty"`
 	ChannelData string `json:"channel_data,omitempty"`
 }
 
-// ConnectionEstablishedData is sent once a socket connection is accepted.
+// ConnectionEstablishedData 握手连接成功后下发给客户端的 SocketID 和心跳超时设定
 type ConnectionEstablishedData struct {
 	SocketID        string `json:"socket_id"`
 	ActivityTimeout int    `json:"activity_timeout"`
 }
 
-// ErrorPayload is returned when the server needs to reject or report an error.
+// ErrorPayload 通讯发生异常或鉴权被拒时下发的信息体
 type ErrorPayload struct {
 	Code    int    `json:"code,omitempty"`
 	Message string `json:"message"`
 }
 
-// Envelope is the internal broadcast payload used across nodes.
+// Envelope 跨服务节点进行 Redis 广播的分发信封
 type Envelope struct {
 	NodeID         string          `json:"node_id"`
 	Event          string          `json:"event"`
@@ -61,10 +61,37 @@ func encodeJSON(v any) json.RawMessage {
 	return json.RawMessage(b)
 }
 
+func encodePusherData(v any) json.RawMessage {
+	raw, err := json.Marshal(v)
+	if err != nil {
+		raw = []byte(`null`)
+	}
+	quoted, err := json.Marshal(string(raw))
+	if err != nil {
+		return json.RawMessage(`"null"`)
+	}
+	return json.RawMessage(quoted)
+}
+
+func encodePusherRawData(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 {
+		raw = json.RawMessage(`null`)
+	}
+	quoted, err := json.Marshal(string(raw))
+	if err != nil {
+		return json.RawMessage(`"null"`)
+	}
+	return json.RawMessage(quoted)
+}
+
 func decodeSubscribePayload(data []byte) (SubscribePayload, error) {
 	var payload SubscribePayload
 	if len(data) == 0 {
 		return payload, errors.New("empty subscribe payload")
+	}
+	var encoded string
+	if err := json.Unmarshal(data, &encoded); err == nil {
+		data = []byte(encoded)
 	}
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return payload, err

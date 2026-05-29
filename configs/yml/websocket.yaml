@@ -1,7 +1,10 @@
 websocket:
   port: ${WEBSOCKET_PORT:6001}
-  path: ${WEBSOCKET_PATH:/ws}
+  path: ${WEBSOCKET_PATH:/app/:appKey}
   auth_path: /broadcasting/auth
+  app_id: ${REVERB_APP_ID:lfiber}
+  app_key: ${REVERB_APP_KEY:lfiber}
+  app_secret: ${REVERB_APP_SECRET:}
   bus_mode: ${BROADCAST_CONNECTION:redis}
   heartbeat_interval: 30
   write_queue_size: 128

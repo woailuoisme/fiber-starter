@@ -57,4 +57,13 @@ func registerRealtimeRoutes(app *fiber.App, jwtProtected fiber.Handler) {
 	if path := strings.TrimSpace(rt.Config.WebSocket.Path); path != "" {
 		app.Get(path, rt.Realtime.Handler())
 	}
+	if strings.TrimSpace(rt.Config.WebSocket.Path) != "/app/:appKey" {
+		app.Get("/app/:appKey", rt.Realtime.Handler())
+	}
+
+	api := rt.Realtime.APIHandler()
+	app.Post("/apps/:appID/events", api)
+	app.Get("/apps/:appID/channels", api)
+	app.Get("/apps/:appID/channels/:channel/users", api)
+	app.Get("/apps/:appID/channels/:channel", api)
 }

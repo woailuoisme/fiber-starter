@@ -2,17 +2,20 @@ package tests
 
 import (
 	"crypto/hmac"
+	"crypto/md5" //nolint:gosec // Pusher REST compatibility signs body_md5.
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
 
-	"lfiber/configs"
 	models "lfiber/internal/features/user"
-	realtime "lfiber/internal/providers/realtime"
+	"lfiber/pkg/realtime"
 	"lfiber/tests/internal/testkit"
 
 	"github.com/gofiber/fiber/v3"
@@ -36,13 +39,18 @@ func TestRealtime_ParseChannelKinds(t *testing.T) {
 }
 
 func TestRealtime_BuildAuthResponse_PrivateAndPresence(t *testing.T) {
-	cfg := &configs.Config{
-		WebSocket: configs.WebSocketConfig{
-			AppKey:    "app-key",
-			AppSecret: "secret",
+	cfg := &realtime.Config{
+		AppKey:    "app-key",
+		AppSecret: "secret",
+	}
+	user := realtime.User{
+		ID: "123",
+		Info: map[string]any{
+			"id":    int64(123),
+			"email": "user@example.com",
+			"name":  "User",
 		},
 	}
-	user := &models.User{ID: 123, Email: "user@example.com", Name: "User"}
 
 	resp, err := realtime.BuildAuthResponse(cfg, "socket-1", "private-user.123", user)
 	require.NoError(t, err)
@@ -56,23 +64,37 @@ func TestRealtime_BuildAuthResponse_PrivateAndPresence(t *testing.T) {
 	presenceResp, err := realtime.BuildAuthResponse(cfg, "socket-1", "presence-room.1", user)
 	require.NoError(t, err)
 	mac = hmac.New(sha256.New, []byte("secret"))
-	_, _ = mac.Write([]byte("socket-1:presence-room.1"))
+	_, _ = mac.Write([]byte("socket-1:presence-room.1:" + presenceResp.ChannelData))
 	expectedPresence := "app-key:" + hex.EncodeToString(mac.Sum(nil))
 	assert.Equal(t, expectedPresence, presenceResp.Auth)
 	assert.NotEmpty(t, presenceResp.ChannelData)
-	assert.Contains(t, presenceResp.ChannelData, strconv.FormatInt(user.ID, 10))
+	assert.Contains(t, presenceResp.ChannelData, "123")
 }
 
 func TestRealtime_AuthHandler_UsesCurrentUser(t *testing.T) {
-	cfg := &configs.Config{
-		WebSocket: configs.WebSocketConfig{
-			AppKey:    "app-key",
-			AppSecret: "secret",
-		},
+	cfg := &realtime.Config{
+		AppKey:    "app-key",
+		AppSecret: "secret",
 	}
-	mgr := realtime.NewManager(cfg)
+	mgr := realtime.NewManager(cfg, realtime.NewNoopLogger())
 	t.Cleanup(func() {
 		require.NoError(t, mgr.Close())
+	})
+
+	// 注入 AuthUserResolver
+	mgr.SetAuthUserResolver(func(c fiber.Ctx) (realtime.User, error) {
+		u, ok := c.Locals("user").(*models.User)
+		if !ok || u == nil {
+			return realtime.User{}, fiber.ErrUnauthorized
+		}
+		return realtime.User{
+			ID: strconv.FormatInt(u.ID, 10),
+			Info: map[string]any{
+				"id":    u.ID,
+				"email": u.Email,
+				"name":  u.Name,
+			},
+		}, nil
 	})
 
 	app := fiber.New()
@@ -91,4 +113,74 @@ func TestRealtime_AuthHandler_UsesCurrentUser(t *testing.T) {
 	body := testkit.JSONBody(t, resp)
 	assert.Contains(t, body, "auth")
 	assert.Contains(t, body, "channel_data")
+}
+
+func TestRealtime_APIHandler_ValidatesPusherSignature(t *testing.T) {
+	cfg := &realtime.Config{
+		AppID:     "app-id",
+		AppKey:    "app-key",
+		AppSecret: "secret",
+		BusMode:   "memory",
+	}
+	mgr := realtime.NewManager(cfg, realtime.NewNoopLogger())
+	t.Cleanup(func() {
+		require.NoError(t, mgr.Close())
+	})
+
+	app := fiber.New()
+	api := mgr.APIHandler()
+	app.Post("/apps/:appID/events", api)
+
+	body := []byte(`{"name":"orders.updated","channels":["private-orders.1"],"data":"{\"id\":1}"}`)
+	req := httptest.NewRequest(http.MethodPost, signedURL(t, http.MethodPost, "/apps/app-id/events", "app-key", "secret", body), strings.NewReader(string(body)))
+	req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	require.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	invalidReq := httptest.NewRequest(http.MethodPost, "/apps/app-id/events?auth_key=app-key&auth_version=1.0&auth_timestamp=1893456000&auth_signature=bad", strings.NewReader(string(body)))
+	invalidReq.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+	invalidResp, err := app.Test(invalidReq)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusUnauthorized, invalidResp.StatusCode)
+}
+
+func signedURL(t *testing.T, method, path, key, secret string, body []byte) string {
+	t.Helper()
+
+	sum := md5.Sum(body)
+	params := map[string]string{
+		"auth_key":       key,
+		"auth_timestamp": "1893456000",
+		"auth_version":   "1.0",
+		"body_md5":       hex.EncodeToString(sum[:]),
+	}
+	params["auth_signature"] = signPusherRequest(method, path, secret, params)
+
+	values := url.Values{}
+	for k, v := range params {
+		values.Set(k, v)
+	}
+	return path + "?" + values.Encode()
+}
+
+func signPusherRequest(method, path, secret string, params map[string]string) string {
+	keys := make([]string, 0, len(params))
+	for key := range params {
+		if key != "auth_signature" {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+
+	values := url.Values{}
+	for _, key := range keys {
+		values.Set(key, params[key])
+	}
+
+	stringToSign := strings.ToUpper(method) + "\n" + path + "\n" + values.Encode()
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = fmt.Fprint(mac, stringToSign)
+	return hex.EncodeToString(mac.Sum(nil))
 }

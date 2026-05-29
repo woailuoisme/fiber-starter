@@ -41,6 +41,7 @@ import (
 	helpers "lfiber/internal/support"
 	"lfiber/internal/support/appctx"
 	backup "lfiber/pkg/backup"
+	lock "lfiber/pkg/lock"
 	medialibrary "lfiber/pkg/medialibrary"
 	search "lfiber/pkg/search"
 )
@@ -59,6 +60,7 @@ type Runtime struct {
 	MailManager     mailContracts.Manager
 	EmailService    mailContracts.Mailer
 	Realtime        realtimeContracts.Manager
+	Locker          lock.Locker
 	QueueManager    queueContracts.Manager
 	QueueService    queueContracts.Queue
 	ScheduleManager scheduleContracts.Manager
@@ -179,6 +181,13 @@ func Build() (*Runtime, error) {
 			realtimeManager, err := realtime.RegisterRealtime(cfg)
 			if err == nil {
 				rt.Realtime = realtimeManager
+			}
+			return err
+		}},
+		{"lock", false, func() error {
+			lockerService, err := lock.Register(cfg)
+			if err == nil {
+				rt.Locker = lockerService
 			}
 			return err
 		}},
@@ -416,5 +425,7 @@ func (rt *Runtime) TranslatorService() i18nContracts.Translator { return rt.Tran
 func (rt *Runtime) LogService() loggingContracts.Logger { return rt.Log }
 
 func (rt *Runtime) RateLimiterService() ratelimiterContracts.Limiter { return rt.RateLimiter }
+
+func (rt *Runtime) LockerValue() lock.Locker { return rt.Locker }
 
 func (rt *Runtime) BackupService() *backup.Service { return rt.Backup }

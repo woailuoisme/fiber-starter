@@ -6,9 +6,9 @@
 
 ### 1.1 建立连接
 
-WebSocket 端点通常位于 `/ws` 或 `/realtime`。
+WebSocket 端点默认位于 `/app/{app_key}`，保持 Pusher / Laravel Reverb 风格的客户端连接形态。
 
-- **URL**: `ws://<domain>/ws`
+- **URL**: `ws://<domain>/app/<app_key>`
 - **协议**: 推荐使用标准 WebSocket。
 
 连接成功后，服务端会自动发送 `pusher:connection_established` 事件。
@@ -35,6 +35,15 @@ WebSocket 端点通常位于 `/ws` 或 `/realtime`。
   }
   ```
 
+服务端广播可通过 Go 容器内的 `Realtime.Dispatch(channel, event, data)`，也可通过 Pusher-compatible REST API：
+
+- `POST /apps/{app_id}/events`
+- `GET /apps/{app_id}/channels`
+- `GET /apps/{app_id}/channels/{channel}`
+- `GET /apps/{app_id}/channels/{channel}/users`
+
+REST API 使用 Pusher 风格的 `auth_key`、`auth_timestamp`、`auth_version`、`body_md5` 和 `auth_signature` 参数签名。
+
 ## 2. 消息格式
 
 所有消息均采用 JSON 格式传输：
@@ -43,14 +52,14 @@ WebSocket 端点通常位于 `/ws` 或 `/realtime`。
 {
   "event": "event_name",
   "channel": "channel_name",
-  "data": { ... },
+  "data": "{...}",
   "socket_id": "optional_origin_socket_id"
 }
 ```
 
 - **event**: 事件名称。
 - **channel**: 通道名称（订阅/取消订阅时必须，公共广播时可选）。
-- **data**: 事件载荷（JSON 对象或字符串）。
+- **data**: Pusher 协议中的 JSON 字符串载荷。
 - **socket_id**: 发送者的 Socket ID（用于排除发送者自身广播）。
 
 ## 3. 通道类型

@@ -335,6 +335,7 @@ type WebSocketConfig struct {
 	Port              string `mapstructure:"port"`
 	Path              string `mapstructure:"path"`
 	AuthPath          string `mapstructure:"auth_path"`
+	AppID             string `mapstructure:"app_id"`
 	AppKey            string `mapstructure:"app_key"`
 	AppSecret         string `mapstructure:"app_secret"`
 	BusMode           string `mapstructure:"bus_mode"`

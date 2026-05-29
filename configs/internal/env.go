@@ -148,6 +148,7 @@ func EnvConfigMap() map[string]any {
 		"WEBSOCKET_PORT":               "websocket.port",
 		"WEBSOCKET_PATH":               "websocket.path",
 		"WEBSOCKET_AUTH_PATH":          "websocket.auth_path",
+		"WEBSOCKET_APP_ID":             "websocket.app_id",
 		"WEBSOCKET_APP_KEY":            "websocket.app_key",
 		"WEBSOCKET_APP_SECRET":         "websocket.app_secret",
 		"WEBSOCKET_BUS_MODE":           "websocket.bus_mode",
@@ -156,6 +157,10 @@ func EnvConfigMap() map[string]any {
 		"WEBSOCKET_MAX_MESSAGE_SIZE":   "websocket.max_message_size",
 		"WEBSOCKET_HEARTBEAT_INTERVAL": "websocket.heartbeat_interval",
 		"WEBSOCKET_PRESENCE_TTL":       "websocket.presence_ttl",
+		"REVERB_APP_ID":                "websocket.app_id",
+		"REVERB_APP_KEY":               "websocket.app_key",
+		"REVERB_APP_SECRET":            "websocket.app_secret",
+		"REVERB_PATH":                  "websocket.path",
 
 		// Payment
 		"WECHAT_APP_ID":      "payment.wechat.app_id",

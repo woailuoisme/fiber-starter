@@ -16,6 +16,7 @@ import (
 	makecmd "lfiber/internal/console/commands/make"
 	mediacmd "lfiber/internal/console/commands/media"
 	queuecmd "lfiber/internal/console/commands/queue"
+	realtimecmd "lfiber/internal/console/commands/realtime"
 	routecmd "lfiber/internal/console/commands/route"
 	schedulecmd "lfiber/internal/console/commands/schedule"
 	scoutcmd "lfiber/internal/console/commands/scout"
@@ -71,6 +72,7 @@ func NewRootCommand() *cobra.Command {
 	root.AddCommand(schedulecmd.Commands()...)
 	root.AddCommand(makecmd.Commands()...)
 	root.AddCommand(scoutcmd.Commands()...)
+	root.AddCommand(realtimecmd.Commands()...)
 
 	// Configure lipgloss colorized help function
 	root.SetHelpFunc(func(cmd *cobra.Command, args []string) {

@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
-// PresenceStore tracks presence members per channel.
+// PresenceStore 维护和查询在线状态成员的底层驱动接口
 type PresenceStore interface {
 	Join(ctx context.Context, channel string, socketID string, member PresenceMember, ttl time.Duration) error
 	Leave(ctx context.Context, channel string, socketID string) error
@@ -110,13 +111,20 @@ func (s *memoryPresenceStore) Count(ctx context.Context, channel string) (int, e
 
 func (s *memoryPresenceStore) Close() error { return nil }
 
+// redisPresenceEnvelope 带有 NodeID 标识的 Redis 在线成员包装，用于在宕机时踢出残留数据
+type redisPresenceEnvelope struct {
+	Member PresenceMember `json:"member"`
+	NodeID string         `json:"node_id"`
+}
+
 type redisPresenceStore struct {
 	client *redis.Client
 	prefix string
+	nodeID string
 }
 
-func newRedisPresenceStore(client *redis.Client, prefix string) PresenceStore {
-	return &redisPresenceStore{client: client, prefix: prefix}
+func newRedisPresenceStore(client *redis.Client, prefix string, nodeID string) PresenceStore {
+	return &redisPresenceStore{client: client, prefix: prefix, nodeID: nodeID}
 }
 
 func (s *redisPresenceStore) key(channel string) string {
@@ -127,7 +135,11 @@ func (s *redisPresenceStore) key(channel string) string {
 }
 
 func (s *redisPresenceStore) Join(ctx context.Context, channel string, socketID string, member PresenceMember, ttl time.Duration) error {
-	raw, err := json.Marshal(member)
+	envelope := redisPresenceEnvelope{
+		Member: member,
+		NodeID: s.nodeID,
+	}
+	raw, err := json.Marshal(envelope)
 	if err != nil {
 		return err
 	}
@@ -165,11 +177,11 @@ func (s *redisPresenceStore) Members(ctx context.Context, channel string) ([]Pre
 	}
 	members := make([]PresenceMember, 0, len(values))
 	for _, raw := range values {
-		var member PresenceMember
-		if err := json.Unmarshal([]byte(raw), &member); err != nil {
+		var env redisPresenceEnvelope
+		if err := json.Unmarshal([]byte(raw), &env); err != nil {
 			continue
 		}
-		members = append(members, member)
+		members = append(members, env.Member)
 	}
 	sort.Slice(members, func(i, j int) bool {
 		return members[i].UserID < members[j].UserID
@@ -184,3 +196,104 @@ func (s *redisPresenceStore) Count(ctx context.Context, channel string) (int, er
 }
 
 func (s *redisPresenceStore) Close() error { return nil }
+
+// fallbackPresenceStore 当 Redis 不可用时自动降级为本地内存，提供高可用守护
+type fallbackPresenceStore struct {
+	redisStore PresenceStore
+	memStore   PresenceStore
+	redisAlive atomic.Bool
+	logger     Logger
+	client     *redis.Client
+	done       chan struct{}
+}
+
+func newFallbackPresenceStore(redisStore PresenceStore, logger Logger, client *redis.Client) PresenceStore {
+	fps := &fallbackPresenceStore{
+		redisStore: redisStore,
+		memStore:   newMemoryPresenceStore(),
+		logger:     logger,
+		client:     client,
+		done:       make(chan struct{}),
+	}
+	fps.redisAlive.Store(true)
+	go fps.detector()
+	return fps
+}
+
+func (s *fallbackPresenceStore) Join(ctx context.Context, channel string, socketID string, member PresenceMember, ttl time.Duration) error {
+	if s.redisAlive.Load() {
+		err := s.redisStore.Join(ctx, channel, socketID, member, ttl)
+		if err == nil {
+			return nil
+		}
+		s.logger.Error("realtime_redis_presence_join_failed_falling_back", "channel", channel, "error", err.Error())
+		s.redisAlive.Store(false)
+	}
+	return s.memStore.Join(ctx, channel, socketID, member, ttl)
+}
+
+func (s *fallbackPresenceStore) Leave(ctx context.Context, channel string, socketID string) error {
+	if s.redisAlive.Load() {
+		err := s.redisStore.Leave(ctx, channel, socketID)
+		if err == nil {
+			return nil
+		}
+		s.logger.Error("realtime_redis_presence_leave_failed_falling_back", "channel", channel, "error", err.Error())
+		s.redisAlive.Store(false)
+	}
+	return s.memStore.Leave(ctx, channel, socketID)
+}
+
+func (s *fallbackPresenceStore) Members(ctx context.Context, channel string) ([]PresenceMember, error) {
+	if s.redisAlive.Load() {
+		members, err := s.redisStore.Members(ctx, channel)
+		if err == nil {
+			return members, nil
+		}
+		s.logger.Error("realtime_redis_presence_members_failed_falling_back", "channel", channel, "error", err.Error())
+		s.redisAlive.Store(false)
+	}
+	return s.memStore.Members(ctx, channel)
+}
+
+func (s *fallbackPresenceStore) Count(ctx context.Context, channel string) (int, error) {
+	if s.redisAlive.Load() {
+		n, err := s.redisStore.Count(ctx, channel)
+		if err == nil {
+			return n, nil
+		}
+		s.logger.Error("realtime_redis_presence_count_failed_falling_back", "channel", channel, "error", err.Error())
+		s.redisAlive.Store(false)
+	}
+	return s.memStore.Count(ctx, channel)
+}
+
+func (s *fallbackPresenceStore) detector() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-s.done:
+			return
+		case <-ticker.C:
+			if s.redisAlive.Load() {
+				continue
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			err := s.client.Ping(ctx).Err()
+			cancel()
+			if err == nil {
+				s.logger.Info("realtime_redis_presence_recovered_restoring_redis")
+				s.redisAlive.Store(true)
+			}
+		}
+	}
+}
+
+func (s *fallbackPresenceStore) Close() error {
+	close(s.done)
+	_ = s.redisStore.Close()
+	_ = s.memStore.Close()
+	return nil
+}

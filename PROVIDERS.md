@@ -292,6 +292,8 @@ msg := i18n.Trans(c, "messages.welcome", nil)
 
 - `Handler() fiber.Handler`: 获取 WebSocket 主处理函数。
 - `AuthHandler() fiber.Handler`: 获取用于 WebSocket 握手校验的中间件。
+- `APIHandler() fiber.Handler`: 获取 Pusher-compatible REST API 处理函数。
+- `AuthorizeChannel(pattern string, auth realtime.ChannelAuthorization)`: 注册类似 Laravel `Broadcast::channel` 的频道授权回调。
 - `Dispatch(channel, event string, data any) error`: 向指定频道分发事件 and 数据。
 - `Close() error`: 关闭实时通信服务。
 

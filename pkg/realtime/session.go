@@ -2,25 +2,25 @@ package realtime
 
 import (
 	"encoding/json"
+	"strings"
 	"sync"
 	"time"
 
-	"lfiber/internal/features/user"
-
-	"github.com/gofiber/contrib/v3/socketio"
-	"go.uber.org/zap"
+	"github.com/gofiber/contrib/v3/websocket"
+	"github.com/google/uuid"
 )
 
+// Session 代表一个连接到当前节点的活跃 WebSocket 连接会话。
 type Session struct {
-	manager *Manager
-	kws     *socketio.Websocket
+	manager *ManagerImpl
+	conn    *websocket.Conn
 	id      string
 
 	mu        sync.RWMutex
-	user      *user.User
+	writeMu   sync.Mutex
+	user      User
 	channels  map[string]struct{}
 	presence  map[string]PresenceMember
-	recv      chan []byte
 	send      chan []byte
 	done      chan struct{}
 	closeOnce sync.Once
@@ -29,7 +29,7 @@ type Session struct {
 	lastPong          time.Time
 }
 
-func newSession(manager *Manager, kws *socketio.Websocket) *Session {
+func newSession(manager *ManagerImpl, conn *websocket.Conn) *Session {
 	heartbeat := time.Duration(manager.heartbeatIntervalSeconds()) * time.Second
 	if heartbeat <= 0 {
 		heartbeat = 30 * time.Second
@@ -42,19 +42,20 @@ func newSession(manager *Manager, kws *socketio.Websocket) *Session {
 
 	session := &Session{
 		manager:           manager,
-		kws:               kws,
-		id:                kws.GetUUID(),
+		conn:              conn,
+		id:                uuid.NewString(),
 		channels:          make(map[string]struct{}),
 		presence:          make(map[string]PresenceMember),
-		recv:              make(chan []byte, queueSize),
 		send:              make(chan []byte, queueSize),
 		done:              make(chan struct{}),
 		heartbeatInterval: heartbeat,
 		lastPong:          time.Now(),
 	}
 
-	if user, ok := kws.Locals("user").(*user.User); ok && user != nil {
-		session.user = user
+	if manager.userResolver != nil {
+		if u, err := manager.userResolver(conn); err == nil {
+			session.user = u
+		}
 	}
 
 	return session
@@ -64,13 +65,13 @@ func (s *Session) ID() string {
 	return s.id
 }
 
-func (s *Session) User() *user.User {
+func (s *Session) User() User {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.user
 }
 
-func (s *Session) SetUser(user *user.User) {
+func (s *Session) SetUser(user User) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.user = user
@@ -121,25 +122,9 @@ func (s *Session) presenceMember(channel string) (PresenceMember, bool) {
 }
 
 func (s *Session) Start() {
-	go s.readPump()
 	go s.writePump()
 	go s.heartbeatLoop()
-}
-
-func (s *Session) Inbound(data []byte) bool {
-	select {
-	case <-s.done:
-		return false
-	default:
-	}
-	select {
-	case s.recv <- data:
-		return true
-	default:
-		s.manager.logWarn("realtime_recv_queue_full", zap.String("socket_id", s.id))
-		s.manager.removeSession(s.id)
-		return false
-	}
+	s.readLoop()
 }
 
 func (s *Session) EnqueueFrame(frame []byte) bool {
@@ -152,7 +137,7 @@ func (s *Session) EnqueueFrame(frame []byte) bool {
 	case s.send <- frame:
 		return true
 	default:
-		s.manager.logWarn("realtime_send_queue_full", zap.String("socket_id", s.id))
+		s.manager.logger.Warn("realtime_send_queue_full", "socket_id", s.id)
 		s.manager.removeSession(s.id)
 		return false
 	}
@@ -167,23 +152,23 @@ func (s *Session) TouchPong() {
 func (s *Session) shutdown() {
 	s.closeOnce.Do(func() {
 		close(s.done)
-		if s.kws != nil && s.kws.IsAlive() {
-			s.kws.Close()
+		if s.conn != nil {
+			_ = s.conn.Close()
 		}
 	})
 }
 
-func (s *Session) readPump() {
+func (s *Session) readLoop() {
+	defer s.manager.removeSession(s.id)
 	for {
-		select {
-		case data, ok := <-s.recv:
-			if !ok {
-				return
-			}
-			s.handleInbound(data)
-		case <-s.done:
+		messageType, data, err := s.conn.ReadMessage()
+		if err != nil {
 			return
 		}
+		if messageType != websocket.TextMessage {
+			continue
+		}
+		s.handleInbound(data)
 	}
 }
 
@@ -194,11 +179,13 @@ func (s *Session) writePump() {
 			if !ok {
 				return
 			}
-			if s.kws == nil || !s.kws.IsAlive() {
+			s.writeMu.Lock()
+			err := s.conn.WriteMessage(websocket.TextMessage, frame)
+			s.writeMu.Unlock()
+			if err != nil {
 				s.manager.removeSession(s.id)
 				return
 			}
-			s.kws.Emit(frame)
 		case <-s.done:
 			return
 		}
@@ -217,13 +204,11 @@ func (s *Session) heartbeatLoop() {
 			s.mu.RUnlock()
 
 			if time.Since(lastPong) > 2*s.heartbeatInterval {
-				s.manager.logWarn("realtime_heartbeat_timeout", zap.String("socket_id", s.id))
+				s.manager.logger.Warn("realtime_heartbeat_timeout", "socket_id", s.id)
 				s.manager.removeSession(s.id)
 				return
 			}
-			_ = s.SendMessage(Message{
-				Event: EventPing,
-			})
+			_ = s.SendMessage(Message{Event: EventPing})
 		case <-s.done:
 			return
 		}
@@ -267,7 +252,6 @@ func (s *Session) handleSubscribe(msg Message) {
 func (s *Session) handleUnsubscribe(msg Message) {
 	payload, err := decodeSubscribePayload(msg.Data)
 	if err != nil {
-		// fallback to channel from top-level field for simple clients
 		payload.Channel = msg.Channel
 	}
 	if payload.Channel == "" {
@@ -278,7 +262,15 @@ func (s *Session) handleUnsubscribe(msg Message) {
 }
 
 func (s *Session) handleBroadcast(msg Message) {
+	if !s.manager.clientEventsEnabled() {
+		s.sendError("client events are disabled")
+		return
+	}
 	if msg.Channel == "" || msg.Event == "" || len(msg.Data) == 0 {
+		return
+	}
+	if !strings.HasPrefix(msg.Event, "client-") || !s.hasChannel(msg.Channel) {
+		s.sendError("client event is not allowed")
 		return
 	}
 	s.manager.publishEnvelope(Envelope{
@@ -293,7 +285,7 @@ func (s *Session) handleBroadcast(msg Message) {
 func (s *Session) sendError(message string) {
 	_ = s.SendMessage(Message{
 		Event: EventError,
-		Data:  encodeJSON(ErrorPayload{Message: message}),
+		Data:  encodePusherData(ErrorPayload{Message: message}),
 	})
 }
 

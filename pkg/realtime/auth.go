@@ -6,45 +6,41 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"strconv"
 	"strings"
-
-	"lfiber/configs"
-	"lfiber/internal/features/user"
 
 	"github.com/gofiber/fiber/v3"
 )
 
-// AuthRequest matches the broadcast auth request payload used by clients.
+// AuthRequest Pusher 风格的鉴权请求参数结构体
 type AuthRequest struct {
 	SocketID    string `json:"socket_id" form:"socket_id"`
 	ChannelName string `json:"channel_name" form:"channel_name"`
 }
 
-// AuthResponse matches the Pusher auth response shape.
+// AuthResponse Pusher 风格的广播授权响应结构体
 type AuthResponse struct {
 	Auth        string `json:"auth"`
 	ChannelData string `json:"channel_data,omitempty"`
 }
 
-func BuildAuthSignature(appKey, appSecret, socketID, channel string) string {
+func BuildAuthSignature(appKey, appSecret, socketID, channel string, channelData ...string) string {
 	mac := hmac.New(sha256.New, []byte(appSecret))
-	_, _ = mac.Write([]byte(socketID + ":" + channel))
+	payload := socketID + ":" + channel
+	if len(channelData) > 0 && channelData[0] != "" {
+		payload += ":" + channelData[0]
+	}
+	_, _ = mac.Write([]byte(payload))
 	return appKey + ":" + hex.EncodeToString(mac.Sum(nil))
 }
 
-func BuildPresenceChannelData(user *user.User) string {
-	if user == nil {
+func BuildPresenceChannelData(user User) string {
+	if user.ID == "" {
 		return ""
 	}
 
 	payload := map[string]any{
-		"user_id": strconv.FormatInt(user.ID, 10),
-		"user_info": map[string]any{
-			"id":    user.ID,
-			"email": user.Email,
-			"name":  user.Name,
-		},
+		"user_id":   user.ID,
+		"user_info": user.Info,
 	}
 
 	raw, err := json.Marshal(payload)
@@ -54,8 +50,8 @@ func BuildPresenceChannelData(user *user.User) string {
 	return string(raw)
 }
 
-func ValidateChannelAuth(appKey, appSecret, socketID, channelName, auth string) error {
-	expected := BuildAuthSignature(appKey, appSecret, socketID, channelName)
+func ValidateChannelAuth(appKey, appSecret, socketID, channelName, auth string, channelData ...string) error {
+	expected := BuildAuthSignature(appKey, appSecret, socketID, channelName, channelData...)
 	if !hmac.Equal([]byte(expected), []byte(auth)) {
 		return errors.New("invalid channel auth signature")
 	}
@@ -66,7 +62,7 @@ func isPrivateLike(channel Channel) bool {
 	return channel.Kind == ChannelPrivate || channel.Kind == ChannelPresence
 }
 
-func BuildAuthResponse(cfg *configs.Config, socketID, channelName string, user *user.User) (AuthResponse, error) {
+func BuildAuthResponse(cfg *Config, socketID, channelName string, user User) (AuthResponse, error) {
 	if cfg == nil {
 		return AuthResponse{}, errors.New("realtime config unavailable")
 	}
@@ -78,22 +74,21 @@ func BuildAuthResponse(cfg *configs.Config, socketID, channelName string, user *
 	if !isPrivateLike(channel) {
 		return AuthResponse{}, errors.New("public channels do not require auth")
 	}
-	if user == nil {
+	if user.ID == "" {
 		return AuthResponse{}, errors.New("authenticated user required")
 	}
 
-	auth := BuildAuthSignature(cfg.WebSocket.AppKey, cfg.WebSocket.AppSecret, socketID, channelName)
-	resp := AuthResponse{Auth: auth}
+	resp := AuthResponse{}
 	if channel.IsPresence() {
 		resp.ChannelData = BuildPresenceChannelData(user)
 	}
+	resp.Auth = BuildAuthSignature(cfg.AppKey, cfg.AppSecret, socketID, channelName, resp.ChannelData)
 	return resp, nil
 }
 
 func parseAuthRequest(c fiber.Ctx) (AuthRequest, error) {
 	var req AuthRequest
 	if err := c.Bind().Body(&req); err != nil {
-		// Allow form/query based fallback for Pusher-style clients.
 		req.SocketID = strings.TrimSpace(c.FormValue("socket_id"))
 		req.ChannelName = strings.TrimSpace(c.FormValue("channel_name"))
 		if req.SocketID == "" || req.ChannelName == "" {

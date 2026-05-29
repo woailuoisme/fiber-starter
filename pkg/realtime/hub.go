@@ -2,6 +2,7 @@ package realtime
 
 import "sync"
 
+// Hub 统一调度和维护本机上的所有 WebSocket Session 映射
 type Hub struct {
 	mu       sync.RWMutex
 	sessions map[string]*Session
@@ -110,6 +111,19 @@ func (h *Hub) Members(channel string) []*Session {
 	out := make([]*Session, 0, len(members))
 	for _, session := range members {
 		out = append(out, session)
+	}
+	return out
+}
+
+func (h *Hub) Channels() map[string]int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	out := make(map[string]int, len(h.channels))
+	for channel, members := range h.channels {
+		if len(members) > 0 {
+			out[channel] = len(members)
+		}
 	}
 	return out
 }
