@@ -226,6 +226,12 @@ table "media" {
     null = false
   }
 
+  column "conversion_status" {
+    type    = text
+    null    = false
+    default = "completed"
+  }
+
   column "manipulations" {
     type    = text
     null    = false

@@ -66,6 +66,32 @@ type StorageConfig struct {
 	Public     *LocalStorageConfig  `mapstructure:"public"`
 }
 
+type MediaLibraryConfig struct {
+	ConversionMode string `mapstructure:"conversion_mode"`
+	Queue          string `mapstructure:"queue"`
+}
+
+type BackupConfig struct {
+	Disk          string                   `mapstructure:"disk"`
+	Path          string                   `mapstructure:"path"`
+	TempPath      string                   `mapstructure:"temp_path"`
+	Notifications BackupNotificationConfig `mapstructure:"notifications"`
+	Binaries      BackupBinaryConfig       `mapstructure:"binaries"`
+}
+
+type BackupNotificationConfig struct {
+	Enabled       bool     `mapstructure:"enabled"`
+	NotifySuccess bool     `mapstructure:"notify_success"`
+	Channels      []string `mapstructure:"channels"`
+	MailTo        string   `mapstructure:"mail_to"`
+}
+
+type BackupBinaryConfig struct {
+	PgDump  string `mapstructure:"pg_dump"`
+	Psql    string `mapstructure:"psql"`
+	SQLite3 string `mapstructure:"sqlite3"`
+}
+
 type LocalStorageConfig struct {
 	Root string `mapstructure:"root"`
 	URL  string `mapstructure:"url"`
@@ -117,6 +143,8 @@ type Config struct {
 	Notification  NotificationConfig  `mapstructure:"notification"`
 	Queue         QueueConfig         `mapstructure:"queue"`
 	Storage       StorageConfig       `mapstructure:"storage"`
+	MediaLibrary  MediaLibraryConfig  `mapstructure:"media_library"`
+	Backup        BackupConfig        `mapstructure:"backup"`
 	WebSocket     WebSocketConfig     `mapstructure:"websocket"`
 	Payment       PaymentConfig       `mapstructure:"payment"`
 	Business      BusinessConfig      `mapstructure:"business"`

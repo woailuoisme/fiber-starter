@@ -48,7 +48,6 @@ RUN mkdir -p /app/storage/app /app/storage/logs /app/storage/framework/cache /ap
 
 # 设置容器运行默认环境变量（生产环境模式、端口、上海时区）
 ENV APP_ENV=production \
-    CONFIG_WARN_MISSING_ENV_FILE=false \
     APP_PORT=3100 \
     APP_HOST=0.0.0.0 \
     TZ=Asia/Shanghai

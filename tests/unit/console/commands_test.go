@@ -138,6 +138,21 @@ func TestDBReset_CancelsWhenNoInteraction(t *testing.T) {
 	assert.Contains(t, out, "Operation cancelled")
 }
 
+func TestBackupRestore_CancelsWhenNoInteraction(t *testing.T) {
+	previous := commandutil.RuntimeBuilder
+	commandutil.RuntimeBuilder = func() (*providers.Runtime, error) {
+		t.Fatal("runtime should not build when destructive restore is cancelled")
+		return nil, nil
+	}
+	t.Cleanup(func() {
+		commandutil.RuntimeBuilder = previous
+	})
+
+	out, err := executeCommand(t, "--no-interaction", "backup:restore", "backups/lfiber/sqlite/latest.sql.gz")
+	require.NoError(t, err)
+	assert.Contains(t, out, "Operation cancelled")
+}
+
 func TestDBReset_ForceSkipsConfirmation(t *testing.T) {
 	t.Setenv("DB_CONNECTION", "sqlite")
 	t.Setenv("DB_DATABASE", filepath.Join(t.TempDir(), "database.sqlite"))
@@ -162,7 +177,7 @@ func TestDBReset_ForceSkipsConfirmation(t *testing.T) {
 func TestRootCommand_HasLaravelStyleCommands(t *testing.T) {
 	out, err := executeCommand(t, "--help")
 	require.NoError(t, err)
-	for _, name := range []string{"app:about", "jwt:generate", "config:show", "cache:clear", "auth:about", "db:migrate", "hash:make", "schedule:run", "queue:work"} {
+	for _, name := range []string{"app:about", "jwt:generate", "config:show", "cache:clear", "auth:about", "db:migrate", "backup:run", "backup:restore", "backup:list", "hash:make", "schedule:run", "queue:work", "media:regenerate"} {
 		assert.Contains(t, out, name)
 	}
 	assert.Contains(t, out, "--no-interaction")

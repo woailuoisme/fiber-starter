@@ -8,8 +8,10 @@ import (
 	"image/color"
 	"image/png"
 	"testing"
+	"time"
 
 	"lfiber/internal/providers/database"
+	queueContracts "lfiber/internal/providers/queue/contracts"
 	"lfiber/internal/providers/storage"
 	"lfiber/pkg/medialibrary"
 	"lfiber/tests/internal/testkit"
@@ -17,6 +19,48 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type captureQueue struct {
+	jobs []queueContracts.Job
+}
+
+func (q *captureQueue) Push(job queueContracts.Job) error {
+	q.jobs = append(q.jobs, job)
+	return nil
+}
+
+func (q *captureQueue) Size(queue ...string) (int64, error) { return int64(len(q.jobs)), nil }
+func (q *captureQueue) PushOn(_ string, job queueContracts.Job) error {
+	return q.Push(job)
+}
+func (q *captureQueue) Later(_ time.Duration, job queueContracts.Job) error { return q.Push(job) }
+func (q *captureQueue) LaterOn(_ string, _ time.Duration, job queueContracts.Job) error {
+	return q.Push(job)
+}
+
+func (q *captureQueue) Bulk(jobs []queueContracts.Job, queue ...string) error {
+	q.jobs = append(q.jobs, jobs...)
+	return nil
+}
+func (q *captureQueue) ProcessAt(_ time.Time, job queueContracts.Job) error { return q.Push(job) }
+func (q *captureQueue) Register(job queueContracts.Job)                     {}
+func (q *captureQueue) StartWorker(queue ...string) error                   { return nil }
+func (q *captureQueue) RunWorker(queue ...string) error                     { return nil }
+func (q *captureQueue) StopWorker() error                                   { return nil }
+func (q *captureQueue) InspectQueues() ([]queueContracts.QueueStatus, error) {
+	return nil, nil
+}
+
+func (q *captureQueue) ListFailed(page, pageSize int) ([]queueContracts.FailedJob, error) {
+	return nil, nil
+}
+func (q *captureQueue) RetryFailed(id string) error  { return nil }
+func (q *captureQueue) DeleteFailed(id string) error { return nil }
+func (q *captureQueue) Flush(queue string) error     { return nil }
+func (q *captureQueue) HealthCheck() error           { return nil }
+func (q *captureQueue) Close() error                 { return nil }
+func (q *captureQueue) SetConcurrency(num int)       {}
+func (q *captureQueue) GetConcurrency() int          { return 1 }
 
 // TestProduct 模拟实现 HasMedia 接口的模型实体
 type TestProduct struct {
@@ -98,6 +142,7 @@ func TestMediaLibrary_IntegrationWorkflow(t *testing.T) {
 	assert.Equal(t, "laptop_front.png", media.FileName)
 	assert.Equal(t, "image/png", media.MimeType)
 	assert.Equal(t, int64(len(imgData)), media.Size)
+	assert.Equal(t, medialibrary.DerivedMediaStatusCompleted, media.ConversionStatus)
 	assert.Equal(t, "Laptop Front View", media.CustomProperties["alt"])
 
 	// 6. 验证物理文件在磁盘上的落库情况
@@ -111,6 +156,7 @@ func TestMediaLibrary_IntegrationWorkflow(t *testing.T) {
 	assert.Contains(t, media.Manipulations, "thumb")
 	thumbMap := media.Manipulations["thumb"].(map[string]any)
 	thumbPath := thumbMap["path"].(string)
+	assert.Equal(t, medialibrary.DerivedMediaStatusCompleted, thumbMap["status"])
 	assert.Equal(t, fmt.Sprintf("media/%s/conversions/laptop_front-thumb.png", media.UUID), thumbPath)
 	thumbExists, err := disk.Exists(thumbPath)
 	require.NoError(t, err)
@@ -214,4 +260,122 @@ func TestMediaLibrary_ValidationConstraints(t *testing.T) {
 		ToMediaCollection("gallery")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not allowed in collection")
+}
+
+func TestMediaLibrary_QueueModeDefersConversions(t *testing.T) {
+	ctx := context.Background()
+	cfg := testkit.NewSQLiteConfig(t)
+	dbManager, conn, err := database.RegisterDatabase(cfg)
+	require.NoError(t, err)
+	defer func() { _ = dbManager.CloseAll() }()
+
+	bunDB, err := conn.BunDB()
+	require.NoError(t, err)
+	storageManager, err := storage.Register(cfg)
+	require.NoError(t, err)
+	defer func() { _ = storageManager.Close() }()
+	_, err = bunDB.NewCreateTable().Model((*medialibrary.Media)(nil)).Exec(ctx)
+	require.NoError(t, err)
+
+	queue := &captureQueue{}
+	mediaService := medialibrary.NewService(
+		bunDB,
+		storageManager,
+		"local",
+		medialibrary.WithConversionMode(medialibrary.ConversionModeQueue),
+		medialibrary.WithQueue(queue, "media"),
+	)
+	product := &TestProduct{ID: 101, Name: "Queued Product"}
+
+	mockImg := image.NewRGBA(image.Rect(0, 0, 120, 120))
+	var imgBuf bytes.Buffer
+	require.NoError(t, png.Encode(&imgBuf, mockImg))
+
+	media, err := mediaService.AddMedia(ctx, product).
+		FromBytes(imgBuf.Bytes(), "queued.png").
+		ToMediaCollection("gallery")
+	require.NoError(t, err)
+	assert.Equal(t, medialibrary.DerivedMediaStatusPending, media.ConversionStatus)
+	require.Len(t, queue.jobs, 1)
+
+	err = queue.jobs[0].Handle(ctx)
+	require.NoError(t, err)
+
+	var stored medialibrary.Media
+	err = bunDB.NewSelect().Model(&stored).Where("id = ?", media.ID).Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, medialibrary.DerivedMediaStatusCompleted, stored.ConversionStatus)
+	assert.Contains(t, mediaService.GetUrl(&stored, "thumb"), "queued-thumb.png")
+}
+
+func TestMediaLibrary_RejectsDangerousFileName(t *testing.T) {
+	ctx := context.Background()
+	cfg := testkit.NewSQLiteConfig(t)
+	dbManager, conn, err := database.RegisterDatabase(cfg)
+	require.NoError(t, err)
+	defer func() { _ = dbManager.CloseAll() }()
+
+	bunDB, err := conn.BunDB()
+	require.NoError(t, err)
+	storageManager, err := storage.Register(cfg)
+	require.NoError(t, err)
+	defer func() { _ = storageManager.Close() }()
+	_, err = bunDB.NewCreateTable().Model((*medialibrary.Media)(nil)).Exec(ctx)
+	require.NoError(t, err)
+
+	mediaService := medialibrary.NewService(bunDB, storageManager, "local")
+	product := &TestProduct{ID: 102, Name: "Unsafe Product"}
+	mockImg := image.NewRGBA(image.Rect(0, 0, 10, 10))
+	var imgBuf bytes.Buffer
+	require.NoError(t, png.Encode(&imgBuf, mockImg))
+
+	_, err = mediaService.AddMedia(ctx, product).
+		FromBytes(imgBuf.Bytes(), "shell.php.jpg").
+		ToMediaCollection("gallery")
+	require.ErrorIs(t, err, medialibrary.ErrFileNameNotAllowed)
+}
+
+func TestMediaLibrary_RegenerateOnlyMissing(t *testing.T) {
+	ctx := context.Background()
+	cfg := testkit.NewSQLiteConfig(t)
+	dbManager, conn, err := database.RegisterDatabase(cfg)
+	require.NoError(t, err)
+	defer func() { _ = dbManager.CloseAll() }()
+
+	bunDB, err := conn.BunDB()
+	require.NoError(t, err)
+	storageManager, err := storage.Register(cfg)
+	require.NoError(t, err)
+	defer func() { _ = storageManager.Close() }()
+	_, err = bunDB.NewCreateTable().Model((*medialibrary.Media)(nil)).Exec(ctx)
+	require.NoError(t, err)
+
+	mediaService := medialibrary.NewService(bunDB, storageManager, "local")
+	product := &TestProduct{ID: 103, Name: "Regenerate Product"}
+	mockImg := image.NewRGBA(image.Rect(0, 0, 120, 120))
+	var imgBuf bytes.Buffer
+	require.NoError(t, png.Encode(&imgBuf, mockImg))
+
+	media, err := mediaService.AddMedia(ctx, product).
+		FromBytes(imgBuf.Bytes(), "regen.png").
+		ToMediaCollection("gallery")
+	require.NoError(t, err)
+
+	media.Manipulations["thumb"] = map[string]any{
+		"width":  80,
+		"height": 80,
+		"crop":   true,
+		"status": medialibrary.DerivedMediaStatusPending,
+	}
+	media.ConversionStatus = medialibrary.DerivedMediaStatusFailed
+	_, err = bunDB.NewUpdate().
+		Model(media).
+		Column("manipulations", "conversion_status").
+		Where("id = ?", media.ID).
+		Exec(ctx)
+	require.NoError(t, err)
+
+	count, err := mediaService.Regenerate(ctx, medialibrary.RegenerateOptions{OnlyMissing: true, FailedOnly: true})
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
 }

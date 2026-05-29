@@ -8,6 +8,7 @@ import (
 
 	"lfiber/configs"
 	auth "lfiber/internal/providers/auth"
+	backupProvider "lfiber/internal/providers/backup"
 	cache "lfiber/internal/providers/cache"
 	configProvider "lfiber/internal/providers/config"
 	database "lfiber/internal/providers/database"
@@ -339,6 +340,33 @@ func TestProviderEntryPoints_RegisterWrappers(t *testing.T) {
 		exists, err := disk.Exists("entrypoint.txt")
 		require.NoError(t, err)
 		assert.True(t, exists)
+	})
+
+	t.Run("Backup", func(t *testing.T) {
+		cfg := testkit.NewSQLiteConfig(t)
+		cfg.App.Name = "lfiber"
+		cfg.Storage.Driver = "local"
+		cfg.Storage.Local = &configs.LocalStorageConfig{Root: t.TempDir(), URL: "/storage"}
+		cfg.Backup.Disk = "local"
+		cfg.Backup.Path = "backups"
+		cfg.Backup.TempPath = ".cache/backup"
+		cfg.Backup.Notifications.Enabled = true
+		cfg.Backup.Notifications.Channels = []string{"mail"}
+
+		dbManager, _, err := database.RegisterDatabase(cfg)
+		require.NoError(t, err)
+		defer func() { _ = dbManager.CloseAll() }()
+		storageManager, err := storage.Register(cfg)
+		require.NoError(t, err)
+		defer func() { _ = storageManager.Close() }()
+		_, mailer, err := mail.Register(&configs.Config{Mail: configs.MailConfig{Enabled: true, Default: "log"}})
+		require.NoError(t, err)
+		_, dispatcher, err := notification.RegisterNotification(mailer)
+		require.NoError(t, err)
+
+		service, err := backupProvider.Register(cfg, dbManager, storageManager, dispatcher)
+		require.NoError(t, err)
+		require.NotNil(t, service)
 	})
 }
 

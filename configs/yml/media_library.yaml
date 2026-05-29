@@ -1,0 +1,3 @@
+media_library:
+  conversion_mode: ${MEDIA_LIBRARY_CONVERSION_MODE:sync}
+  queue: ${MEDIA_LIBRARY_QUEUE:default}

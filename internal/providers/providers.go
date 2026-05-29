@@ -11,6 +11,7 @@ import (
 	authContracts "lfiber/internal/providers/auth/contracts"
 	authorization "lfiber/internal/providers/authorization"
 	authorizationContracts "lfiber/internal/providers/authorization/contracts"
+	backupProvider "lfiber/internal/providers/backup"
 	cache "lfiber/internal/providers/cache"
 	cacheContracts "lfiber/internal/providers/cache/contracts"
 	config "lfiber/internal/providers/config"
@@ -41,6 +42,7 @@ import (
 	storageContracts "lfiber/internal/providers/storage/contracts"
 	helpers "lfiber/internal/support"
 	"lfiber/internal/support/appctx"
+	backup "lfiber/pkg/backup"
 	medialibrary "lfiber/pkg/medialibrary"
 )
 
@@ -71,6 +73,7 @@ type Runtime struct {
 	Log             loggingContracts.Logger
 	RateLimiter     ratelimiterContracts.Limiter
 	MediaLibrary    *medialibrary.Service
+	Backup          *backup.Service
 	Degraded        map[string]string
 }
 
@@ -215,15 +218,17 @@ func Build() (*Runtime, error) {
 			if rt.Connection == nil || rt.Storage == nil {
 				return errors.New("database connection or storage is not registered")
 			}
-			bunDB, err := rt.Connection.BunDB()
-			if err != nil {
-				return fmt.Errorf("get bun db: %w", err)
-			}
 			defaultDisk := "local"
 			if cfg.Storage.Driver != "" {
 				defaultDisk = cfg.Storage.Driver
 			}
-			rt.MediaLibrary = medialibrary.NewService(bunDB, rt.Storage, defaultDisk)
+			rt.MediaLibrary = medialibrary.NewServiceFromConnection(
+				rt.Connection,
+				rt.Storage,
+				defaultDisk,
+				medialibrary.WithConversionMode(cfg.MediaLibrary.ConversionMode),
+				medialibrary.WithQueue(rt.QueueService, cfg.MediaLibrary.Queue),
+			)
 			return nil
 		}},
 		{"notification", true, func() error {
@@ -233,6 +238,16 @@ func Build() (*Runtime, error) {
 				if err := notification.RegisterConfiguredChannels(cfg, notificationManager); err != nil {
 					return err
 				}
+			}
+			return err
+		}},
+		{"backup", false, func() error {
+			if rt.Database == nil || rt.Storage == nil {
+				return errors.New("database manager or storage is not registered")
+			}
+			backupService, err := backupProvider.Register(cfg, rt.Database, rt.Storage, rt.Notification)
+			if err == nil {
+				rt.Backup = backupService
 			}
 			return err
 		}},
@@ -398,3 +413,5 @@ func (rt *Runtime) TranslatorService() i18nContracts.Translator { return rt.Tran
 func (rt *Runtime) LogService() loggingContracts.Logger { return rt.Log }
 
 func (rt *Runtime) RateLimiterService() ratelimiterContracts.Limiter { return rt.RateLimiter }
+
+func (rt *Runtime) BackupService() *backup.Service { return rt.Backup }

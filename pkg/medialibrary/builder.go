@@ -2,17 +2,18 @@ package medialibrary
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 )
+
+const defaultReaderLimit = 32 << 20
 
 // MediaBuilder 为媒体库提供流式/链式参数组装构建器
 type MediaBuilder struct {
@@ -69,9 +70,13 @@ func (b *MediaBuilder) FromReader(reader io.Reader, filename string) *MediaBuild
 	if b.err != nil {
 		return b
 	}
-	data, err := io.ReadAll(reader)
+	data, err := io.ReadAll(io.LimitReader(reader, defaultReaderLimit+1))
 	if err != nil {
 		b.err = fmt.Errorf("failed to read from reader: %w", err)
+		return b
+	}
+	if len(data) > defaultReaderLimit {
+		b.err = fmt.Errorf("%w: reader exceeded %d bytes", ErrFileTooLarge, defaultReaderLimit)
 		return b
 	}
 	b.fileData = data
@@ -100,15 +105,13 @@ func (b *MediaBuilder) ToMediaCollection(collectionName string) (*Media, error) 
 		return nil, b.err
 	}
 	if len(b.fileData) == 0 {
-		return nil, errors.New("no file content provided")
+		return nil, ErrNoFileContent
 	}
 
-	// 1. 获取模型声明的 Collections 规则
 	reg := NewCollectionRegistry()
 	b.model.RegisterMediaCollections(reg)
 	col, hasCol := reg.Get(collectionName)
 
-	// 2. 检测文件类型
 	fileSize := int64(len(b.fileData))
 	detectSize := 512
 	if len(b.fileData) < 512 {
@@ -119,75 +122,31 @@ func (b *MediaBuilder) ToMediaCollection(collectionName string) (*Media, error) 
 		mimeType = mimeType[:idx]
 	}
 
-	// 3. 执行 Collection 集合约束校验
-	if hasCol {
-		if col.MaxFileSize > 0 && fileSize > col.MaxFileSize {
-			return nil, fmt.Errorf("file size %d exceeds collection max size limit %d", fileSize, col.MaxFileSize)
-		}
-		if len(col.AllowedMimes) > 0 {
-			allowed := false
-			for _, m := range col.AllowedMimes {
-				if strings.EqualFold(m, mimeType) || strings.HasPrefix(mimeType, strings.TrimSuffix(m, "/*")) {
-					allowed = true
-					break
-				}
-			}
-			if !allowed {
-				return nil, fmt.Errorf("mime type %s is not allowed in collection %s", mimeType, collectionName)
-			}
-		}
+	if err := NewCollectionPolicy(col).Validate(fileSize, mimeType, collectionName); err != nil {
+		return nil, err
 	}
 
-	// 4. 生成全局唯一 UUID 与定位存储
 	mediaUUID := uuid.New().String()
 	diskName := b.service.defaultDiskName
 	disk := b.service.storage.Disk(diskName)
 
-	cleanFileName := sanitizeFileName(b.fileName)
-	originalPath := fmt.Sprintf("media/%s/%s", mediaUUID, cleanFileName)
-
-	// 写入原图
-	err := disk.Put(originalPath, b.fileData)
+	cleanFileName, err := b.service.fileNamePolicy.Sanitize(b.fileName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to save original file to disk: %w", err)
+		return nil, err
+	}
+	originalPath := b.service.pathGenerator.OriginalPath(mediaUUID, cleanFileName)
+
+	if err := disk.Put(originalPath, b.fileData); err != nil {
+		return nil, fmt.Errorf("%w: save original file: %v", ErrDiskWriteFailed, err)
 	}
 
-	// 5. 开展 Image Conversions 图片格式转换处理
+	conversionStatus := DerivedMediaStatusCompleted
 	manipulations := make(map[string]any)
 	if hasCol && len(col.Conversions) > 0 && strings.HasPrefix(mimeType, "image/") {
-		for _, conv := range col.Conversions {
-			convData, actualFormat, err := performImageConversion(b.fileData, conv)
-			if err != nil {
-				// 转换错误不阻断原图上传
-				continue
-			}
-
-			ext := filepath.Ext(cleanFileName)
-			base := strings.TrimSuffix(cleanFileName, ext)
-			targetExt := "." + actualFormat
-			convFileName := fmt.Sprintf("%s-%s%s", base, conv.Name, targetExt)
-
-			convPath := fmt.Sprintf("media/%s/conversions/%s", mediaUUID, convFileName)
-
-			err = disk.Put(convPath, convData)
-			if err != nil {
-				continue
-			}
-
-			manipulations[conv.Name] = map[string]any{
-				"path": convPath,
-				"size": len(convData),
-				"mime": "image/" + actualFormat,
-			}
-		}
+		conversionStatus = DerivedMediaStatusPending
+		manipulations = pendingManipulations(col.Conversions)
 	}
 
-	// 6. 若为 SingleFile 覆盖模式，先移除对应集合下所有旧文件
-	if hasCol && col.SingleFile {
-		_ = b.service.ClearMediaCollection(b.ctx, b.model, collectionName)
-	}
-
-	// 7. 持久化入库
 	baseName := strings.TrimSuffix(cleanFileName, filepath.Ext(cleanFileName))
 	media := &Media{
 		ModelType:        b.model.GetModelType(),
@@ -199,25 +158,71 @@ func (b *MediaBuilder) ToMediaCollection(collectionName string) (*Media, error) 
 		MimeType:         mimeType,
 		Disk:             diskName,
 		Size:             fileSize,
+		ConversionStatus: conversionStatus,
 		Manipulations:    manipulations,
 		CustomProperties: b.customProps,
 		ResponsiveImages: make(map[string]any),
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
+		CreatedAt:        now(),
+		UpdatedAt:        now(),
 	}
 
-	_, err = b.service.db.NewInsert().Model(media).Exec(b.ctx)
+	var oldMedia []*Media
+	db, err := b.service.database()
 	if err != nil {
-		_ = disk.DeleteDirectory(fmt.Sprintf("media/%s", mediaUUID))
-		return nil, fmt.Errorf("failed to insert media record: %w", err)
+		_ = disk.DeleteDirectory(b.service.pathGenerator.MediaDirectory(mediaUUID))
+		return nil, err
+	}
+	err = db.RunInTx(b.ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		if _, err := tx.NewInsert().Model(media).Exec(ctx); err != nil {
+			return fmt.Errorf("%w: %v", ErrRecordCreateFailed, err)
+		}
+		if hasCol && col.SingleFile {
+			q := tx.NewSelect().Model(&oldMedia).
+				Where("model_type = ?", b.model.GetModelType()).
+				Where("model_id = ?", b.model.GetModelID()).
+				Where("collection_name = ?", collectionName).
+				Where("id <> ?", media.ID)
+			if err := q.Scan(ctx); err != nil {
+				return err
+			}
+			if len(oldMedia) > 0 {
+				_, err := tx.NewDelete().Model((*Media)(nil)).
+					Where("model_type = ?", b.model.GetModelType()).
+					Where("model_id = ?", b.model.GetModelID()).
+					Where("collection_name = ?", collectionName).
+					Where("id <> ?", media.ID).
+					Exec(ctx)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		_ = disk.DeleteDirectory(b.service.pathGenerator.MediaDirectory(mediaUUID))
+		return nil, err
+	}
+
+	for _, old := range oldMedia {
+		_ = disk.DeleteDirectory(b.service.pathGenerator.MediaDirectory(old.UUID))
+	}
+
+	if hasCol && len(col.Conversions) > 0 && strings.HasPrefix(mimeType, "image/") {
+		if b.service.conversionMode == ConversionModeQueue {
+			if err := wrapJobEnqueueError(enqueueConversionJob(b.service.queue, media.ID, col.Conversions, b.service.conversionQueue)); err != nil {
+				media.ConversionStatus = DerivedMediaStatusFailed
+				return media, b.service.updateConversionState(b.ctx, media, nil, DerivedMediaStatusFailed)
+			}
+			return media, nil
+		}
+		results, status, _ := NewConversionRunner(b.service).Generate(b.ctx, media, col.Conversions)
+		media.Manipulations = mergeManipulations(media.Manipulations, results)
+		media.ConversionStatus = status
+		if err := b.service.updateConversionState(b.ctx, media, media.Manipulations, status); err != nil {
+			return media, err
+		}
 	}
 
 	return media, nil
-}
-
-// sanitizeFileName 清理文件名防跨目录攻击
-func sanitizeFileName(name string) string {
-	name = filepath.Base(name)
-	name = strings.ReplaceAll(name, " ", "_")
-	return name
 }

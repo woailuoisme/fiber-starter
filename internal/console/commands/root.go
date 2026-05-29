@@ -7,11 +7,13 @@ import (
 
 	appcmd "lfiber/internal/console/commands/app"
 	authcmd "lfiber/internal/console/commands/auth"
+	backupcmd "lfiber/internal/console/commands/backup"
 	cachecmd "lfiber/internal/console/commands/cache"
 	configcmd "lfiber/internal/console/commands/config"
 	dbcmd "lfiber/internal/console/commands/db"
 	hashcmd "lfiber/internal/console/commands/hash"
 	jwtcmd "lfiber/internal/console/commands/jwt"
+	mediacmd "lfiber/internal/console/commands/media"
 	queuecmd "lfiber/internal/console/commands/queue"
 	routecmd "lfiber/internal/console/commands/route"
 	schedulecmd "lfiber/internal/console/commands/schedule"
@@ -58,9 +60,11 @@ func NewRootCommand() *cobra.Command {
 	root.AddCommand(configcmd.Commands()...)
 	root.AddCommand(cachecmd.Commands()...)
 	root.AddCommand(authcmd.Commands()...)
+	root.AddCommand(backupcmd.Commands()...)
 	root.AddCommand(dbcmd.Commands()...)
 	root.AddCommand(hashcmd.Commands()...)
 	root.AddCommand(jwtcmd.Commands()...)
+	root.AddCommand(mediacmd.Commands()...)
 	root.AddCommand(queuecmd.Commands()...)
 	root.AddCommand(schedulecmd.Commands()...)
 

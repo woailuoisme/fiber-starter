@@ -1,0 +1,13 @@
+backup:
+  disk: ${BACKUP_DISK:local}
+  path: ${BACKUP_PATH:backups}
+  temp_path: ${BACKUP_TEMP_PATH:.cache/backup}
+  notifications:
+    enabled: ${BACKUP_NOTIFICATIONS_ENABLED:true}
+    notify_success: ${BACKUP_NOTIFY_SUCCESS:false}
+    channels: ${BACKUP_NOTIFICATION_CHANNELS:mail}
+    mail_to: ${BACKUP_NOTIFICATION_MAIL_TO:""}
+  binaries:
+    pg_dump: ${BACKUP_PG_DUMP_BINARY:pg_dump}
+    psql: ${BACKUP_PSQL_BINARY:psql}
+    sqlite3: ${BACKUP_SQLITE3_BINARY:sqlite3}

@@ -1,0 +1,3 @@
+# Use a simplified Media Library core
+
+We will model `pkg/medialibrary` after Spatie's Laravel Medialibrary as a reusable core, but we will not copy the full package surface. The simplified core keeps a service-owned fluent interface, polymorphic Media Owners, one default Media Disk, UUID-based Media Paths, sync and queue Derived Media generation with sync as the default, Derived Media results on the Media record, and single-file replacement that creates the new Media before deleting old Media. We reject owner-attached methods, per-collection disks, independent Derived Media tables, responsive images, remote URL intake, and broad Spatie feature parity until the core proves it needs them.

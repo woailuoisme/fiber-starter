@@ -38,6 +38,10 @@ type (
 	TelegramNotificationConfig = internal.TelegramNotificationConfig
 	QueueConfig                = internal.QueueConfig
 	StorageConfig              = internal.StorageConfig
+	MediaLibraryConfig         = internal.MediaLibraryConfig
+	BackupConfig               = internal.BackupConfig
+	BackupNotificationConfig   = internal.BackupNotificationConfig
+	BackupBinaryConfig         = internal.BackupBinaryConfig
 	LocalStorageConfig         = internal.LocalStorageConfig
 	GarageStorageConfig        = internal.GarageStorageConfig
 	S3StorageConfig            = internal.S3StorageConfig

@@ -31,3 +31,5 @@ services:
       critical: ${SERVICE_STORAGE_CRITICAL:false}
     realtime:
       critical: ${SERVICE_REALTIME_CRITICAL:false}
+    backup:
+      critical: ${SERVICE_BACKUP_CRITICAL:false}

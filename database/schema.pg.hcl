@@ -232,6 +232,12 @@ table "media" {
     null = false
   }
 
+  column "conversion_status" {
+    type    = varchar(32)
+    null    = false
+    default = "completed"
+  }
+
   column "manipulations" {
     type    = jsonb
     null    = false
