@@ -27,9 +27,6 @@ APP_LOG_DIR := env("APP_LOG_DIR", "storage/logs")
 DEPLOY_DIR := env("DEPLOY_DIR", "deploy")
 APP_MAIN := env("APP_MAIN", "./cmd/app")
 APP_RUN := GO + " run " + APP_MAIN
-ENV := env("ENV", "postgres")
-NAME := env("NAME", "")
-CMD := env("CMD", "")
 
 LINT_RUN := "XDG_CACHE_HOME=" + LINT_CACHE_HOME + " GOCACHE=" + LINT_GOCACHE + " " + GOLANGCI_LINT + " run"
 
@@ -149,8 +146,8 @@ secrets-staged:
 secrets-worktree:
     @GITLEAKS_CONFIG=.gitleaks.toml {{ GITLEAKS }} dir --redact --no-banner --no-color .
 
-# 运行 CLI 命令（示例：just lfiber jwt:generate 或 CMD="jwt:generate" just lfiber）
-lfiber cmd=CMD:
+# 运行 CLI 命令（示例：just lfiber jwt:generate）
+lfiber cmd="":
     @{{ APP_RUN }} {{ cmd }}
 
 # 运行数据库迁移
@@ -213,64 +210,40 @@ upgrade-patch:
     @sh scripts/go-upgrade.sh patch
 
 
-# 生成 PostgreSQL 迁移（NAME=xxx）
-atlas-diff-postgres name=NAME:
-    @{{ ATLAS_MIGRATE }} diff {{ name }} --env postgres
-
-# 应用 PostgreSQL 迁移（依赖 DATABASE_URL）
-atlas-apply-postgres:
-    @{{ ATLAS_MIGRATE }} apply --env postgres
-
-# 生成 SQLite 迁移（NAME=xxx）
-atlas-diff-sqlite name=NAME:
-    @{{ ATLAS_MIGRATE }} diff {{ name }} --env sqlite
-
-# 应用 SQLite 迁移
-atlas-apply-sqlite:
-    @{{ ATLAS_MIGRATE }} apply --env sqlite
-
-# 显示迁移状态（默认 postgres，ENV=sqlite 可切换）
-atlas-status env=ENV:
-    @{{ ATLAS_MIGRATE }} status --env {{ env }}
-
-# 显示迁移历史（默认 postgres，ENV=sqlite 可切换）
-atlas-history env=ENV:
-    @{{ ATLAS_MIGRATE }} history --env {{ env }}
-
-# 修复迁移表（默认 postgres，ENV=sqlite 可切换）
-atlas-repair env=ENV:
-    @{{ ATLAS_MIGRATE }} repair --env {{ env }}
-
-# 重置数据库并重新应用所有迁移（默认 postgres，ENV=sqlite 可切换）
-atlas-reset env=ENV:
-    @{{ ATLAS_MIGRATE }} reset --env {{ env }}
-
-# 重新生成 PostgreSQL 迁移校验文件（atlas.sum）
-atlas-hash-postgres:
-    @{{ ATLAS_MIGRATE }} hash --env postgres
-
-# 重新生成 SQLite 迁移校验文件（atlas.sum）
-atlas-hash-sqlite:
-    @{{ ATLAS_MIGRATE }} hash --env sqlite
-
-# 重新生成迁移校验文件（默认 postgres，ENV=sqlite 可切换）
-atlas-hash env=ENV:
-    @{{ ATLAS_MIGRATE }} hash --env {{ env }}
-
-# 生成迁移（默认 postgres，NAME=xxx，ENV=sqlite 可切换）
-atlas-diff name=NAME env=ENV:
+# 生成迁移（默认 env="postgres"，NAME=xxx）
+atlas-diff name env="postgres":
     @{{ ATLAS_MIGRATE }} diff {{ name }} --env {{ env }}
 
-# 应用迁移（默认 postgres，ENV=sqlite 可切换）
-atlas-apply env=ENV:
+# 应用迁移（默认 env="postgres"）
+atlas-apply env="postgres":
     @{{ ATLAS_MIGRATE }} apply --env {{ env }}
 
-# 检查数据库 schema（默认 postgres，ENV=sqlite 可切换）
-atlas-lint env=ENV:
+# 显示迁移状态（默认 env="postgres"）
+atlas-status env="postgres":
+    @{{ ATLAS_MIGRATE }} status --env {{ env }}
+
+# 显示迁移历史（默认 env="postgres"）
+atlas-history env="postgres":
+    @{{ ATLAS_MIGRATE }} history --env {{ env }}
+
+# 修复迁移表（默认 env="postgres"）
+atlas-repair env="postgres":
+    @{{ ATLAS_MIGRATE }} repair --env {{ env }}
+
+# 重置数据库并重新应用所有迁移（默认 env="postgres"）
+atlas-reset env="postgres":
+    @{{ ATLAS_MIGRATE }} reset --env {{ env }}
+
+# 重新生成迁移校验文件（默认 env="postgres"）
+atlas-hash env="postgres":
+    @{{ ATLAS_MIGRATE }} hash --env {{ env }}
+
+# 检查数据库 schema（默认 env="postgres"）
+atlas-lint env="postgres":
     @{{ ATLAS_SCHEMA }} lint --env {{ env }}
 
-# 检查当前数据库 schema（默认 postgres，ENV=sqlite 可切换）
-atlas-inspect env=ENV:
+# 检查当前数据库 schema（默认 env="postgres"）
+atlas-inspect env="postgres":
     @{{ ATLAS_SCHEMA }} inspect --env {{ env }}
 
 # 自动从注释生成 Swagger 文档并由官方 Fiber contrib SwaggerUI 展示
