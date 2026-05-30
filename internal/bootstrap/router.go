@@ -2,9 +2,7 @@ package bootstrap
 
 import (
 	middleware "lfiber/internal/common/middleware"
-	"lfiber/internal/features/auth"
 	"lfiber/internal/features/monitoring"
-	"lfiber/internal/features/user"
 	providers "lfiber/internal/providers"
 	helpers "lfiber/internal/support"
 	"lfiber/pkg/logviewer"
@@ -27,9 +25,8 @@ func SetupApplicationRoutes(app *fiber.App) error {
 	apiGroup := app.Group("/api")
 	v1Group := apiGroup.Group("/v1")
 
-	// Register user and auth routes
-	auth.RegisterRoutes(v1Group)
-	user.RegisterRoutes(v1Group)
+	// Register all business features routes
+	registerFeatureRoutes(v1Group)
 
 	registerRealtimeRoutes(app, middleware.JWTProtected(rt.Config, rt.Cache))
 
