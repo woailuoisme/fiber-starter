@@ -82,9 +82,21 @@ config:
 clean:
     @rm -rf {{ BUILD_DIR }} {{ COVERAGE_DIR }}
 
-# 运行测试
+# 运行测试 (优先使用 gotestsum 且只测试包含真实 _test.go 文件的包)
 test:
-    @{{ GO }} test -v ./...
+	#!/usr/bin/env bash
+	PACKAGES=$(fd -e go --glob "*_test.go" tests | xargs -I {} dirname {} | sort -u | sed 's|^|./|')
+	if command -v gotestsum >/dev/null 2>&1; then \
+		gotestsum --format pkgname -- $PACKAGES; \
+	else \
+		{{ GO }} test -v $PACKAGES; \
+	fi
+
+# 运行 mockery 根据 .mockery.yaml 自动生成 Mock 桩代码
+mock:
+	@echo "Generating mocks using mockery..."
+	@mise exec -- mockery
+
 
 # 生成测试覆盖率报告
 coverage:

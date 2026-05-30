@@ -1,0 +1,10 @@
+packages:
+  lfiber/internal/providers/mail/contracts:
+    config:
+      dir: "tests/mocks/providers/mail"
+      pkgname: "mailmocks"
+      filename: "mock_{{.InterfaceName}}.go"
+      structname: "Mock{{.InterfaceName}}"
+    interfaces:
+      Mailer:
+      Message:

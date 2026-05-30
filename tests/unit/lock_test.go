@@ -2,6 +2,7 @@ package tests
 
 import (
 	"context"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -14,8 +15,19 @@ import (
 )
 
 func prepareRedis(t *testing.T) *redis.Client {
+	host := os.Getenv("REDIS_HOST")
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	port := os.Getenv("REDIS_PORT")
+	if port == "" {
+		port = "6379"
+	}
+	password := os.Getenv("REDIS_PASSWORD")
+
 	client := redis.NewClient(&redis.Options{
-		Addr: "127.0.0.1:6379",
+		Addr:     host + ":" + port,
+		Password: password,
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -23,7 +35,7 @@ func prepareRedis(t *testing.T) *redis.Client {
 
 	err := client.Ping(ctx).Err()
 	if err != nil {
-		t.Skip("Local Redis (127.0.0.1:6379) is not available; skipping lock integration tests")
+		t.Skipf("Local Redis (%s:%s) is not available; skipping lock integration tests", host, port)
 	}
 
 	return client
