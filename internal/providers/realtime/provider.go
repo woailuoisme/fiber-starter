@@ -102,7 +102,7 @@ func extractUserFields(val any) (id string, name string, email string, err error
 		return "", "", "", errors.New("user object is nil")
 	}
 	v := reflect.ValueOf(val)
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	}
 	if v.Kind() != reflect.Struct {

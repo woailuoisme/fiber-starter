@@ -2,6 +2,8 @@ package health
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -87,6 +89,8 @@ func (a *Aggregator) Check() (map[string]Status, string) {
 			return cfg.Search.Default
 		case "storage":
 			return cfg.Storage.Driver
+		case "centrifugo":
+			return "centrifugo"
 		default:
 			return ""
 		}
@@ -171,6 +175,14 @@ func (a *Aggregator) Check() (map[string]Status, string) {
 				}
 				return a.app.StorageValue().Disk().HealthCheck()
 			},
+		},
+		{
+			// Centrifugo 是独立进程，通过 HTTP 探测其 /health 端点来确认可达性
+			name:     "centrifugo",
+			enabled:  cfg != nil && cfg.WebSocket.Enabled,
+			critical: a.isCritical("centrifugo", false),
+			driver:   getDriver("centrifugo"),
+			check:    centrifugoHealthCheck(cfg),
 		},
 	}
 
@@ -301,4 +313,32 @@ func CriticalityFromConfig(cfg *configs.Config, name string, fallback bool) bool
 		return fallback
 	}
 	return dependency.Critical
+}
+
+// centrifugoHealthCheck 通过 Centrifugo 的 HTTP /health 端点探测服务可达性。
+// Centrifugo 作为独立进程运行，不在 Fiber 容器内，只能通过外部 HTTP 探测。
+// 从 CENTRIFUGO_URL (形如 https://push.test.local/api) 推导出基础地址。
+func centrifugoHealthCheck(cfg *configs.Config) func() error {
+	return func() error {
+		if cfg == nil || cfg.WebSocket.URL == "" {
+			return fmt.Errorf("centrifugo url not configured")
+		}
+
+		// 从 API URL 推导出基础地址: https://push.test.local/api → https://push.test.local
+		apiURL := cfg.WebSocket.URL
+		baseURL := strings.TrimSuffix(strings.TrimSuffix(apiURL, "/api"), "/")
+		healthURL := baseURL + "/health"
+
+		client := &http.Client{Timeout: 3 * time.Second}
+		resp, err := client.Get(healthURL) //nolint:noctx
+		if err != nil {
+			return fmt.Errorf("centrifugo unreachable: %w", err)
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("centrifugo /health returned HTTP %d", resp.StatusCode)
+		}
+		return nil
+	}
 }

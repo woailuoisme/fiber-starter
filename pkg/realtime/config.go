@@ -16,5 +16,10 @@ type Config struct {
 	MaxMessageSize    int           `json:"max_message_size"`
 	HeartbeatInterval int           `json:"heartbeat_interval"`
 	PresenceTTL       int           `json:"presence_ttl"`
+	URL               string        `json:"url"`
+	ClientURL         string        `json:"client_url"`
+	ClientSSEURL      string        `json:"client_sse_url"`
+	APIKey            string        `json:"api_key"`
+	Secret            string        `json:"secret"`
 	RedisClient       *redis.Client `json:"-"` // 可选：从外部注入复用的 Redis 客户端实例
 }

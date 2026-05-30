@@ -6,6 +6,7 @@ require (
 	ariga.io/atlas-provider-bun v0.0.3
 	github.com/BurntSushi/toml v1.6.0
 	github.com/casbin/casbin/v2 v2.135.0
+	github.com/centrifugal/gocent/v3 v3.4.0
 	github.com/chai2010/webp v1.4.0
 	github.com/charmbracelet/huh v1.0.0
 	github.com/charmbracelet/lipgloss v1.1.0
@@ -13,7 +14,7 @@ require (
 	github.com/dromara/carbon/v2 v2.6.16
 	github.com/fatih/color v1.19.0
 	github.com/go-faker/faker/v4 v4.7.0
-	github.com/go-playground/validator/v10 v10.30.2
+	github.com/go-playground/validator/v10 v10.30.3
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/goccy/go-json v0.10.6
 	github.com/gofiber/contrib/v3/casbin v1.0.6
@@ -24,7 +25,6 @@ require (
 	github.com/gofiber/contrib/v3/monitor v1.0.6
 	github.com/gofiber/contrib/v3/otel v1.2.0
 	github.com/gofiber/contrib/v3/swaggerui v1.0.7
-	github.com/gofiber/contrib/v3/websocket v1.2.0
 	github.com/gofiber/fiber/v3 v3.3.0
 	github.com/gofiber/storage/ristretto/v2 v2.1.4
 	github.com/gofiber/storage/rueidis v1.3.7
@@ -109,7 +109,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
-	github.com/fasthttp/websocket v1.5.12 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -156,7 +155,7 @@ require (
 	github.com/richardlehane/msoleps v1.0.6 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
-	github.com/savsgio/gotils v0.0.0-20250924091648-bce9a52d7761 // indirect
+	github.com/rogpeppe/go-internal v1.15.0 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/shirou/gopsutil/v4 v4.26.4 // indirect
 	github.com/spf13/cast v1.10.0 // indirect

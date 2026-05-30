@@ -321,11 +321,7 @@ func (rt *Runtime) Close() error {
 			errs = append(errs, err)
 		}
 	}
-	if rt.Realtime != nil {
-		if err := rt.Realtime.Close(); err != nil {
-			errs = append(errs, err)
-		}
-	}
+
 	if rt.ScheduleManager != nil {
 		if err := rt.ScheduleManager.Close(); err != nil {
 			errs = append(errs, err)

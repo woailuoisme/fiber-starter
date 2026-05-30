@@ -345,6 +345,11 @@ type WebSocketConfig struct {
 	MaxMessageSize    int    `mapstructure:"max_message_size"`
 	HeartbeatInterval int    `mapstructure:"heartbeat_interval"`
 	PresenceTTL       int    `mapstructure:"presence_ttl"`
+	URL               string `mapstructure:"url"`
+	ClientURL         string `mapstructure:"client_url"`
+	ClientSSEURL      string `mapstructure:"client_sse_url"`
+	APIKey            string `mapstructure:"api_key"`
+	Secret            string `mapstructure:"secret"`
 }
 
 type PaymentConfig struct {

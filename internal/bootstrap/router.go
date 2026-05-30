@@ -1,8 +1,6 @@
 package bootstrap
 
 import (
-	"strings"
-
 	middleware "lfiber/internal/common/middleware"
 	"lfiber/internal/features/auth"
 	"lfiber/internal/features/monitoring"
@@ -42,34 +40,4 @@ func SetupApplicationRoutes(app *fiber.App) error {
 		helpers.Info("registered_route_entries", zap.Int("total", len(app.GetRoutes())))
 	}
 	return nil
-}
-
-func registerRealtimeRoutes(app *fiber.App, jwtProtected fiber.Handler) {
-	rt := providers.App()
-	if rt == nil || rt.Realtime == nil || rt.Config == nil {
-		return
-	}
-
-	if path := strings.TrimSpace(rt.Config.WebSocket.AuthPath); path != "" {
-		app.Post(path, jwtProtected, rt.Realtime.AuthHandler())
-	}
-
-	if path := strings.TrimSpace(rt.Config.WebSocket.Path); path != "" {
-		app.Get(path, rt.Realtime.WebSocketHandler())
-	}
-	if strings.TrimSpace(rt.Config.WebSocket.Path) != "/app/:appKey" {
-		app.Get("/app/:appKey", rt.Realtime.WebSocketHandler())
-	}
-	if path := strings.TrimSpace(rt.Config.WebSocket.SSEPath); path != "" {
-		app.Get(path, rt.Realtime.SSEHandler())
-	}
-	if strings.TrimSpace(rt.Config.WebSocket.SSEPath) != "/sse/app/:appKey" {
-		app.Get("/sse/app/:appKey", rt.Realtime.SSEHandler())
-	}
-
-	api := rt.Realtime.APIHandler()
-	app.Post("/apps/:appID/events", api)
-	app.Get("/apps/:appID/channels", api)
-	app.Get("/apps/:appID/channels/:channel/users", api)
-	app.Get("/apps/:appID/channels/:channel", api)
 }

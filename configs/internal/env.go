@@ -163,6 +163,11 @@ func EnvConfigMap() map[string]any {
 		"REVERB_APP_SECRET":            "websocket.app_secret",
 		"REVERB_PATH":                  "websocket.path",
 		"REVERB_SSE_PATH":              "websocket.sse_path",
+		"CENTRIFUGO_URL":               "websocket.url",
+		"CENTRIFUGO_CLIENT_URL":        "websocket.client_url",
+		"CENTRIFUGO_CLIENT_SSE_URL":    "websocket.client_sse_url",
+		"CENTRIFUGO_API_KEY":           "websocket.api_key",
+		"CENTRIFUGO_SECRET":            "websocket.secret",
 
 		// Payment
 		"WECHAT_APP_ID":      "payment.wechat.app_id",

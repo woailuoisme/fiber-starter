@@ -13,6 +13,12 @@
       "skillPath": "skills/code-polish/SKILL.md",
       "computedHash": "dd6e5d97e228cfcd0444fc2ad16f9983ab9eb66654c3e641f8214feddb95f547"
     },
+    "code-simplifier": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "skillPath": "skills/.curated/code-simplifier/SKILL.md",
+      "computedHash": "4a0e48edfbc5078394b8d038a8efffa748cafdc908d10ca05d38670cce9b292e"
+    },
     "code-simplify": {
       "source": "paulrberg/agent-skills",
       "sourceType": "github",

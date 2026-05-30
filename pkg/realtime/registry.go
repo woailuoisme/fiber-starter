@@ -41,24 +41,31 @@ func (r *channelRegistry) Authorize(ctx context.Context, user User, channel stri
 		return nil
 	}
 
+	var matchedRoute channelRoute
+	var params map[string]string
+	found := false
+
+	// 在读锁区间内仅做正则查找和参数提取以缩短锁持有时间，避免锁内执行业务回调导致潜在死锁
 	r.mu.RLock()
-	routes := append([]channelRoute(nil), r.routes...)
+	for _, route := range r.routes {
+		matches := route.re.FindStringSubmatch(channel)
+		if matches != nil {
+			params = make(map[string]string, len(route.names))
+			for i, name := range route.names {
+				params[name] = matches[i+1]
+			}
+			matchedRoute = route
+			found = true
+			break
+		}
+	}
 	r.mu.RUnlock()
 
-	for _, route := range routes {
-		matches := route.re.FindStringSubmatch(channel)
-		if matches == nil {
-			continue
-		}
-
-		params := make(map[string]string, len(route.names))
-		for i, name := range route.names {
-			params[name] = matches[i+1]
-		}
-		return route.auth(ctx, user, channel, params)
+	if !found {
+		return nil
 	}
 
-	return nil
+	return matchedRoute.auth(ctx, user, channel, params)
 }
 
 func compileChannelRoute(pattern string, auth ChannelAuthorization) channelRoute {
@@ -78,7 +85,8 @@ func compileChannelRoute(pattern string, auth ChannelAuthorization) channelRoute
 			}
 			name := pattern[i+1 : i+1+end]
 			names = append(names, name)
-			out.WriteString(`([^\.]+)`)
+			// 支持以点、冒号和斜杠作为分隔符抽取参数
+			out.WriteString(`([^\\.:/]+)`)
 			i += end + 1
 		case '*':
 			out.WriteString(`.*`)

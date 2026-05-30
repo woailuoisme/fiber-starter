@@ -26,6 +26,13 @@ ripgrep = "latest"
 fd = "latest"
 sd = "latest"
 
+# 可观测性与监控调试工具 (Observability & Monitoring)
+promtool = "latest"                     # Prometheus 配置与指标格式校验工具
+loki-logcli = "latest"                  # Grafana Loki 日志查询与分析工具 (命令行 logcli)
+k6 = "latest"                           # 现代化 API 压测与性能测试工具
+vector = "latest"                       # 极速日志与指标管道流处理器
+hurl = "latest"                         # 基于文本的 HTTP 接口冒烟测试与健康探测工具
+
 [settings]
 npm.package_manager = "pnpm"
 

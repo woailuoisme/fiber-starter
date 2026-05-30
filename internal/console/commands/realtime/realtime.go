@@ -74,32 +74,12 @@ func broadcastCommand() *cobra.Command {
 func cleanupCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:     "realtime:cleanup",
-		Short:   "Cleanup dead nodes and remove their residue Presence members from Redis",
+		Short:   "N/A: Presence lifecycle is fully managed by Centrifugo",
 		GroupID: "system",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			rt, err := commandutil.BuildRuntime()
-			if err != nil {
-				return err
-			}
-			defer func() { _ = commandutil.CloseRuntime(rt) }()
-
-			if rt.Realtime == nil {
-				return errors.New("realtime service is not registered/enabled")
-			}
-
-			mgr, ok := rt.Realtime.(*realtime.ManagerImpl)
-			if !ok {
-				return errors.New("realtime provider is not a *realtime.ManagerImpl instance")
-			}
-
-			ctx := cmd.Context()
-			ui.Info(cmd.OutOrStdout(), "Scanning cluster nodes and dead presence sessions...")
-			if err := mgr.CleanupPresence(ctx); err != nil {
-				ui.Error(cmd.OutOrStderr(), "Cleanup failed: %v", err)
-				return err
-			}
-
-			ui.Success(cmd.OutOrStdout(), "Realtime presence clean up completed successfully")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			// Centrifugo 原生管理 Presence TTL，Fiber 侧无需手动清理
+			ui.Info(cmd.OutOrStdout(), "Presence cleanup is handled by Centrifugo natively (via presence_ttl config).")
+			ui.Info(cmd.OutOrStdout(), "No manual cleanup is required on the application side.")
 			return nil
 		},
 	}
