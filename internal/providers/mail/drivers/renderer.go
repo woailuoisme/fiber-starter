@@ -51,6 +51,28 @@ func RenderTemplate(templateName string, data map[string]any) (string, error) {
 			}
 		}
 	}
+	if _, ok := data["Theme"]; !ok {
+		data["Theme"] = map[string]string{
+			"PrimaryColor": primaryColor,
+			"SuccessColor": successColor,
+			"DangerColor":  dangerColor,
+			"WarningColor": warningColor,
+			"BgColor":      bgColor,
+		}
+	}
+
+	// 注入 Theme 到 Button 和 Panel 字段（如果它们是 map 格式），解决子模板无法通过 $ 获取全局 Theme 的问题
+	// Inject Theme map into Button and Panel components if they are maps to solve sub-template scoping issues
+	if btn, ok := data["Button"].(map[string]any); ok {
+		btn["Theme"] = data["Theme"]
+	} else if btn, ok := data["Button"].(map[string]interface{}); ok {
+		btn["Theme"] = data["Theme"]
+	}
+	if pnl, ok := data["Panel"].(map[string]any); ok {
+		pnl["Theme"] = data["Theme"]
+	} else if pnl, ok := data["Panel"].(map[string]interface{}); ok {
+		pnl["Theme"] = data["Theme"]
+	}
 
 	// 2. Set default fields in data if not already set
 	if _, ok := data["AppName"]; !ok {
@@ -61,15 +83,6 @@ func RenderTemplate(templateName string, data map[string]any) (string, error) {
 	}
 	if _, ok := data["Year"]; !ok {
 		data["Year"] = time.Now().Year()
-	}
-	if _, ok := data["Theme"]; !ok {
-		data["Theme"] = map[string]string{
-			"PrimaryColor": primaryColor,
-			"SuccessColor": successColor,
-			"DangerColor":  dangerColor,
-			"WarningColor": warningColor,
-			"BgColor":      bgColor,
-		}
 	}
 
 	// 3. Create a new template and parse layout, components, and target template

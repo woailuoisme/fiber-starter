@@ -480,9 +480,17 @@ func extractOTPCode(t *testing.T, body string) string {
 	t.Helper()
 
 	re := regexp.MustCompile(`\b\d{6}\b`)
-	match := re.FindString(body)
-	require.NotEmpty(t, match, "expected otp code in email body")
-	return match
+	matches := re.FindAllStringIndex(body, -1)
+	for _, loc := range matches {
+		start := loc[0]
+		end := loc[1]
+		if start > 0 && body[start-1] == '#' {
+			continue
+		}
+		return body[start:end]
+	}
+	require.Fail(t, "expected otp code in email body")
+	return ""
 }
 
 // mockMailer facilitates intercepting registration OTPs.
