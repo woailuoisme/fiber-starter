@@ -1,0 +1,83 @@
+name: Gitleaks
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Scan for secrets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install Gitleaks
+        run: |
+          go install github.com/gitleaks/gitleaks/v8@v8.30.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Compute scan range
+        id: range
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git fetch origin "${{ github.base_ref }}"
+            base_sha="$(git merge-base FETCH_HEAD HEAD)"
+            echo "mode=git" >> "$GITHUB_OUTPUT"
+            echo "log_opts=${base_sha}..HEAD" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            before="${{ github.event.before }}"
+            if [[ "$before" =~ ^0+$ ]]; then
+              before="$(git rev-list --max-parents=0 HEAD)"
+            fi
+            echo "mode=git" >> "$GITHUB_OUTPUT"
+            echo "log_opts=${before}..HEAD" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "mode=dir" >> "$GITHUB_OUTPUT"
+
+      - name: Scan for secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ steps.range.outputs.mode }}" == "git" ]]; then
+            gitleaks git \
+              --config .gitleaks.toml \
+              --redact \
+              --no-banner \
+              --no-color \
+              --log-opts "${{ steps.range.outputs.log_opts }}" \
+              .
+            exit 0
+          fi
+
+          gitleaks dir \
+            --config .gitleaks.toml \
+            --redact \
+            --no-banner \
+            --no-color \
+            .

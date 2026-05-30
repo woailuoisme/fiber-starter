@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"lfiber/configs"
+	"lfiber/internal/providers/asynqredis"
 	"lfiber/internal/providers/queue/contracts"
 	helpers "lfiber/internal/support"
 
@@ -51,12 +52,8 @@ func NewAsynqDriver(cfg *configs.Config) *AsynqDriver {
 	}
 }
 
-func (d *AsynqDriver) getRedisOpt() asynq.RedisClientOpt {
-	return asynq.RedisClientOpt{
-		Addr:     fmt.Sprintf("%s:%s", d.config.Redis.Host, d.config.Redis.Port),
-		Password: d.config.Redis.Password,
-		DB:       d.config.Redis.DB + 1,
-	}
+func (d *AsynqDriver) getRedisOpt() asynq.RedisConnOpt {
+	return asynqredis.NewClientOpt(d.config, 1)
 }
 
 func (d *AsynqDriver) getClient() *asynq.Client {

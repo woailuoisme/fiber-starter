@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"lfiber/configs"
+	"lfiber/internal/providers/asynqredis"
 	queueContracts "lfiber/internal/providers/queue/contracts"
 	"lfiber/internal/providers/schedule/contracts"
 	helpers "lfiber/internal/support"
@@ -22,17 +24,18 @@ type AsynqScheduler struct {
 }
 
 // NewAsynqScheduler creates a new asynq-based scheduler
-func NewAsynqScheduler(cfg *configs.Config) *AsynqScheduler {
-	redisOpt := asynq.RedisClientOpt{
-		Addr:     fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port),
-		Password: cfg.Redis.Password,
-		DB:       cfg.Redis.DB + 2, // Use a separate DB for scheduler if needed
+func NewAsynqScheduler(cfg *configs.Config) (*AsynqScheduler, error) {
+	loc, err := time.LoadLocation(cfg.App.Timezone)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load scheduler timezone %q: %w", cfg.App.Timezone, err)
 	}
 
 	return &AsynqScheduler{
-		scheduler: asynq.NewScheduler(redisOpt, nil),
-		config:    cfg,
-	}
+		scheduler: asynq.NewScheduler(asynqredis.NewClientOpt(cfg, 2), &asynq.SchedulerOpts{
+			Location: loc,
+		}),
+		config: cfg,
+	}, nil
 }
 
 // Job registers a job to be scheduled

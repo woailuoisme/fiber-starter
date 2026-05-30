@@ -1,0 +1,17 @@
+title = "fiber-starter gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Atlas checksum files trigger generic-api-key false positives"
+targetRules = ["generic-api-key"]
+paths = [
+  '''^database/migrations/postgres/atlas\.sum$''',
+  '''^database/migrations/sqlite/atlas\.sum$''',
+]
+
+[[allowlists]]
+description = "Example env template contains placeholder password fields"
+targetRules = ["generic-api-key"]
+paths = ['''^\.env\.example$''']

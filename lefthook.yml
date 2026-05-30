@@ -22,3 +22,6 @@ pre-commit:
       stage_fixed: true
       run: just lint-fix
 
+    # 4. 扫描 staged 变更中的 secret
+    - name: gitleaks
+      run: just secrets-staged

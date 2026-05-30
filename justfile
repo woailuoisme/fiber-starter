@@ -11,6 +11,7 @@ export GOFLAGS := env("GOFLAGS", "-mod=mod")
 GO := env("GO", "go")
 GOFUMPT := env("GOFUMPT", "gofumpt")
 GOLANGCI_LINT := env("GOLANGCI_LINT", "golangci-lint")
+GITLEAKS := env("GITLEAKS", "gitleaks")
 K6 := env("K6", "k6")
 ATLAS := env("ATLAS", "atlas")
 ATLAS_MIGRATE := ATLAS + " migrate"
@@ -48,6 +49,10 @@ dev:
 # 直接运行应用
 run:
     @{{ APP_RUN }} serve
+
+# 构建后并发启动 HTTP 服务、队列和调度器
+dev-all: build
+    @concurrently -k -n serve,queue,schedule -c "#93c5fd,#c4b5fd,#fb7185,#fdba74" "{{ BUILD_DIR }}/{{ SERVER_BINARY_NAME }} serve" "{{ BUILD_DIR }}/{{ SERVER_BINARY_NAME }} queue:work" "{{ BUILD_DIR }}/{{ SERVER_BINARY_NAME }} schedule:run"
 
 _build-dir:
     @mkdir -p {{ BUILD_DIR }}
@@ -125,7 +130,19 @@ vet:
 check: fmt-gofumpt lint-fix
 
 # 运行所有检查
-check-all: check test
+check-all: check test secrets
+
+# 运行 Gitleaks 追踪扫描
+secrets:
+    @GITLEAKS_CONFIG=.gitleaks.toml {{ GITLEAKS }} git --redact --no-banner --no-color .
+
+# 运行 Gitleaks staged 扫描
+secrets-staged:
+    @GITLEAKS_CONFIG=.gitleaks.toml {{ GITLEAKS }} git --staged --redact --no-banner --no-color .
+
+# 运行 Gitleaks 工作区扫描（包含未跟踪和忽略文件）
+secrets-worktree:
+    @GITLEAKS_CONFIG=.gitleaks.toml {{ GITLEAKS }} dir --redact --no-banner --no-color .
 
 # 运行 CLI 命令（示例：just lfiber jwt:generate 或 CMD="jwt:generate" just lfiber）
 lfiber cmd=CMD:

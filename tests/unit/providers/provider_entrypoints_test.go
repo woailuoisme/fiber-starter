@@ -281,6 +281,7 @@ func TestProviderEntryPoints_RegisterWrappers(t *testing.T) {
 
 	t.Run("Schedule", func(t *testing.T) {
 		cfg := testkit.DefaultConfig()
+		cfg.App.Timezone = "Asia/Shanghai"
 		cfg.Redis.Host = "127.0.0.1"
 		cfg.Redis.Port = "6379"
 
@@ -296,6 +297,17 @@ func TestProviderEntryPoints_RegisterWrappers(t *testing.T) {
 		assert.Equal(t, "daily-job", event.NameStr)
 		assert.Equal(t, "daily job", event.DescriptionStr)
 		assert.Len(t, scheduler.GetEvents(), 1)
+	})
+
+	t.Run("ScheduleInvalidTimezone", func(t *testing.T) {
+		cfg := testkit.DefaultConfig()
+		cfg.App.Timezone = "Not/AZone"
+
+		manager, scheduler, err := schedule.RegisterSchedule(cfg)
+		require.Error(t, err)
+		assert.Nil(t, manager)
+		assert.Nil(t, scheduler)
+		assert.ErrorContains(t, err, `failed to load scheduler timezone "Not/AZone"`)
 	})
 
 	t.Run("Search", func(t *testing.T) {

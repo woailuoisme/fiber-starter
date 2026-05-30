@@ -7,6 +7,12 @@ atlas = "latest"
 ripgrep = "latest"
 fd = "latest"
 sd = "latest"
+gitleaks = "latest"
+pnpm = "latest"
+"npm:concurrently" = "latest"
+
+[settings]
+npm.package_manager = "pnpm"
 
 [env]
 _.file = ".env"

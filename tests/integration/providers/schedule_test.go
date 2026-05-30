@@ -18,20 +18,24 @@ func TestScheduleProvider_Manager(t *testing.T) {
 	require.NotNil(t, manager)
 
 	t.Run("DefaultScheduler", func(t *testing.T) {
-		scheduler := manager.Scheduler()
+		scheduler, err := manager.Scheduler()
+		require.NoError(t, err)
 		assert.NotNil(t, scheduler)
 	})
 
 	t.Run("SchedulerCaching", func(t *testing.T) {
-		s1 := manager.Scheduler()
-		s2 := manager.Scheduler()
+		s1, err := manager.Scheduler()
+		require.NoError(t, err)
+		s2, err := manager.Scheduler()
+		require.NoError(t, err)
 		assert.Equal(t, s1, s2, "Scheduler instances should be cached")
 	})
 }
 
 func TestScheduleProvider_Operations(t *testing.T) {
 	cfg, _, _ := configs.LoadConfig()
-	s := schedule.NewManager(cfg).Scheduler()
+	s, err := schedule.NewManager(cfg).Scheduler()
+	require.NoError(t, err)
 
 	t.Run("EventCreation", func(t *testing.T) {
 		// Call

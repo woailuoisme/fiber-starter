@@ -250,6 +250,7 @@ cfg := rt.Config    // 获取配置
 ### 开发与运行
 
 - `rtk just dev`：启动热重载开发服务器
+- `rtk just dev-all`：先构建二进制，再并发启动 `serve`、`queue:work` 和 `schedule:run`
 - `rtk just run`：直接运行应用
 - `rtk just build`：构建二进制文件
 - `rtk just build-prod`：构建生产环境二进制文件（压缩体积）
