@@ -3,17 +3,14 @@ package realtime
 import (
 	"errors"
 	"fmt"
-	"strings"
+	"reflect"
 
 	"lfiber/configs"
-	"lfiber/internal/features/user"
 	realtimeContracts "lfiber/internal/providers/realtime/contracts"
 	helpers "lfiber/internal/support"
 	"lfiber/pkg/realtime"
 
-	"github.com/gofiber/contrib/v3/websocket"
 	"github.com/gofiber/fiber/v3"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -69,61 +66,73 @@ func RegisterRealtime(cfg *configs.Config) (realtimeContracts.Manager, error) {
 		MaxMessageSize:    cfg.WebSocket.MaxMessageSize,
 		HeartbeatInterval: cfg.WebSocket.HeartbeatInterval,
 		PresenceTTL:       cfg.WebSocket.PresenceTTL,
-	}
-
-	// 共享/复用全局 Redis 客户端连接
-	if strings.EqualFold(strings.TrimSpace(cfg.WebSocket.BusMode), "redis") {
-		addr := strings.TrimSpace(fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port))
-		pkgCfg.RedisClient = redis.NewClient(&redis.Options{
-			Addr:     addr,
-			Password: cfg.Redis.Password,
-			DB:       cfg.Redis.DB,
-		})
+		URL:               cfg.WebSocket.URL,
+		ClientURL:         cfg.WebSocket.ClientURL,
+		ClientSSEURL:      cfg.WebSocket.ClientSSEURL,
+		APIKey:            cfg.WebSocket.APIKey,
+		Secret:            cfg.WebSocket.Secret,
 	}
 
 	logger := zapLoggerBridge{}
 	manager := realtime.NewManager(pkgCfg, logger)
 
-	// 注入 WebSocket 连接建立时的用户解析规则 (从 Locals 读取已认证的业务用户)
-	manager.SetUserResolver(func(conn *websocket.Conn) (realtime.User, error) {
-		u, ok := conn.Locals("user").(*user.User)
-		if !ok || u == nil {
-			return realtime.User{}, errors.New("unauthorized")
-		}
-		return realtime.User{
-			ID: fmt.Sprintf("%d", u.ID),
-			Info: map[string]any{
-				"id":    u.ID,
-				"email": u.Email,
-				"name":  u.Name,
-			},
-		}, nil
-	})
-
-	// 注入通道订阅鉴权 Hook 闭包
-	manager.SetOnSubscribe(func(sessionID string, channel string, u realtime.User) error {
-		if u.ID == "" {
-			return errors.New("authentication required for private channel")
-		}
-		// 预留位置：后续可通过 Redis 或数据库查询，细粒度判定用户对 channelName 的拥有权限
-		return nil
-	})
-
 	// 注入 HTTP Broadcasting Auth 广播路由的鉴权提取逻辑
 	manager.SetAuthUserResolver(func(c fiber.Ctx) (realtime.User, error) {
-		u, ok := c.Locals("user").(*user.User)
-		if !ok || u == nil {
+		localUser := c.Locals("user")
+		id, name, email, err := extractUserFields(localUser)
+		if err != nil {
 			return realtime.User{}, errors.New("unauthorized")
 		}
 		return realtime.User{
-			ID: fmt.Sprintf("%d", u.ID),
+			ID: id,
 			Info: map[string]any{
-				"id":    u.ID,
-				"email": u.Email,
-				"name":  u.Name,
+				"id":    id,
+				"email": email,
+				"name":  name,
 			},
 		}, nil
 	})
 
 	return manager, nil
+}
+
+// extractUserFields 通过反射动态抽取用户结构体字段，以消除对 features/user 包的物理依赖，切断循环导入
+func extractUserFields(val any) (id string, name string, email string, err error) {
+	if val == nil {
+		return "", "", "", errors.New("user object is nil")
+	}
+	v := reflect.ValueOf(val)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Struct {
+		return "", "", "", errors.New("user object must be a struct pointer or struct")
+	}
+
+	// 动态解析 ID
+	idField := v.FieldByName("ID")
+	if idField.IsValid() {
+		if idField.Kind() == reflect.Int64 {
+			id = fmt.Sprintf("%d", idField.Int())
+		} else if idField.Kind() == reflect.String {
+			id = idField.String()
+		}
+	}
+
+	// 动态解析 Name
+	nameField := v.FieldByName("Name")
+	if nameField.IsValid() && nameField.Kind() == reflect.String {
+		name = nameField.String()
+	}
+
+	// 动态解析 Email
+	emailField := v.FieldByName("Email")
+	if emailField.IsValid() && emailField.Kind() == reflect.String {
+		email = emailField.String()
+	}
+
+	if id == "" {
+		return "", "", "", errors.New("failed to extract ID from user structure")
+	}
+	return id, name, email, nil
 }
