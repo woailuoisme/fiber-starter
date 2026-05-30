@@ -8,8 +8,10 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-type AuthRequest = pusher.AuthRequest
-type AuthResponse = pusher.AuthResponse
+type (
+	AuthRequest  = pusher.AuthRequest
+	AuthResponse = pusher.AuthResponse
+)
 
 func BuildAuthSignature(appKey, appSecret, socketID, channel string, channelData ...string) string {
 	return pusher.BuildAuthSignature(appKey, appSecret, socketID, channel, channelData...)

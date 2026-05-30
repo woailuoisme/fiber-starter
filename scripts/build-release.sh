@@ -39,6 +39,7 @@ fi
 # 确保 Go 编译时优先使用本地 go.mod 依赖模式
 export GOFLAGS="${GOFLAGS:-} -mod=mod"
 
+APP_MAIN=${APP_MAIN:-./cmd/app}
 BUILD_DIR=${BUILD_DIR:-build}
 SERVER_BINARY_NAME=${SERVER_BINARY_NAME:-lfiber}
 DEPLOY_DIR=${DEPLOY_DIR:-deploy}
@@ -111,7 +112,7 @@ BINARY="$BUILD_DIR/${SERVER_BINARY_NAME}-linux-amd64"
 mkdir -p "$BUILD_DIR"
 
 log_info "Building $ENVIRONMENT binary (linux/amd64) — version: $VERSION..."
-GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o "$BINARY" ./cmd/app
+GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o "$BINARY" "$APP_MAIN"
 log_success "Build complete: $BINARY"
 
 # ── 打包 ───────────────────────────────────────────────────────────────────────

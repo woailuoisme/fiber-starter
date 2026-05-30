@@ -10,8 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"lfiber/pkg/realtime/internal/pusher"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type Logger interface {

@@ -11,6 +11,7 @@ export GOFLAGS := env("GOFLAGS", "-mod=mod")
 GO := env("GO", "go")
 GOFUMPT := env("GOFUMPT", "gofumpt")
 GOLANGCI_LINT := env("GOLANGCI_LINT", "golangci-lint")
+ACTIONLINT := env("ACTIONLINT", "actionlint")
 GITLEAKS := env("GITLEAKS", "gitleaks")
 K6 := env("K6", "k6")
 ATLAS := env("ATLAS", "atlas")
@@ -77,8 +78,8 @@ build-prod: _build-dir
 
 # 显示当前构建配置
 config:
-    @printf "BUILD_DIR=%s\nCOVERAGE_DIR=%s\nSERVER_BINARY_NAME=%s\nCLI_BINARY_NAME=%s\nAPP_LOG_DIR=%s\nDEPLOY_DIR=%s\n" \
-        "{{ BUILD_DIR }}" "{{ COVERAGE_DIR }}" "{{ SERVER_BINARY_NAME }}" "{{ CLI_BINARY_NAME }}" "{{ APP_LOG_DIR }}" "{{ DEPLOY_DIR }}"
+    @printf "APP_MAIN=%s\nBUILD_DIR=%s\nCOVERAGE_DIR=%s\nSERVER_BINARY_NAME=%s\nCLI_BINARY_NAME=%s\nAPP_LOG_DIR=%s\nDEPLOY_DIR=%s\n" \
+        "{{ APP_MAIN }}" "{{ BUILD_DIR }}" "{{ COVERAGE_DIR }}" "{{ SERVER_BINARY_NAME }}" "{{ CLI_BINARY_NAME }}" "{{ APP_LOG_DIR }}" "{{ DEPLOY_DIR }}"
 
 # 清理构建文件
 clean:
@@ -98,6 +99,10 @@ _lint-setup:
 # 运行代码检查 (golangci-lint)
 lint: _lint-setup
     @{{ LINT_RUN }}
+
+# 检查 GitHub Actions workflow
+actionlint:
+    @{{ ACTIONLINT }} -config-file .github/actionlint.yaml
 
 # 运行代码检查 (只显示常见问题)
 lint-quick: _lint-setup
@@ -130,7 +135,7 @@ vet:
 check: fmt-gofumpt lint-fix
 
 # 运行所有检查
-check-all: check test secrets
+check-all: check actionlint test secrets
 
 # 运行 Gitleaks 追踪扫描
 secrets:

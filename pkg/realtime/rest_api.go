@@ -78,7 +78,7 @@ func (m *ManagerImpl) validateRESTSignature(c fiber.Ctx) error {
 	}
 
 	if bodyMD5 := strings.TrimSpace(q["body_md5"]); bodyMD5 != "" {
-		sum := md5.Sum(c.Body())
+		sum := md5.Sum(c.Body()) //nolint:gosec // Pusher protocol specifies MD5 hash for request body verification.
 		if !hmac.Equal([]byte(bodyMD5), []byte(hex.EncodeToString(sum[:]))) {
 			return errors.New("invalid body md5")
 		}

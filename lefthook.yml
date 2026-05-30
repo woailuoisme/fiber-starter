@@ -25,3 +25,8 @@ pre-commit:
     # 4. 扫描 staged 变更中的 secret
     - name: gitleaks
       run: just secrets-staged
+
+    # 5. 检查 GitHub Actions workflow 配置
+    - name: actionlint
+      glob: ".github/**/*.{yml,yaml}"
+      run: just actionlint

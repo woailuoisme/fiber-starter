@@ -18,11 +18,13 @@ const (
 	EventMemberRemoved         = pusher.EventMemberRemoved
 )
 
-type Message = pusher.Message
-type SubscribePayload = pusher.SubscribePayload
-type ConnectionEstablishedData = pusher.ConnectionEstablishedData
-type ErrorPayload = pusher.ErrorPayload
-type Envelope = pusher.Envelope
+type (
+	Message                   = pusher.Message
+	SubscribePayload          = pusher.SubscribePayload
+	ConnectionEstablishedData = pusher.ConnectionEstablishedData
+	ErrorPayload              = pusher.ErrorPayload
+	Envelope                  = pusher.Envelope
+)
 
 func encodeJSON(v any) json.RawMessage {
 	return pusher.EncodeJSON(v)

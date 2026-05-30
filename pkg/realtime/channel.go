@@ -10,9 +10,11 @@ const (
 	ChannelPresence = pusher.ChannelPresence
 )
 
-type PresenceMember = pusher.PresenceMember
-type PresenceSnapshot = pusher.PresenceSnapshot
-type Channel = pusher.Channel
+type (
+	PresenceMember   = pusher.PresenceMember
+	PresenceSnapshot = pusher.PresenceSnapshot
+	Channel          = pusher.Channel
+)
 
 func ParseChannel(name string) (Channel, error) {
 	return pusher.ParseChannel(name)
