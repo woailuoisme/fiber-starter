@@ -20,11 +20,6 @@ func RenderTemplate(templateName string, data map[string]any) (string, error) {
 	// 1. Get fallback values from config
 	appName := "Go Fiber App"
 	appURL := "http://localhost:3300"
-	primaryColor := "#4f46e5"
-	successColor := "#10b981"
-	dangerColor := "#f43f5e"
-	warningColor := "#f59e0b"
-	bgColor := "#f8fafc"
 
 	if app := appctx.App(); app != nil {
 		if cfg := app.AppConfig(); cfg != nil {
@@ -34,44 +29,7 @@ func RenderTemplate(templateName string, data map[string]any) (string, error) {
 			if cfg.App.URL != "" {
 				appURL = cfg.App.URL
 			}
-			if cfg.Mail.Theme.PrimaryColor != "" {
-				primaryColor = cfg.Mail.Theme.PrimaryColor
-			}
-			if cfg.Mail.Theme.SuccessColor != "" {
-				successColor = cfg.Mail.Theme.SuccessColor
-			}
-			if cfg.Mail.Theme.DangerColor != "" {
-				dangerColor = cfg.Mail.Theme.DangerColor
-			}
-			if cfg.Mail.Theme.WarningColor != "" {
-				warningColor = cfg.Mail.Theme.WarningColor
-			}
-			if cfg.Mail.Theme.BgColor != "" {
-				bgColor = cfg.Mail.Theme.BgColor
-			}
 		}
-	}
-	if _, ok := data["Theme"]; !ok {
-		data["Theme"] = map[string]string{
-			"PrimaryColor": primaryColor,
-			"SuccessColor": successColor,
-			"DangerColor":  dangerColor,
-			"WarningColor": warningColor,
-			"BgColor":      bgColor,
-		}
-	}
-
-	// 注入 Theme 到 Button 和 Panel 字段（如果它们是 map 格式），解决子模板无法通过 $ 获取全局 Theme 的问题
-	// Inject Theme map into Button and Panel components if they are maps to solve sub-template scoping issues
-	if btn, ok := data["Button"].(map[string]any); ok {
-		btn["Theme"] = data["Theme"]
-	} else if btn, ok := data["Button"].(map[string]interface{}); ok {
-		btn["Theme"] = data["Theme"]
-	}
-	if pnl, ok := data["Panel"].(map[string]any); ok {
-		pnl["Theme"] = data["Theme"]
-	} else if pnl, ok := data["Panel"].(map[string]interface{}); ok {
-		pnl["Theme"] = data["Theme"]
 	}
 
 	// 2. Set default fields in data if not already set

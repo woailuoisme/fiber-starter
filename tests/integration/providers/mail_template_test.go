@@ -114,29 +114,6 @@ func TestMailTemplate_Rendering(t *testing.T) {
 		assert.Contains(t, body, "#f43f5e") // 红色的十六进制颜色码 (border)
 	})
 
-	t.Run("Inject customized Theme from config", func(t *testing.T) {
-		cfg.Mail.Theme.PrimaryColor = "#000000"
-		cfg.Mail.Theme.SuccessColor = "#111111"
-		cfg.Mail.Theme.DangerColor = "#222222"
-		cfg.Mail.Theme.WarningColor = "#333333"
-		cfg.Mail.Theme.BgColor = "#444444"
-
-		msg := mail.NewMessage().View("reset_password", map[string]interface{}{
-			"Name":      "Jane Doe",
-			"ExpiresIn": "30 minutes",
-			"Button": map[string]interface{}{
-				"Color": "success",
-				"Url":   "http://reset.com/123",
-				"Text":  "Reset Button",
-			},
-		})
-
-		body := msg.GetBody()
-		assert.Contains(t, body, "#111111")
-		assert.Contains(t, body, "#000000")
-		assert.Contains(t, body, "#444444")
-	})
-
 	t.Run("Fallback to default values if context is missing", func(t *testing.T) {
 		// 清理全局 Runtime，测试在未挂载应用容器时的默认值 fallback
 		// Clear global instance to test defaults when runtime is missing
