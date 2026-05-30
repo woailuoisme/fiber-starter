@@ -78,7 +78,9 @@ func TestDocsRoutes_ExposeSwaggerUIAndOpenAPISpec(t *testing.T) {
 	defer specResp.Body.Close()
 
 	specJSON := testkit.ReadBody(t, specResp)
-	assert.Contains(t, specJSON, `"swagger": "2.0"`)
+	var specParsed map[string]any
+	require.NoError(t, json.Unmarshal([]byte(specJSON), &specParsed))
+	assert.Equal(t, "2.0", specParsed["swagger"])
 	assertSuccessSchemasHideErrorFields(t, specJSON)
 	assertNoDataSuccessSchemasHideDataField(t, specJSON)
 }

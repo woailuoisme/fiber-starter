@@ -1,6 +1,9 @@
 package monitoring
 
 import (
+	"encoding/json"
+	"net/url"
+
 	"lfiber/docs"
 	helpers "lfiber/internal/support"
 	"lfiber/internal/support/otel"
@@ -26,7 +29,7 @@ func RegisterRoutes(app *fiber.App, h *HealthController) {
 			"api":     "/api/v1",
 		})
 	})
-	swaggerSpec := mustReadSwaggerSpec()
+	swaggerSpec := injectSwaggerHost(mustReadSwaggerSpec(), h.cfg.App.URL)
 	swaggerHandler := swaggerui.New(swaggerui.Config{
 		BasePath:    "/",
 		FilePath:    "openapi.json",
@@ -97,4 +100,33 @@ func RegisterRoutes(app *fiber.App, h *HealthController) {
 
 func mustReadSwaggerSpec() []byte {
 	return docs.OpenAPISpec
+}
+
+// injectSwaggerHost 解析 appURL 并动态修改 OpenAPI Spec 的 host 和 schemes 属性，
+// 这样在 Swagger UI 等组件渲染时可以正确显示并调用当前环境的基准 URL 接口。
+func injectSwaggerHost(spec []byte, appURL string) []byte {
+	if appURL == "" {
+		return spec
+	}
+	u, err := url.Parse(appURL)
+	if err != nil {
+		return spec
+	}
+
+	var data map[string]any
+	if err := json.Unmarshal(spec, &data); err != nil {
+		return spec
+	}
+
+	data["host"] = u.Host
+
+	if u.Scheme != "" {
+		data["schemes"] = []string{u.Scheme}
+	}
+
+	newSpec, err := json.Marshal(data)
+	if err != nil {
+		return spec
+	}
+	return newSpec
 }
