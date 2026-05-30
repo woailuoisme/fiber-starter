@@ -1,16 +1,30 @@
 [tools]
+# 核心运行时与包管理器 (Runtimes & Package Managers)
 go = "1.26.3"
+node = "latest"
+pnpm = "latest"
+
+# 本地开发与并发运行 (Development & Orchestration)
 air = "latest"
+"npm:concurrently" = "latest"
+
+# 静态检查、安全扫描与质量门禁 (Linting, Security & Quality)
+gofumpt = "latest"
 golangci-lint = "latest"
+swag = "latest"
 actionlint = "latest"
-"go:golang.org/x/tools/cmd/gonew" = "latest"
+gitleaks = "latest"
+
+# 数据库变更与迁移管理 (Database Migration)
 atlas = "latest"
+
+# 项目模板与脚手架克隆 (Scaffolding & Templates)
+"go:golang.org/x/tools/cmd/gonew" = "latest"
+
+# 命令行高效检索与文本替换 (CLI Utilities)
 ripgrep = "latest"
 fd = "latest"
 sd = "latest"
-gitleaks = "latest"
-pnpm = "latest"
-"npm:concurrently" = "latest"
 
 [settings]
 npm.package_manager = "pnpm"
