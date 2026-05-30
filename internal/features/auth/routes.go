@@ -4,7 +4,7 @@ import (
 	"time"
 
 	middleware "lfiber/internal/common/middleware"
-	"lfiber/internal/support/appctx"
+	providers "lfiber/internal/providers"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -13,16 +13,16 @@ const routeTimeout = 30 * time.Second
 
 // RegisterRoutes registers auth routes under the provided router group.
 func RegisterRoutes(router fiber.Router) {
-	rt := appctx.App()
+	rt := providers.App()
 
 	authService := NewAuthService(
-		rt.ConnectionValue(),
-		rt.AppConfig(),
-		rt.CacheStore(),
-		rt.EmailServiceValue(),
+		rt.Connection,
+		rt.Config,
+		rt.Cache,
+		rt.EmailService,
 	)
 	authController := NewAuthController(authService)
-	jwtProtected := middleware.JWTProtected(rt.AppConfig(), rt.CacheStore())
+	jwtProtected := middleware.JWTProtected(rt.Config, rt.Cache)
 
 	authRouter := middleware.NewTimeoutRouter(
 		router.Group("/auth"),
